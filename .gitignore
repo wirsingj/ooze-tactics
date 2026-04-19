@@ -1,0 +1,26 @@
+﻿# Godot 4
+.godot/
+
+# Exports and build output
+build/
+exports/
+*.pck
+*.apk
+*.aab
+*.exe
+*.zip
+
+# Python tooling cache
+__pycache__/
+*.pyc
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

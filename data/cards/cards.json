@@ -1,0 +1,14 @@
+[
+  {"id":"feral_spines","name":"Feral Spines","desc":"All attacks deal +20% damage.","effect":"base_damage_mult","amount":1.2,"weight":4},
+  {"id":"mineral_veins","name":"Mineral Veins","desc":"Gain +2 nutrients per tick.","effect":"income_flat","amount":2,"weight":5},
+  {"id":"frugal_growth","name":"Frugal Growth","desc":"Grow costs 1 less nutrient.","effect":"grow_cost_delta","amount":-1,"weight":4},
+  {"id":"dense_core","name":"Dense Core","desc":"Core gains +12 max HP.","effect":"core_hp_flat","amount":12,"weight":3},
+  {"id":"pitted_shots","name":"Pitted Shots","desc":"All attacks deal +10% damage.","effect":"base_damage_mult","amount":1.1,"weight":5},
+  {"id":"cavern_siphon","name":"Cavern Siphon","desc":"Gain +1 nutrients per tick.","effect":"income_flat","amount":1,"weight":6},
+  {"id":"greedy_growth","name":"Greedy Growth","desc":"Grow costs 2 less nutrients.","effect":"grow_cost_delta","amount":-2,"weight":2},
+  {"id":"reinforced_core","name":"Reinforced Core","desc":"Core gains +8 max HP.","effect":"core_hp_flat","amount":8,"weight":5},
+  {"id":"volatile_enzymes","name":"Volatile Enzymes","desc":"All attacks deal +30% damage.","effect":"base_damage_mult","amount":1.3,"weight":2},
+  {"id":"deep_roots","name":"Deep Roots","desc":"Gain +3 nutrients per tick.","effect":"income_flat","amount":3,"weight":2},
+  {"id":"precision_buds","name":"Precision Buds","desc":"All attacks deal +15% damage.","effect":"base_damage_mult","amount":1.15,"weight":4},
+  {"id":"obsidian_core","name":"Obsidian Core","desc":"Core gains +16 max HP.","effect":"core_hp_flat","amount":16,"weight":1}
+]

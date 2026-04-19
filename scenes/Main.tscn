@@ -1,0 +1,264 @@
+[gd_scene load_steps=3 format=3 uid="uid://cj2tr2ob3vlqv"]
+
+[ext_resource type="Script" path="res://scripts/GameController.gd" id="1_controller"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_controller")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="UI" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopPanel" type="PanelContainer" parent="CanvasLayer/UI"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = 58.0
+
+[node name="BoardRegion" type="Control" parent="CanvasLayer/UI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 72.0
+offset_right = -244.0
+offset_bottom = -136.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopMargin" type="MarginContainer" parent="CanvasLayer/UI/TopPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 6
+
+[node name="TopRow" type="HBoxContainer" parent="CanvasLayer/UI/TopPanel/TopMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="PlayerLabel" type="Label" parent="CanvasLayer/UI/TopPanel/TopMargin/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "PLAYER HP 0"
+
+[node name="TurnLabel" type="Label" parent="CanvasLayer/UI/TopPanel/TopMargin/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 4
+horizontal_alignment = 1
+text = "TURN 1"
+
+[node name="EnemyLabel" type="Label" parent="CanvasLayer/UI/TopPanel/TopMargin/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_alignment = 2
+text = "ENEMY HP 0"
+
+[node name="RightPanel" type="PanelContainer" parent="CanvasLayer/UI"]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -228.0
+offset_top = 72.0
+offset_right = -8.0
+offset_bottom = -136.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="RightMargin" type="MarginContainer" parent="CanvasLayer/UI/RightPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="Log" type="RichTextLabel" parent="CanvasLayer/UI/RightPanel/RightMargin"]
+layout_mode = 2
+scroll_active = true
+bbcode_enabled = false
+fit_content = false
+text = ""
+
+[node name="BottomPanel" type="PanelContainer" parent="CanvasLayer/UI"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -128.0
+offset_right = -8.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="BottomMargin" type="MarginContainer" parent="CanvasLayer/UI/BottomPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="BottomRow" type="HBoxContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="StatsColumn" type="VBoxContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow"]
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="EnergyLabel" type="Label" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/StatsColumn"]
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+text = "ENERGY"
+
+[node name="QueueLabel" type="Label" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/StatsColumn"]
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+text = "QUEUED"
+
+[node name="ModeLabel" type="Label" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/StatsColumn"]
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+text = "SELECTED BASIC"
+
+[node name="DebugLabel" type="Label" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/StatsColumn"]
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+text = "Debug"
+
+[node name="TileButtons" type="GridContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+columns = 3
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6
+
+[node name="BasicButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/TileButtons"]
+custom_minimum_size = Vector2(92, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Basic\n1"
+icon_alignment = 0
+vertical_icon_alignment = 0
+expand_icon = true
+
+[node name="MeleeButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/TileButtons"]
+custom_minimum_size = Vector2(92, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Melee\n2"
+icon_alignment = 0
+vertical_icon_alignment = 0
+expand_icon = true
+
+[node name="RangedButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/TileButtons"]
+custom_minimum_size = Vector2(92, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Ranged\n2"
+icon_alignment = 0
+vertical_icon_alignment = 0
+expand_icon = true
+
+[node name="GatherButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/TileButtons"]
+custom_minimum_size = Vector2(92, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Gather\n3"
+icon_alignment = 0
+vertical_icon_alignment = 0
+expand_icon = true
+
+[node name="DefenseButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/TileButtons"]
+custom_minimum_size = Vector2(92, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Defense\n2"
+icon_alignment = 0
+vertical_icon_alignment = 0
+expand_icon = true
+
+[node name="ControlsColumn" type="VBoxContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow"]
+custom_minimum_size = Vector2(132, 0)
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="EndTurnButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ControlsColumn"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+text = "END TURN"
+
+[node name="SkipButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ControlsColumn"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+text = "SKIP"
+
+[node name="ClearQueueButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ControlsColumn"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+text = "CLEAR QUEUE"
+
+[node name="CardPanel" type="PanelContainer" parent="CanvasLayer/UI"]
+visible = false
+layout_mode = 1
+anchors_preset = 0
+anchor_left = 0.22
+anchor_top = 0.2
+anchor_right = 0.78
+anchor_bottom = 0.8
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+
+[node name="CardMargin" type="MarginContainer" parent="CanvasLayer/UI/CardPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="CardVBox" type="VBoxContainer" parent="CanvasLayer/UI/CardPanel/CardMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="CanvasLayer/UI/CardPanel/CardMargin/CardVBox"]
+layout_mode = 2
+horizontal_alignment = 1
+text = "CHOOSE AN UPGRADE"
+
+[node name="Card1" type="Button" parent="CanvasLayer/UI/CardPanel/CardMargin/CardVBox"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+text = "Card 1"
+
+[node name="Card2" type="Button" parent="CanvasLayer/UI/CardPanel/CardMargin/CardVBox"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+text = "Card 2"
+
+[node name="Card3" type="Button" parent="CanvasLayer/UI/CardPanel/CardMargin/CardVBox"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+text = "Card 3"

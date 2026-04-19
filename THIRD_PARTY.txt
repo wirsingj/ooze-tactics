@@ -1,0 +1,17 @@
+﻿THIRD-PARTY COMPONENTS
+
+1) Godot Engine
+- Project dependency: runtime/game engine (not vendored source code in this repository)
+- Website: https://godotengine.org
+- License: MIT License
+- Copyright: Godot contributors
+
+2) Pillow (Python Imaging Library Fork)
+- Usage: optional development-time atlas generation script (tools/generate_atlas.py)
+- Included in repo: No (external tool dependency only)
+- Website: https://python-pillow.org
+- License: HPND-style/Pillow license
+
+Notes:
+- No third-party code is vendored into this repository.
+- All game source scripts and generated art assets in this repository are authored/generated for this project.

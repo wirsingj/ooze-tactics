@@ -1,0 +1,13 @@
+﻿OOZE-TACTICS
+Copyright (c) 2026 John Wirsing. All rights reserved.
+
+All rights are reserved by the copyright owner.
+
+Permission is NOT granted to any person or entity to use, copy, modify, merge,
+publish, distribute, sublicense, sell, host, or otherwise exploit this software,
+its source code, assets, or documentation, in whole or in part, in any form.
+
+This project is provided for private use by the copyright owner only.
+No open-source license is granted.
+
+Any unauthorized use is strictly prohibited.

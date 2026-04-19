@@ -1,0 +1,5 @@
+[
+  {"id":"bulwark","name":"Bulwark Cluster","weights":{"grow":3,"defend":5,"attack":2},"budget":20},
+  {"id":"spitter","name":"Spitter Cluster","weights":{"grow":3,"defend":1,"attack":6},"budget":20},
+  {"id":"bloom","name":"Bloom Cluster","weights":{"grow":6,"defend":2,"attack":2},"budget":20}
+]
