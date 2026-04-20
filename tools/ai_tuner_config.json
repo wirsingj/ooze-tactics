@@ -1,0 +1,41 @@
+{
+	"checkpoints": [15, 50, 100],
+	"runs_per_seed": 1,
+	"top_n": 5,
+	"output_dir": "user://ai_tuner_output",
+	"fixed_overrides": {},
+	"scenarios": [
+		{
+			"name": "spectator_2v2_all_rooms",
+			"level_index": 3,
+			"player_team_size": 2,
+			"enemy_team_size": 2,
+			"turn_limit": 100,
+			"door_hp": 32,
+			"enemies_allied": true,
+			"seeds": [1337],
+			"stop_at_last_checkpoint": true,
+			"outcome_check_interval": 8
+		}
+	],
+	"search": {
+		"max_total_candidates": 4,
+		"max_grid_candidates": 2,
+		"random_iterations": 1,
+		"random_seed": 1337,
+		"grid_parameters": {
+			"ranged_saturation_soft_cap": [0.30, 0.34],
+			"ranged_saturation_max_penalty": [36, 46],
+			"specialization_safe_phase_penalty": [14, 20],
+			"resource_safe_phase_bonus": [10, 16]
+		},
+		"random_parameters": {
+			"specialization_backline_blanket_penalty": {"min": 8, "max": 20, "step": 2},
+			"specialization_path_penalty": {"min": 8, "max": 20, "step": 2},
+			"resource_gather_focus_bonus": {"min": 8, "max": 18, "step": 2},
+			"resource_near_threat_penalty": {"min": 8, "max": 16, "step": 2},
+			"upgrade_priority_margin": {"min": 6, "max": 14, "step": 2},
+			"tile_upgrade_min_score": {"min": 58, "max": 74, "step": 2}
+		}
+	}
+}

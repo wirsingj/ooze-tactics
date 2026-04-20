@@ -88,11 +88,25 @@ const SPECIALIZATION_BACKLINE_BLANKET_PENALTY: int = 12
 const SPECIALIZATION_PATH_PENALTY: int = 12
 const UPGRADE_PRIORITY_MARGIN: int = 10
 
+var _tuning: Dictionary = {}
+
 # Enemy uses deterministic, pressure-biased heuristics:
 # 1) secure at least one frontline action when possible
 # 2) push pressure growth
 # 3) take resource opportunities that don't stall pressure
 # 4) avoid low-impact backline conversion churn
+
+func clear_tuning() -> void:
+	_tuning.clear()
+
+func set_tuning(overrides: Dictionary) -> void:
+	_tuning = overrides.duplicate(true)
+
+func _tp_int(key: String, fallback: int) -> int:
+	return int(_tuning.get(key, fallback))
+
+func _tp_float(key: String, fallback: float) -> float:
+	return float(_tuning.get(key, fallback))
 
 func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array:
 	var actions: Array = []
@@ -255,8 +269,11 @@ func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array
 		if candidate.is_empty() and conversions_used < MAX_CONVERSIONS_PER_TURN:
 			candidate = _best_heart_pressure_conversion_action(state, owner_id, energy, reserved_convert_blocks)
 
-		var upgrade_energy_threshold: int = ENGAGED_UPGRADE_ENERGY_THRESHOLD if engaged else NON_ENGAGED_UPGRADE_ENERGY_THRESHOLD
-		if tile_upgrades_used < MAX_TILE_UPGRADES_PER_TURN and energy >= upgrade_energy_threshold:
+		var engaged_upgrade_energy_threshold: int = _tp_int("engaged_upgrade_energy_threshold", ENGAGED_UPGRADE_ENERGY_THRESHOLD)
+		var non_engaged_upgrade_energy_threshold: int = _tp_int("non_engaged_upgrade_energy_threshold", NON_ENGAGED_UPGRADE_ENERGY_THRESHOLD)
+		var upgrade_energy_threshold: int = engaged_upgrade_energy_threshold if engaged else non_engaged_upgrade_energy_threshold
+		var max_tile_upgrades_per_turn: int = maxi(0, _tp_int("max_tile_upgrades_per_turn", MAX_TILE_UPGRADES_PER_TURN))
+		if tile_upgrades_used < max_tile_upgrades_per_turn and energy >= upgrade_energy_threshold:
 			var prefer_frontline_upgrade: bool = engaged
 			var tile_upgrade_candidate: Dictionary = _best_tile_upgrade_action(state, owner_id, energy, reserved_convert_blocks, prefer_frontline_upgrade)
 			if _should_prefer_tile_upgrade_candidate(candidate, tile_upgrade_candidate, engaged):
@@ -1399,7 +1416,8 @@ func _best_tile_upgrade_action(
 					"planned_total_count": 0,
 				}
 			}
-	if best_score < TILE_UPGRADE_MIN_SCORE:
+	var tile_upgrade_min_score: int = _tp_int("tile_upgrade_min_score", TILE_UPGRADE_MIN_SCORE)
+	if best_score < tile_upgrade_min_score:
 		return {}
 	return best
 
@@ -1415,14 +1433,16 @@ func _should_prefer_tile_upgrade_candidate(current_candidate: Dictionary, tile_u
 	var kind: String = String(current_action.get("type", "pass"))
 	if kind == "convert_tile":
 		var to_type: String = String(current_action.get("to_type", "basic"))
+		var priority_margin: int = _tp_int("upgrade_priority_margin", UPGRADE_PRIORITY_MARGIN)
 		if engaged and to_type == "defense":
-			return upgrade_score >= current_score + UPGRADE_PRIORITY_MARGIN + 10
-		return upgrade_score >= current_score + UPGRADE_PRIORITY_MARGIN - 2
+			return upgrade_score >= current_score + priority_margin + 10
+		return upgrade_score >= current_score + priority_margin - 2
 	if kind == "place_tile":
+		var place_priority_margin: int = _tp_int("upgrade_priority_margin", UPGRADE_PRIORITY_MARGIN)
 		var placed_type: String = String(current_action.get("tile_type", "basic"))
 		if placed_type == "basic":
-			return upgrade_score >= current_score + UPGRADE_PRIORITY_MARGIN - 4
-		return upgrade_score >= current_score + UPGRADE_PRIORITY_MARGIN
+			return upgrade_score >= current_score + place_priority_margin - 4
+		return upgrade_score >= current_score + place_priority_margin
 	return upgrade_score > current_score
 
 func _upgrade_focus_bonus(
@@ -1893,24 +1913,26 @@ func _resource_objective_score(state: GameState, owner_id: int, tile: Vector2i, 
 	if best_dist >= 999999:
 		return 0
 
-	var score: int = maxi(0, RESOURCE_OBJECTIVE_MAX_DISTANCE - best_dist + 1) * RESOURCE_OBJECTIVE_STEP_WEIGHT
+	var max_dist: int = _tp_int("resource_objective_max_distance", RESOURCE_OBJECTIVE_MAX_DISTANCE)
+	var step_weight: int = _tp_int("resource_objective_step_weight", RESOURCE_OBJECTIVE_STEP_WEIGHT)
+	var score: int = maxi(0, max_dist - best_dist + 1) * step_weight
 	match phase:
 		PHASE_SAFE_EXPANSION:
-			score += RESOURCE_SAFE_PHASE_BONUS
+			score += _tp_int("resource_safe_phase_bonus", RESOURCE_SAFE_PHASE_BONUS)
 		PHASE_APPROACHING_CONTACT:
-			score += RESOURCE_APPROACHING_PHASE_BONUS
+			score += _tp_int("resource_approaching_phase_bonus", RESOURCE_APPROACHING_PHASE_BONUS)
 		_:
 			pass
 	if best_dist <= 1 and phase != PHASE_ACTIVE_FRONTLINE:
-		score += RESOURCE_LOW_THREAT_BONUS
+		score += _tp_int("resource_low_threat_bonus", RESOURCE_LOW_THREAT_BONUS)
 	if on_open_resource:
-		score += RESOURCE_NODE_HOLD_BONUS
+		score += _tp_int("resource_node_hold_bonus", RESOURCE_NODE_HOLD_BONUS)
 	if tile_type == "gather" and best_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
-		score += RESOURCE_GATHER_FOCUS_BONUS
+		score += _tp_int("resource_gather_focus_bonus", RESOURCE_GATHER_FOCUS_BONUS)
 
 	var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, tile)
 	if nearest_enemy_dist <= 2 and phase != PHASE_ACTIVE_FRONTLINE:
-		score -= RESOURCE_NEAR_THREAT_PENALTY
+		score -= _tp_int("resource_near_threat_penalty", RESOURCE_NEAR_THREAT_PENALTY)
 	return maxi(0, score)
 
 func _adjacent_open_ground_count(state: GameState, tile: Vector2i) -> int:
@@ -2020,21 +2042,27 @@ func _conversion_score(state: GameState, owner_id: int, block: Dictionary, from_
 func _is_ranged_hard_capped(state: GameState, owner_id: int) -> bool:
 	var owner_blocks: Array = state.get_owner_blocks(owner_id)
 	var total_tiles: int = owner_blocks.size()
-	if total_tiles < RANGED_SATURATION_MIN_TILES:
+	var min_tiles: int = _tp_int("ranged_saturation_min_tiles", RANGED_SATURATION_MIN_TILES)
+	if total_tiles < min_tiles:
 		return false
-	return _owner_type_ratio(owner_blocks, "ranged") >= RANGED_SATURATION_HARD_CAP
+	var hard_cap: float = _tp_float("ranged_saturation_hard_cap", RANGED_SATURATION_HARD_CAP)
+	return _owner_type_ratio(owner_blocks, "ranged") >= hard_cap
 
 func _ranged_saturation_penalty(state: GameState, owner_id: int) -> int:
 	var owner_blocks: Array = state.get_owner_blocks(owner_id)
 	var total_tiles: int = owner_blocks.size()
-	if total_tiles < RANGED_SATURATION_MIN_TILES:
+	var min_tiles: int = _tp_int("ranged_saturation_min_tiles", RANGED_SATURATION_MIN_TILES)
+	if total_tiles < min_tiles:
 		return 0
 	var ratio: float = _owner_type_ratio(owner_blocks, "ranged")
-	if ratio <= RANGED_SATURATION_SOFT_CAP:
+	var soft_cap: float = _tp_float("ranged_saturation_soft_cap", RANGED_SATURATION_SOFT_CAP)
+	var hard_cap: float = _tp_float("ranged_saturation_hard_cap", RANGED_SATURATION_HARD_CAP)
+	if ratio <= soft_cap:
 		return 0
-	var band: float = maxf(0.0001, RANGED_SATURATION_HARD_CAP - RANGED_SATURATION_SOFT_CAP)
-	var t: float = clampf((ratio - RANGED_SATURATION_SOFT_CAP) / band, 0.0, 1.0)
-	return int(round(float(RANGED_SATURATION_MAX_PENALTY) * t))
+	var band: float = maxf(0.0001, hard_cap - soft_cap)
+	var t: float = clampf((ratio - soft_cap) / band, 0.0, 1.0)
+	var max_penalty: int = _tp_int("ranged_saturation_max_penalty", RANGED_SATURATION_MAX_PENALTY)
+	return int(round(float(max_penalty) * t))
 
 func _owner_type_ratio(owner_blocks: Array, tile_type: String) -> float:
 	if owner_blocks.is_empty():
@@ -2060,14 +2088,18 @@ func _owner_specialization_ratio(owner_blocks: Array) -> float:
 func _specialization_saturation_penalty(state: GameState, owner_id: int) -> int:
 	var owner_blocks: Array = state.get_owner_blocks(owner_id)
 	var total_tiles: int = owner_blocks.size()
-	if total_tiles < SPECIALIZATION_MIN_TILES:
+	var min_tiles: int = _tp_int("specialization_min_tiles", SPECIALIZATION_MIN_TILES)
+	if total_tiles < min_tiles:
 		return 0
 	var ratio: float = _owner_specialization_ratio(owner_blocks)
-	if ratio <= SPECIALIZATION_SOFT_CAP:
+	var soft_cap: float = _tp_float("specialization_soft_cap", SPECIALIZATION_SOFT_CAP)
+	var hard_cap: float = _tp_float("specialization_hard_cap", SPECIALIZATION_HARD_CAP)
+	if ratio <= soft_cap:
 		return 0
-	var band: float = maxf(0.0001, SPECIALIZATION_HARD_CAP - SPECIALIZATION_SOFT_CAP)
-	var t: float = clampf((ratio - SPECIALIZATION_SOFT_CAP) / band, 0.0, 1.0)
-	return int(round(float(SPECIALIZATION_MAX_PENALTY) * t))
+	var band: float = maxf(0.0001, hard_cap - soft_cap)
+	var t: float = clampf((ratio - soft_cap) / band, 0.0, 1.0)
+	var max_penalty: int = _tp_int("specialization_max_penalty", SPECIALIZATION_MAX_PENALTY)
+	return int(round(float(max_penalty) * t))
 
 func _owned_specialized_count_within_manhattan(state: GameState, owner_id: int, tile: Vector2i, radius: int) -> int:
 	var total: int = 0
@@ -2106,16 +2138,20 @@ func _specialization_spread_penalty(
 		return 0
 
 	var penalty: int = _specialization_saturation_penalty(state, owner_id)
-	var nearby_specialized: int = _owned_specialized_count_within_manhattan(state, owner_id, tile, SPECIALIZATION_LOCAL_RADIUS)
+	var local_radius: int = _tp_int("specialization_local_radius", SPECIALIZATION_LOCAL_RADIUS)
+	var nearby_specialized: int = _owned_specialized_count_within_manhattan(state, owner_id, tile, local_radius)
 	var adjacent_specialized: int = _adjacent_owned_specialized_count(state, owner_id, tile)
-	penalty += maxi(0, nearby_specialized - SPECIALIZATION_LOCAL_SOFT_LIMIT) * SPECIALIZATION_LOCAL_CLUSTER_PENALTY
-	penalty += adjacent_specialized * SPECIALIZATION_ADJACENT_PENALTY
+	var local_soft_limit: int = _tp_int("specialization_local_soft_limit", SPECIALIZATION_LOCAL_SOFT_LIMIT)
+	var local_cluster_penalty: int = _tp_int("specialization_local_cluster_penalty", SPECIALIZATION_LOCAL_CLUSTER_PENALTY)
+	var adjacent_penalty: int = _tp_int("specialization_adjacent_penalty", SPECIALIZATION_ADJACENT_PENALTY)
+	penalty += maxi(0, nearby_specialized - local_soft_limit) * local_cluster_penalty
+	penalty += adjacent_specialized * adjacent_penalty
 	if phase == PHASE_SAFE_EXPANSION:
-		penalty += SPECIALIZATION_SAFE_PHASE_PENALTY
+		penalty += _tp_int("specialization_safe_phase_penalty", SPECIALIZATION_SAFE_PHASE_PENALTY)
 	if zone == "backline" and nearest_enemy_dist >= LOW_THREAT_MIN_ENEMY_DISTANCE:
-		penalty += SPECIALIZATION_BACKLINE_BLANKET_PENALTY
+		penalty += _tp_int("specialization_backline_blanket_penalty", SPECIALIZATION_BACKLINE_BLANKET_PENALTY)
 	if zone != "frontline" and nearest_enemy_dist >= PHASE_APPROACHING_CONTACT_MAX_ENEMY_DISTANCE + 1 and support <= 2:
-		penalty += SPECIALIZATION_PATH_PENALTY
+		penalty += _tp_int("specialization_path_penalty", SPECIALIZATION_PATH_PENALTY)
 
 	var objective_dist: int = _primary_objective_distance(state, owner_id, tile)
 	if objective_dist <= 5:
