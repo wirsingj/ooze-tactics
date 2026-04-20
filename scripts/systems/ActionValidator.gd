@@ -76,7 +76,7 @@ func validate_place_target(
 	return state.evaluate_growth_target(owner_id, tile, min_adjacent, planned_tiles)
 
 func validate_convert_target(
-	state: GameState,
+	_state: GameState,
 	owner_id: int,
 	block: Dictionary,
 	to_type: String,
@@ -93,7 +93,8 @@ func validate_convert_target(
 	if from_type != "basic" and to_type != "basic":
 		return {"ok": false, "reason": "requires basic tile"}
 
-	var delta: int = Combat.conversion_energy_delta(from_type, to_type)
+	var from_tier: int = int(block.get("upgrade_tier", 0))
+	var delta: int = Combat.conversion_energy_delta(from_type, to_type, from_tier)
 	if delta > 0 and int(plan.get("remaining_energy", 0)) < delta:
 		return {"ok": false, "reason": "insufficient energy"}
 
@@ -113,12 +114,13 @@ func validate_upgrade_target(
 		return {"ok": false, "reason": "basic cannot upgrade"}
 	if not Combat.UPGRADE_BASE_COST.has(tile_type):
 		return {"ok": false, "reason": "tile cannot upgrade"}
-	if int(block.get("upgrade_tier", 0)) >= 1:
-		return {"ok": false, "reason": "already upgraded"}
+	var current_tier: int = maxi(Combat.SPECIALIZATION_TIER, int(block.get("upgrade_tier", Combat.SPECIALIZATION_TIER)))
+	if current_tier >= Combat.MAX_UPGRADE_TIER:
+		return {"ok": false, "reason": "max tier reached"}
 
 	var planned_type_count: int = int(plan.get("planned_upgrade_counts", {}).get(tile_type, 0))
 	var planned_total_count: int = int(plan.get("planned_upgrade_total", 0))
-	var cost: int = Combat.upgrade_energy_cost(state, owner_id, tile_type, planned_type_count, planned_total_count)
+	var cost: int = Combat.upgrade_energy_cost(state, owner_id, tile_type, planned_type_count, planned_total_count, current_tier)
 	if cost <= 0:
 		return {"ok": false, "reason": "invalid upgrade cost"}
 	if int(plan.get("remaining_energy", 0)) < cost:

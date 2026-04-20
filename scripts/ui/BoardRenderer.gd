@@ -7,15 +7,18 @@ class_name BoardRenderer
 
 const TYPE_ORDER: Array[String] = ["basic", "gather", "defense", "melee", "ranged"]
 const ATLAS_CATALOG_SCRIPT: GDScript = preload("res://scripts/ui/AtlasCatalog.gd")
-const OVERLAY_OWNER_BLEND: float = 0.06
+const OVERLAY_OWNER_BLEND: float = 0.04
 const PREVIEW_ALPHA_SCALE: float = 0.72
 const BASE_VARIANTS: int = 3
 const FRONTLINE_RIM_ALPHA: float = 0.18
-const RANGED_GLOW_ALPHA: float = 0.16
+const RANGED_GLOW_ALPHA: float = 0.07
 const HEART_GLOW_BASE_ALPHA: float = 0.18
 const HEART_GLOW_PULSE_ALPHA: float = 0.18
 const UPGRADE_BADGE_FILL_ALPHA: float = 0.74
-const UPGRADE_BADGE_LINE_ALPHA: float = 0.92
+const UPGRADE_RING_ALPHA: float = 0.58
+const UPGRADE_RING_SHADOW_ALPHA: float = 0.30
+const UPGRADE_TIER_DOT_SHADOW_ALPHA: float = 0.70
+const UPGRADE_TIER_DOT_FILL_ALPHA: float = 1.0
 const EMISSIVE_STRENGTH: float = 0.28
 const EMISSIVE_BLOOM_STRENGTH: float = 0.24
 const EMISSIVE_BLOOM_RADIUS_TILES: float = 0.44
@@ -178,14 +181,14 @@ func make_ui_icon(tile_type: String, pixel_size: int = 32) -> Texture2D:
 	var tex: Texture2D = atlas.make_texture("ui_icon_%s" % tile_type)
 	if tex == null:
 		return null
-	if pixel_size <= 0 or pixel_size == 32:
-		return tex
 
 	var image: Image = tex.get_image()
 	if image == null or image.is_empty():
 		return tex
 
-	image.resize(pixel_size, pixel_size, Image.INTERPOLATE_NEAREST)
+	if pixel_size > 0 and pixel_size != 32:
+		image.resize(pixel_size, pixel_size, Image.INTERPOLATE_NEAREST)
+	image = _enhance_ui_icon_image(image)
 	return ImageTexture.create_from_image(image)
 
 func make_ui_skin(sprite_name: String) -> Texture2D:
@@ -425,35 +428,43 @@ func _draw_block(canvas: Node2D, state: GameState, block: Dictionary, board_orig
 
 	var tile_type: String = String(block.get("tile_type", "basic"))
 	var upgrade_tier: int = int(block.get("upgrade_tier", 0))
+	if tile_type == "basic":
+		_draw_basic_tile_detail(canvas, tile_rect, _owner_tint(state, owner), pos, anim_frame, modulate)
 	var overlay_key: String = _overlay_key(tile_type, int(block.get("gather_bonus", 0)) > 0)
 	if not overlay_key.is_empty() and atlas.has_sprite(overlay_key):
 		var overlay_rect: Rect2 = _overlay_rect(tile_rect, tile_type)
 		if tile_type != "basic":
-			var underlay: Color = _multiply_tint(Color(0.10, 0.14, 0.18, 0.72), modulate)
+			var underlay: Color = _multiply_tint(Color(0.10, 0.14, 0.18, 0.38), modulate)
 			atlas.draw(canvas, overlay_key, overlay_rect.grow(0.6), underlay)
 
 		var role_tint: Color = _overlay_role_tint(tile_type)
 		var overlay_tint: Color = role_tint.lerp(_owner_tint(state, owner), OVERLAY_OWNER_BLEND)
+		if upgrade_tier > Combat.SPECIALIZATION_TIER:
+			overlay_tint = overlay_tint.lerp(Color(1.0, 1.0, 1.0, overlay_tint.a), _tier_brightness_lerp(upgrade_tier))
 		overlay_tint.a = _overlay_opacity(tile_type)
 		var overlay_pass: Color = _multiply_tint(overlay_tint, modulate)
 		atlas.draw(canvas, overlay_key, overlay_rect, overlay_pass)
+		if tile_type != "basic":
+			var clarity_tint: Color = overlay_tint.lerp(Color(1.0, 1.0, 1.0, overlay_tint.a), 0.48)
+			clarity_tint.a = 1.0
+			atlas.draw(canvas, overlay_key, overlay_rect, _multiply_tint(clarity_tint, modulate))
 
 		var owner_glaze: Color = _owner_tint(state, owner)
-		owner_glaze.a = 0.12 if tile_type != "basic" else 0.08
+		owner_glaze.a = 0.04 if tile_type != "basic" else 0.06
 		atlas.draw(canvas, overlay_key, overlay_rect, _multiply_tint(owner_glaze, modulate))
 		_draw_role_readability_accent(canvas, overlay_rect, tile_type, modulate)
 
 	if upgrade_tier > 0:
-		_draw_upgrade_badge(canvas, tile_rect, tile_type, modulate)
+		_draw_upgrade_badge(canvas, tile_rect, tile_type, upgrade_tier, modulate)
 
 	if tile_type == "ranged":
 		var pulse: float = [0.0, 0.55, 1.0][(anim_frame + variant) % 3]
 		var ranged_glow: Color = _overlay_role_tint("ranged")
-		ranged_glow.a = (RANGED_GLOW_ALPHA + pulse * 0.06) * modulate.a
+		ranged_glow.a = (RANGED_GLOW_ALPHA + pulse * 0.02) * modulate.a
 		var center: Vector2 = tile_rect.position + tile_rect.size * 0.5
-		canvas.draw_circle(center, tile_size * 0.30, ranged_glow)
-		var core_glow: Color = Color(1.0, 1.0, 1.0, (0.10 + pulse * 0.08) * modulate.a)
-		canvas.draw_circle(center + Vector2(1.0, 0.0), tile_size * 0.13, core_glow)
+		canvas.draw_circle(center, tile_size * 0.22, ranged_glow)
+		var core_glow: Color = Color(1.0, 1.0, 1.0, (0.06 + pulse * 0.04) * modulate.a)
+		canvas.draw_circle(center + Vector2(0.5, 0.0), tile_size * 0.10, core_glow)
 
 	if bool(block.get("is_heart", false)):
 		var pulse_phase: float = [0.0, 0.55, 1.0][(anim_frame + variant) % 3]
@@ -529,22 +540,27 @@ func _draw_preview_action(
 	var owner: int = int(action.get("owner", 0))
 	var tile_type: String = "basic"
 	var tile: Vector2i = Vector2i(-1, -1)
+	var preview_tier: int = 0
 
 	if kind == "place_tile":
 		tile = action.get("target", Vector2i(-1, -1))
 		tile_type = String(action.get("tile_type", "basic"))
+		preview_tier = 0 if tile_type == "basic" else Combat.SPECIALIZATION_TIER
 	elif kind == "convert_tile":
 		var block_id: int = int(action.get("block_id", -1))
 		if not state.blocks.has(block_id):
 			return
 		tile = state.blocks[block_id]["pos"]
 		tile_type = String(action.get("to_type", "basic"))
+		preview_tier = 0 if tile_type == "basic" else Combat.SPECIALIZATION_TIER
 	elif kind == "upgrade_tile":
 		var upgrade_block_id: int = int(action.get("block_id", -1))
 		if not state.blocks.has(upgrade_block_id):
 			return
 		tile = state.blocks[upgrade_block_id]["pos"]
 		tile_type = String(action.get("tile_type", String(state.blocks[upgrade_block_id].get("tile_type", "basic"))))
+		var current_tier: int = int(state.blocks[upgrade_block_id].get("upgrade_tier", Combat.SPECIALIZATION_TIER))
+		preview_tier = clampi(current_tier + 1, Combat.SPECIALIZATION_TIER, Combat.MAX_UPGRADE_TIER)
 
 	if not state.is_inside(tile):
 		return
@@ -567,17 +583,21 @@ func _draw_preview_action(
 	if not overlay_key.is_empty() and atlas.has_sprite(overlay_key):
 		var overlay_rect: Rect2 = _overlay_rect(rect, tile_type)
 		if tile_type != "basic":
-			var preview_underlay: Color = _multiply_tint(Color(0.10, 0.14, 0.18, 0.50), preview_modulate)
+			var preview_underlay: Color = _multiply_tint(Color(0.10, 0.14, 0.18, 0.30), preview_modulate)
 			atlas.draw(canvas, overlay_key, overlay_rect.grow(0.6), preview_underlay)
 		var role_tint: Color = _overlay_role_tint(tile_type).lerp(_owner_tint(state, owner), OVERLAY_OWNER_BLEND)
+		if preview_tier > Combat.SPECIALIZATION_TIER:
+			role_tint = role_tint.lerp(Color(1.0, 1.0, 1.0, role_tint.a), _tier_brightness_lerp(preview_tier))
 		role_tint.a = _overlay_opacity(tile_type)
 		atlas.draw(canvas, overlay_key, overlay_rect, _multiply_tint(role_tint, preview_modulate))
+		if tile_type != "basic":
+			var preview_clarity_tint: Color = role_tint.lerp(Color(1.0, 1.0, 1.0, role_tint.a), 0.48)
+			preview_clarity_tint.a = clampf(role_tint.a * 0.80, 0.0, 1.0)
+			atlas.draw(canvas, overlay_key, overlay_rect, _multiply_tint(preview_clarity_tint, preview_modulate))
 		_draw_role_readability_accent(canvas, overlay_rect, tile_type, preview_modulate)
 
-	if kind == "upgrade_tile":
-		_draw_upgrade_badge(canvas, rect, tile_type, preview_modulate)
-		var upgrade_rect: Rect2 = rect.grow(-2.0)
-		canvas.draw_rect(upgrade_rect, Color(1.0, 0.95, 0.72, 0.78 * preview_modulate.a), false, 2.0)
+	if preview_tier > 0:
+		_draw_upgrade_badge(canvas, rect, tile_type, preview_tier, preview_modulate)
 
 	if tile_type == "melee":
 		_draw_melee_preview(canvas, state, tile, board_origin, board_clip_rect, indicator_color)
@@ -667,14 +687,56 @@ func _preview_ranged_profile(action: Dictionary, state: GameState) -> Dictionary
 	var range_value: int = int(Combat.TILE_RULES["ranged"]["range"])
 	var splash_radius: int = 1
 	if String(action.get("type", "")) == "upgrade_tile":
-		range_value += Combat.RANGED_UPGRADE_RANGE_BONUS
-		splash_radius += Combat.RANGED_UPGRADE_SPLASH_RADIUS_BONUS
+		var block_id: int = int(action.get("block_id", -1))
+		if block_id >= 0 and state.blocks.has(block_id):
+			var block: Dictionary = state.blocks[block_id]
+			range_value = int(block.get("range", range_value)) + int(Combat.RANGED_UPGRADE_RANGE_BONUS)
+			splash_radius = 1 + int(block.get("ranged_splash_bonus", 0)) + int(Combat.RANGED_UPGRADE_SPLASH_RADIUS_BONUS)
+		else:
+			range_value += Combat.RANGED_UPGRADE_RANGE_BONUS
+			splash_radius += Combat.RANGED_UPGRADE_SPLASH_RADIUS_BONUS
 	elif String(action.get("type", "")) == "convert_tile":
 		var block_id: int = int(action.get("block_id", -1))
 		if block_id >= 0 and state.blocks.has(block_id):
 			range_value = int(maxi(range_value, int(state.blocks[block_id].get("range", range_value))))
 			splash_radius += int(state.blocks[block_id].get("ranged_splash_bonus", 0))
 	return {"range": range_value, "splash_radius": splash_radius}
+
+func _draw_basic_tile_detail(
+	canvas: Node2D,
+	tile_rect: Rect2,
+	owner_tint: Color,
+	tile: Vector2i,
+	anim_frame: int,
+	modulate: Color
+) -> void:
+	var center: Vector2 = tile_rect.position + tile_rect.size * 0.5
+	var noise_a: float = float(_tile_noise(tile.x, tile.y, 31) % 100) / 100.0
+	var noise_b: float = float(_tile_noise(tile.x, tile.y, 47) % 100) / 100.0
+	var frame_pulse: float = [0.0, 0.45, 1.0][(anim_frame + _tile_variant(tile)) % 3]
+
+	var core_tint: Color = owner_tint.lerp(Color(1.0, 1.0, 1.0, 1.0), 0.20)
+	core_tint.a = (0.14 + noise_a * 0.04 + frame_pulse * 0.03) * modulate.a
+	var core_radius: float = tile_size * (0.12 + noise_b * 0.03)
+	canvas.draw_circle(center + Vector2((noise_b - 0.5) * tile_size * 0.12, (noise_a - 0.5) * tile_size * 0.10), core_radius, core_tint)
+
+	var mote_color: Color = Color(0.98, 1.0, 1.0, (0.10 + frame_pulse * 0.03) * modulate.a)
+	canvas.draw_circle(center + Vector2(tile_size * 0.13, -tile_size * 0.10), tile_size * 0.05, mote_color)
+	canvas.draw_circle(center + Vector2(-tile_size * 0.11, tile_size * 0.09), tile_size * 0.04, mote_color)
+
+	var rim_rect: Rect2 = tile_rect.grow(-maxf(2.0, tile_size * 0.08))
+	canvas.draw_rect(rim_rect, Color(1.0, 1.0, 1.0, (0.10 + noise_b * 0.04) * modulate.a), false, maxf(1.0, tile_size * 0.028))
+	var arc_start: float = TAU * noise_a
+	canvas.draw_arc(
+		center,
+		tile_size * 0.34,
+		arc_start,
+		arc_start + PI * (0.80 + noise_b * 0.25),
+		10,
+		Color(1.0, 1.0, 1.0, (0.08 + frame_pulse * 0.03) * modulate.a),
+		maxf(1.0, tile_size * 0.022),
+		true
+	)
 
 func _has_adjacent_hostile(state: GameState, owner: int, tile: Vector2i) -> bool:
 	for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
@@ -690,23 +752,24 @@ func _draw_role_readability_accent(canvas: Node2D, overlay_rect: Rect2, tile_typ
 	match tile_type:
 		"defense":
 			var border_rect: Rect2 = overlay_rect.grow(-4.0)
-			canvas.draw_rect(border_rect, Color(0.08, 0.16, 0.22, 0.56 * alpha_scale), false, 2.0)
+			canvas.draw_rect(border_rect, Color(0.05, 0.09, 0.14, 0.72 * alpha_scale), false, 2.2)
 			canvas.draw_line(
 				border_rect.position + Vector2(2.0, 3.0),
 				border_rect.position + Vector2(border_rect.size.x - 2.0, 3.0),
-				Color(0.66, 0.90, 1.0, 0.36 * alpha_scale),
-				1.2
+				Color(0.86, 0.98, 1.0, 0.68 * alpha_scale),
+				1.6
 			)
 		"melee":
 			var center: Vector2 = overlay_rect.position + overlay_rect.size * 0.5
-			canvas.draw_line(center + Vector2(-7.0, 6.0), center + Vector2(0.0, -7.0), Color(0.10, 0.20, 0.30, 0.54 * alpha_scale), 2.0)
-			canvas.draw_line(center + Vector2(7.0, 6.0), center + Vector2(0.0, -7.0), Color(0.10, 0.20, 0.30, 0.54 * alpha_scale), 2.0)
-			canvas.draw_line(center + Vector2(-5.0, 6.0), center + Vector2(0.0, -5.0), Color(0.86, 0.98, 1.0, 0.24 * alpha_scale), 1.2)
-			canvas.draw_line(center + Vector2(5.0, 6.0), center + Vector2(0.0, -5.0), Color(0.86, 0.98, 1.0, 0.24 * alpha_scale), 1.2)
+			canvas.draw_line(center + Vector2(-7.0, 6.0), center + Vector2(0.0, -7.0), Color(0.06, 0.11, 0.16, 0.72 * alpha_scale), 2.2)
+			canvas.draw_line(center + Vector2(7.0, 6.0), center + Vector2(0.0, -7.0), Color(0.06, 0.11, 0.16, 0.72 * alpha_scale), 2.2)
+			canvas.draw_line(center + Vector2(-5.0, 6.0), center + Vector2(0.0, -5.0), Color(0.90, 1.0, 1.0, 0.62 * alpha_scale), 1.6)
+			canvas.draw_line(center + Vector2(5.0, 6.0), center + Vector2(0.0, -5.0), Color(0.90, 1.0, 1.0, 0.62 * alpha_scale), 1.6)
 		"ranged":
 			var ranged_center: Vector2 = overlay_rect.position + overlay_rect.size * 0.5
-			canvas.draw_circle(ranged_center, tile_size * 0.095, Color(0.10, 0.20, 0.30, 0.52 * alpha_scale))
-			canvas.draw_circle(ranged_center, tile_size * 0.15, Color(0.90, 1.0, 1.0, 0.24 * alpha_scale), false, 1.4)
+			canvas.draw_circle(ranged_center, tile_size * 0.105, Color(0.06, 0.11, 0.16, 0.74 * alpha_scale))
+			canvas.draw_circle(ranged_center, tile_size * 0.16, Color(0.94, 1.0, 1.0, 0.66 * alpha_scale), false, 1.8)
+			canvas.draw_circle(ranged_center + Vector2(0.0, 0.5), tile_size * 0.05, Color(1.0, 1.0, 1.0, 0.56 * alpha_scale))
 		"gather":
 			var gem_center: Vector2 = overlay_rect.position + overlay_rect.size * 0.5
 			var s: float = tile_size * 0.14
@@ -723,36 +786,81 @@ func _draw_role_readability_accent(canvas: Node2D, overlay_rect: Rect2, tile_typ
 				gem_poly[3],
 				gem_poly[0],
 			])
-			canvas.draw_colored_polygon(gem_poly, Color(0.92, 1.0, 0.88, 0.26 * alpha_scale))
-			canvas.draw_polyline(gem_outline, Color(0.10, 0.20, 0.30, 0.48 * alpha_scale), 1.2, true)
+			canvas.draw_colored_polygon(gem_poly, Color(0.96, 1.0, 0.90, 0.60 * alpha_scale))
+			canvas.draw_polyline(gem_outline, Color(0.05, 0.11, 0.16, 0.82 * alpha_scale), 1.6, true)
 		_:
 			pass
 
-func _draw_upgrade_badge(canvas: Node2D, tile_rect: Rect2, tile_type: String, modulate: Color) -> void:
+func _draw_upgrade_badge(canvas: Node2D, tile_rect: Rect2, tile_type: String, tier: int, modulate: Color) -> void:
+	var clamped_tier: int = clampi(tier, 1, Combat.MAX_UPGRADE_TIER)
 	var accent: Color = _overlay_role_tint(tile_type).lerp(Color(1.0, 1.0, 1.0, 1.0), 0.26)
 	var alpha_scale: float = clampf(modulate.a, 0.0, 1.0)
-	var badge_size: float = tile_size * 0.25
-	var badge_rect: Rect2 = Rect2(
-		tile_rect.position.x + tile_rect.size.x - badge_size - 2.0,
-		tile_rect.position.y + 2.0,
-		badge_size,
-		badge_size
-	)
-	canvas.draw_rect(
-		badge_rect,
-		Color(accent.r, accent.g, accent.b, UPGRADE_BADGE_FILL_ALPHA * alpha_scale),
-		true
-	)
-	canvas.draw_rect(
-		badge_rect,
-		Color(0.96, 0.98, 1.0, UPGRADE_BADGE_LINE_ALPHA * alpha_scale),
-		false,
-		1.6
-	)
-	var c: Vector2 = badge_rect.position + badge_rect.size * 0.5
-	var r: float = badge_rect.size.x * 0.23
-	canvas.draw_line(c + Vector2(-r, 0.0), c + Vector2(r, 0.0), Color(0.08, 0.16, 0.22, 0.84 * alpha_scale), 1.5)
-	canvas.draw_line(c + Vector2(0.0, -r), c + Vector2(0.0, r), Color(0.08, 0.16, 0.22, 0.84 * alpha_scale), 1.5)
+	var center: Vector2 = tile_rect.position + tile_rect.size * 0.5
+	var outer_radius: float = tile_size * (0.33 + float(clamped_tier - 1) * 0.02)
+	var glow_alpha: float = (UPGRADE_RING_SHADOW_ALPHA + float(clamped_tier - 1) * 0.08) * alpha_scale
+	var rim_alpha: float = (UPGRADE_RING_ALPHA - 0.12 + float(clamped_tier - 1) * 0.03) * alpha_scale
+	canvas.draw_circle(center, outer_radius + tile_size * 0.05, Color(accent.r, accent.g, accent.b, glow_alpha * 0.20))
+	canvas.draw_circle(center, outer_radius, Color(accent.r, accent.g, accent.b, glow_alpha * 0.12))
+	canvas.draw_circle(center, outer_radius * 0.94, Color(0.98, 0.99, 1.0, rim_alpha * 0.20), false, maxf(1.0, tile_size * 0.035))
+	canvas.draw_circle(center + Vector2(0.0, tile_size * 0.01), tile_size * 0.16, Color(1.0, 1.0, 1.0, UPGRADE_BADGE_FILL_ALPHA * 0.08 * alpha_scale))
+
+	var dot_radius: float = maxf(1.9, tile_size * 0.068)
+	var dot_spacing: float = maxf(4.0, tile_size * 0.18)
+	var dot_center_y: float = tile_rect.position.y + tile_rect.size.y * 0.74
+	var start_x: float = tile_rect.position.x + tile_rect.size.x * 0.5 - dot_spacing * (float(clamped_tier - 1) * 0.5)
+	for i in range(clamped_tier):
+		var dot_center: Vector2 = Vector2(start_x + dot_spacing * float(i), dot_center_y)
+		canvas.draw_circle(dot_center, dot_radius + 1.0, Color(0.04, 0.07, 0.10, UPGRADE_TIER_DOT_SHADOW_ALPHA * alpha_scale))
+		canvas.draw_circle(dot_center, dot_radius, Color(0.98, 0.97, 0.88, UPGRADE_TIER_DOT_FILL_ALPHA * alpha_scale))
+		canvas.draw_circle(dot_center, maxf(0.9, dot_radius * 0.48), Color(accent.r, accent.g, accent.b, minf(1.0, UPGRADE_BADGE_FILL_ALPHA + 0.14) * alpha_scale))
+
+func _enhance_ui_icon_image(source: Image) -> Image:
+	var image: Image = source.duplicate()
+	if image.get_format() != Image.FORMAT_RGBA8:
+		image.convert(Image.FORMAT_RGBA8)
+
+	var width: int = image.get_width()
+	var height: int = image.get_height()
+	var out: Image = Image.create(width, height, false, Image.FORMAT_RGBA8)
+	out.fill(Color(0.0, 0.0, 0.0, 0.0))
+
+	for y in range(height):
+		for x in range(width):
+			var px: Color = image.get_pixel(x, y)
+			if px.a > 0.04:
+				var icon_alpha: float = 1.0 if px.a >= 0.20 else clampf(0.88 + px.a * 0.35, 0.88, 1.0)
+				out.set_pixel(
+					x,
+					y,
+					Color(
+						clampf(px.r * 1.08, 0.0, 1.0),
+						clampf(px.g * 1.08, 0.0, 1.0),
+						clampf(px.b * 1.08, 0.0, 1.0),
+						icon_alpha
+					)
+				)
+				continue
+
+			var edge_alpha: float = 0.0
+			for oy in range(-1, 2):
+				var ny: int = y + oy
+				if ny < 0 or ny >= height:
+					continue
+				for ox in range(-1, 2):
+					if ox == 0 and oy == 0:
+						continue
+					var nx: int = x + ox
+					if nx < 0 or nx >= width:
+						continue
+					edge_alpha = maxf(edge_alpha, image.get_pixel(nx, ny).a)
+
+			if edge_alpha > 0.18:
+				out.set_pixel(x, y, Color(0.05, 0.10, 0.14, clampf(0.58 + edge_alpha * 0.30, 0.58, 0.90)))
+	return out
+
+func _tier_brightness_lerp(tier: int) -> float:
+	var bonus_steps: int = maxi(0, tier - Combat.SPECIALIZATION_TIER)
+	return clampf(float(bonus_steps) * 0.08, 0.0, 0.18)
 
 func _draw_recent_enemy_actions(canvas: Node2D, state: GameState, board_origin: Vector2, board_clip_rect: Rect2, recent_enemy_actions: Array, alpha: float) -> void:
 	if alpha <= 0.0:
@@ -906,14 +1014,41 @@ func _owner_tint(state: GameState, owner_id: int) -> Color:
 	var is_hostile: bool = state.are_hostile(GameState.PLAYER_ID, owner_id)
 	if not is_hostile:
 		var ally_count: int = ALLY_TINTS.size()
-		var ally_idx: int = int(posmod(owner_id, ally_count))
+		var ally_idx: int = _owner_palette_index(state, owner_id, false, ally_count)
 		return ALLY_TINTS[ally_idx]
 
 	var count: int = ENEMY_TINTS.size()
-	var idx: int = int(posmod(owner_id - 2, count))
-	if idx < 0:
-		idx += count
+	var idx: int = _owner_palette_index(state, owner_id, true, count)
 	return ENEMY_TINTS[idx]
+
+func _owner_palette_index(state: GameState, owner_id: int, hostile_to_player: bool, palette_size: int) -> int:
+	if palette_size <= 0:
+		return 0
+	var active_ids: Array[int] = _active_owner_ids_for_palette(state, hostile_to_player)
+	if active_ids.is_empty():
+		return int(posmod(owner_id, palette_size))
+	var idx: int = active_ids.find(owner_id)
+	if idx < 0:
+		idx = active_ids.size()
+	return int(posmod(idx, palette_size))
+
+func _active_owner_ids_for_palette(state: GameState, hostile_to_player: bool) -> Array[int]:
+	var ids: Array[int] = []
+	for owner_variant in state.players.keys():
+		var owner_id: int = int(owner_variant)
+		if owner_id == GameState.PLAYER_ID:
+			continue
+		var player_data: Dictionary = state.players.get(owner_id, {})
+		if not bool(player_data.get("alive", true)):
+			continue
+		if state.get_owner_blocks(owner_id).is_empty():
+			continue
+		var is_hostile: bool = state.are_hostile(GameState.PLAYER_ID, owner_id)
+		if is_hostile != hostile_to_player:
+			continue
+		ids.append(owner_id)
+	ids.sort()
+	return ids
 
 func _overlay_role_tint(tile_type: String) -> Color:
 	match tile_type:
@@ -946,7 +1081,7 @@ func _overlay_opacity(tile_type: String) -> float:
 func _overlay_rect(tile_rect: Rect2, tile_type: String) -> Rect2:
 	if tile_type == "basic":
 		return tile_rect
-	return tile_rect.grow(1.9)
+	return tile_rect.grow(maxf(2.0, tile_size * 0.08))
 
 func _multiply_tint(base: Color, modifier: Color) -> Color:
 	return Color(

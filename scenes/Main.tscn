@@ -23,7 +23,7 @@ anchor_right = 1.0
 offset_left = 12.0
 offset_top = 12.0
 offset_right = -12.0
-offset_bottom = 58.0
+offset_bottom = 60.0
 
 [node name="BoardRegion" type="Control" parent="CanvasLayer/UI"]
 layout_mode = 1
@@ -31,23 +31,23 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 12.0
-offset_top = 76.0
-offset_right = -256.0
-offset_bottom = -96.0
+offset_top = 70.0
+offset_right = -240.0
+offset_bottom = -88.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
 [node name="TopMargin" type="MarginContainer" parent="CanvasLayer/UI/TopPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_top = 6
-theme_override_constants/margin_right = 8
-theme_override_constants/margin_bottom = 6
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_left = 10
 
 [node name="TopVBox" type="VBoxContainer" parent="CanvasLayer/UI/TopPanel/TopMargin"]
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 6
 
 [node name="TopRow" type="HBoxContainer" parent="CanvasLayer/UI/TopPanel/TopMargin/TopVBox"]
 layout_mode = 2
@@ -97,7 +97,7 @@ layout_mode = 2
 text = "x8"
 
 [node name="ActorBar" type="RichTextLabel" parent="CanvasLayer/UI/TopPanel/TopMargin/TopVBox"]
-custom_minimum_size = Vector2(0, 18)
+custom_minimum_size = Vector2(0, 22)
 layout_mode = 2
 fit_content = false
 scroll_active = false
@@ -110,19 +110,19 @@ anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -244.0
-offset_top = 76.0
+offset_left = -256.0
+offset_top = 70.0
 offset_right = -12.0
-offset_bottom = -96.0
+offset_bottom = -88.0
 grow_horizontal = 0
 grow_vertical = 2
 
 [node name="RightMargin" type="MarginContainer" parent="CanvasLayer/UI/RightPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 6
-theme_override_constants/margin_top = 6
-theme_override_constants/margin_right = 6
-theme_override_constants/margin_bottom = 6
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
 
 [node name="Log" type="RichTextLabel" parent="CanvasLayer/UI/RightPanel/RightMargin"]
 layout_mode = 2
@@ -138,7 +138,7 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 12.0
-offset_top = -84.0
+offset_top = -88.0
 offset_right = -12.0
 offset_bottom = -12.0
 grow_horizontal = 2
@@ -146,17 +146,17 @@ grow_vertical = 0
 
 [node name="BottomMargin" type="MarginContainer" parent="CanvasLayer/UI/BottomPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
 
 [node name="BottomRow" type="HBoxContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 12
 
 [node name="StatsColumn" type="VBoxContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow"]
-custom_minimum_size = Vector2(272, 0)
+custom_minimum_size = Vector2(310, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 4
@@ -188,7 +188,7 @@ text = "Debug"
 [node name="ActionGroups" type="HBoxContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
 
 [node name="ExpansionGroup" type="PanelContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups"]
 custom_minimum_size = Vector2(116, 0)
@@ -196,13 +196,13 @@ layout_mode = 2
 
 [node name="ExpansionMargin" type="MarginContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/ExpansionGroup"]
 layout_mode = 2
-theme_override_constants/margin_left = 4
-theme_override_constants/margin_top = 4
-theme_override_constants/margin_right = 4
-theme_override_constants/margin_bottom = 4
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
 
 [node name="BasicButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/ExpansionGroup/ExpansionMargin"]
-custom_minimum_size = Vector2(108, 56)
+custom_minimum_size = Vector2(112, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Basic\n1"
@@ -217,17 +217,17 @@ size_flags_horizontal = 3
 
 [node name="CombatMargin" type="MarginContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/CombatGroup"]
 layout_mode = 2
-theme_override_constants/margin_left = 4
-theme_override_constants/margin_top = 4
-theme_override_constants/margin_right = 4
-theme_override_constants/margin_bottom = 4
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
 
 [node name="CombatButtons" type="HBoxContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/CombatGroup/CombatMargin"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
 
 [node name="MeleeButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/CombatGroup/CombatMargin/CombatButtons"]
-custom_minimum_size = Vector2(108, 56)
+custom_minimum_size = Vector2(112, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Melee\n2"
@@ -236,7 +236,7 @@ vertical_icon_alignment = 0
 expand_icon = true
 
 [node name="RangedButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/CombatGroup/CombatMargin/CombatButtons"]
-custom_minimum_size = Vector2(108, 56)
+custom_minimum_size = Vector2(112, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Ranged\n2"
@@ -245,7 +245,7 @@ vertical_icon_alignment = 0
 expand_icon = true
 
 [node name="DefenseButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/CombatGroup/CombatMargin/CombatButtons"]
-custom_minimum_size = Vector2(108, 56)
+custom_minimum_size = Vector2(112, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Defense\n2"
@@ -259,13 +259,13 @@ layout_mode = 2
 
 [node name="EconomyMargin" type="MarginContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/EconomyGroup"]
 layout_mode = 2
-theme_override_constants/margin_left = 4
-theme_override_constants/margin_top = 4
-theme_override_constants/margin_right = 4
-theme_override_constants/margin_bottom = 4
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
 
 [node name="GatherButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/EconomyGroup/EconomyMargin"]
-custom_minimum_size = Vector2(108, 56)
+custom_minimum_size = Vector2(112, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Gather\n3"
@@ -274,28 +274,28 @@ vertical_icon_alignment = 0
 expand_icon = true
 
 [node name="ControlsColumn" type="VBoxContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow"]
-custom_minimum_size = Vector2(132, 0)
+custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 6
 
 [node name="EndTurnButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ControlsColumn"]
-custom_minimum_size = Vector2(0, 32)
+custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
 text = "END TURN"
 
 [node name="ClearQueueButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ControlsColumn"]
-custom_minimum_size = Vector2(0, 24)
+custom_minimum_size = Vector2(0, 26)
 layout_mode = 2
 text = "CLEAR QUEUE"
 
 [node name="ReturnMenuButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ControlsColumn"]
-custom_minimum_size = Vector2(0, 24)
+custom_minimum_size = Vector2(0, 26)
 layout_mode = 2
 text = "MENU"
 
 [node name="DevUpgradeButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ControlsColumn"]
 visible = false
-custom_minimum_size = Vector2(0, 24)
+custom_minimum_size = Vector2(0, 26)
 layout_mode = 2
 text = "TEST UPGRADE"
 

@@ -313,9 +313,9 @@ func has_any_legal_action(owner_id: int, min_adjacent: int, grow_cost: int) -> b
 	for block in get_owner_blocks(owner_id):
 		var from_type: String = String(block.get("tile_type", "basic"))
 		if from_type != "basic":
-			return true # can always convert back to basic at zero cost
+			return true # can always convert specialized tiles back to basic for a refund
 		for to_type in ["defense", "melee", "ranged", "gather"]:
-			var delta: int = Combat.conversion_energy_delta(from_type, to_type)
+			var delta: int = Combat.conversion_energy_delta(from_type, to_type, int(block.get("upgrade_tier", 0)))
 			if energy >= delta:
 				return true
 
