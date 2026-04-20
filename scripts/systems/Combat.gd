@@ -32,6 +32,10 @@ const UPGRADE_BASE_COST: Dictionary = {
 	"defense": 7,
 	"gather": 6,
 }
+const MAX_UPGRADE_TIER: int = 3
+const SPECIALIZATION_TIER: int = 1
+const UPGRADE_TIER_II_SURCHARGE: int = 4
+const UPGRADE_TIER_III_SURCHARGE: int = 9
 const UPGRADE_TYPE_STEP_EVERY: int = 1
 const UPGRADE_GLOBAL_STEP_EVERY: int = 3
 const MELEE_UPGRADE_DAMAGE_BONUS: int = 1
@@ -43,28 +47,43 @@ const DEFENSE_UPGRADE_HP_BONUS: int = 4
 const DEFENSE_UPGRADE_GUARD_BONUS: int = 1
 const GATHER_UPGRADE_INCOME_BONUS: int = 1
 
-static func conversion_energy_delta(from_type: String, to_type: String) -> int:
+static func conversion_energy_delta(from_type: String, to_type: String, from_tier: int = 0) -> int:
 	if from_type == to_type:
 		return 0
 	if to_type == "basic":
-		return int(TILE_RULES["basic"]["cost"])
+		var role_cost: int = int(TILE_RULES.get(from_type, TILE_RULES["basic"]).get("cost", int(TILE_RULES["basic"]["cost"])))
+		var normalized_tier: int = maxi(SPECIALIZATION_TIER, from_tier)
+		return -_downgrade_refund(role_cost, normalized_tier)
 	if from_type == "basic":
 		return int(TILE_RULES[to_type]["cost"])
 	return 2
+
+static func _downgrade_refund(role_cost: int, tier: int) -> int:
+	# Tier I returns the most, Tier II medium, Tier III lowest.
+	if tier <= 1:
+		return maxi(1, int(ceili(float(role_cost) * 0.75)))
+	if tier == 2:
+		return maxi(1, int(ceili(float(role_cost) * 0.5)))
+	return maxi(1, int(floor(float(role_cost) / 3.0)))
 
 static func upgrade_energy_cost(
 	state: GameState,
 	owner_id: int,
 	tile_type: String,
 	planned_type_count: int = 0,
-	planned_total_count: int = 0
+	planned_total_count: int = 0,
+	current_tier: int = SPECIALIZATION_TIER
 ) -> int:
 	if not UPGRADE_BASE_COST.has(tile_type):
 		return -1
+	var target_tier: int = clampi(current_tier + 1, SPECIALIZATION_TIER + 1, MAX_UPGRADE_TIER)
 	var base: int = int(UPGRADE_BASE_COST[tile_type])
 	var prior_type: int = state.get_upgrade_count(owner_id, tile_type) + maxi(0, planned_type_count)
 	var prior_total: int = state.get_total_upgrade_count(owner_id) + maxi(0, planned_total_count)
-	return base + int(prior_type / UPGRADE_TYPE_STEP_EVERY) + int(prior_total / UPGRADE_GLOBAL_STEP_EVERY)
+	var tier_surcharge: int = UPGRADE_TIER_II_SURCHARGE
+	if target_tier >= 3:
+		tier_surcharge = UPGRADE_TIER_III_SURCHARGE
+	return base + tier_surcharge + int(prior_type / UPGRADE_TYPE_STEP_EVERY) + int(prior_total / UPGRADE_GLOBAL_STEP_EVERY)
 
 func resolve(actions: Array, state: GameState) -> Array[String]:
 	var report: Dictionary = resolve_with_report(actions, state)
@@ -72,10 +91,10 @@ func resolve(actions: Array, state: GameState) -> Array[String]:
 
 func resolve_with_report(actions: Array, state: GameState) -> Dictionary:
 	var report: Dictionary = _apply_staged_actions(actions, state, true)
-	var log: Array[String] = report.get("log", [])
+	var resolution_log: Array[String] = report.get("log", [])
 
-	_resolve_melee_damage(state, log)
-	_resolve_ranged_damage(state, log)
+	_resolve_melee_damage(state, resolution_log)
+	_resolve_ranged_damage(state, resolution_log)
 
 	var removed_positions: Array[Vector2i] = []
 	for block_id_variant in state.blocks.keys():
@@ -87,15 +106,15 @@ func resolve_with_report(actions: Array, state: GameState) -> Dictionary:
 
 	var removed: Array[int] = state.remove_dead_blocks()
 	for block_id in removed:
-		log.append("Block %d dissolved" % block_id)
+		resolution_log.append("Block %d dissolved" % block_id)
 	for tile in removed_positions:
 		state.mark_reclaim_block(tile, 1)
 
-	var defeat_report: Dictionary = _resolve_heart_defeats(state, log)
+	var defeat_report: Dictionary = _resolve_heart_defeats(state, resolution_log)
 	report["defeated_owners"] = defeat_report.get("defeated_owners", [])
 	report["player_heart_burst"] = int(defeat_report.get("player_heart_burst", 0))
 
-	report["log"] = log
+	report["log"] = resolution_log
 	return report
 
 func preview_resolution(state: GameState, actions: Array) -> Dictionary:
@@ -104,7 +123,7 @@ func preview_resolution(state: GameState, actions: Array) -> Dictionary:
 
 func _apply_staged_actions(actions: Array, state: GameState, log_failures: bool) -> Dictionary:
 	var ordered: Array = _order_actions(actions)
-	var log: Array[String] = []
+	var action_log: Array[String] = []
 	var applied_actions: Array = []
 	var failed_actions: Array = []
 	var results_by_preview_id: Dictionary = {}
@@ -114,11 +133,11 @@ func _apply_staged_actions(actions: Array, state: GameState, log_failures: bool)
 		var result: Dictionary = {"applied": false, "reason": "unsupported action"}
 		match kind:
 			"place_tile":
-				result = _apply_place_tile(action, state, log, log_failures)
+				result = _apply_place_tile(action, state, action_log, log_failures)
 			"convert_tile":
-				result = _apply_convert_tile(action, state, log, log_failures)
+				result = _apply_convert_tile(action, state, action_log, log_failures)
 			"upgrade_tile":
-				result = _apply_upgrade_tile(action, state, log, log_failures)
+				result = _apply_upgrade_tile(action, state, action_log, log_failures)
 			"pass":
 				result = {"applied": true}
 			_:
@@ -144,7 +163,7 @@ func _apply_staged_actions(actions: Array, state: GameState, log_failures: bool)
 		"applied_actions": applied_actions,
 		"failed_actions": failed_actions,
 		"results_by_preview_id": results_by_preview_id,
-		"log": log,
+		"log": action_log,
 	}
 
 func _sort_actions(a: Dictionary, b: Dictionary) -> bool:
@@ -210,12 +229,12 @@ func validate_place_action(action: Dictionary, state: GameState) -> Dictionary:
 
 	return {"ok": true}
 
-func _apply_place_tile(action: Dictionary, state: GameState, log: Array[String], log_failures: bool) -> Dictionary:
+func _apply_place_tile(action: Dictionary, state: GameState, event_log: Array[String], log_failures: bool) -> Dictionary:
 	var check: Dictionary = validate_place_action(action, state)
 	if not bool(check.get("ok", false)):
 		var reason: String = String(check.get("reason", "invalid placement"))
 		if log_failures:
-			log.append("Action failed (place): %s" % reason)
+			event_log.append("Action failed (place): %s" % reason)
 		return {"applied": false, "reason": reason}
 
 	var owner: int = int(action.get("owner", 0))
@@ -226,13 +245,14 @@ func _apply_place_tile(action: Dictionary, state: GameState, log: Array[String],
 	state.players[owner]["nutrients"] = int(state.players[owner]["nutrients"]) - cost
 	var block_id: int = state.spawn_block(owner, pos, false, int(TILE_RULES[tile_type]["max_hp"]), tile_type)
 	var block: Dictionary = state.blocks[block_id]
+	block["upgrade_tier"] = _default_upgrade_tier(tile_type)
 	_apply_tile_stats(block, tile_type)
 	block["max_hp"] = _effective_max_hp(block, tile_type)
 	block["hp"] = int(block["max_hp"])
 	_refresh_gather_bonus(state, block)
 	state.blocks[block_id] = block
 
-	log.append("Owner %d placed %s at (%d,%d)" % [owner, tile_type, pos.x, pos.y])
+	event_log.append("Owner %d placed %s at (%d,%d)" % [owner, tile_type, pos.x, pos.y])
 	return {"applied": true}
 
 func validate_convert_action(action: Dictionary, state: GameState) -> Dictionary:
@@ -257,7 +277,8 @@ func validate_convert_action(action: Dictionary, state: GameState) -> Dictionary
 	if from_type != "basic" and to_type != "basic":
 		return {"ok": false, "reason": "requires basic tile"}
 
-	var energy_delta: int = int(action.get("energy_delta", conversion_energy_delta(from_type, to_type)))
+	var from_tier: int = int(block.get("upgrade_tier", _default_upgrade_tier(from_type)))
+	var energy_delta: int = int(action.get("energy_delta", conversion_energy_delta(from_type, to_type, from_tier)))
 	if energy_delta > 0 and int(state.players[owner]["nutrients"]) < energy_delta:
 		return {"ok": false, "reason": "insufficient energy"}
 
@@ -279,24 +300,25 @@ func validate_upgrade_action(action: Dictionary, state: GameState) -> Dictionary
 		return {"ok": false, "reason": "basic cannot upgrade"}
 	if not UPGRADE_BASE_COST.has(tile_type):
 		return {"ok": false, "reason": "tile cannot upgrade"}
-	if int(block.get("upgrade_tier", 0)) >= 1:
-		return {"ok": false, "reason": "already upgraded"}
+	var current_tier: int = maxi(SPECIALIZATION_TIER, int(block.get("upgrade_tier", _default_upgrade_tier(tile_type))))
+	if current_tier >= MAX_UPGRADE_TIER:
+		return {"ok": false, "reason": "max tier reached"}
 
 	var planned_type_count: int = int(action.get("planned_type_count", 0))
 	var planned_total_count: int = int(action.get("planned_total_count", 0))
-	var cost: int = int(action.get("cost", upgrade_energy_cost(state, owner, tile_type, planned_type_count, planned_total_count)))
+	var cost: int = int(action.get("cost", upgrade_energy_cost(state, owner, tile_type, planned_type_count, planned_total_count, current_tier)))
 	if cost <= 0:
 		return {"ok": false, "reason": "invalid upgrade cost"}
 	if int(state.players[owner]["nutrients"]) < cost:
 		return {"ok": false, "reason": "insufficient energy"}
 	return {"ok": true}
 
-func _apply_convert_tile(action: Dictionary, state: GameState, log: Array[String], log_failures: bool) -> Dictionary:
+func _apply_convert_tile(action: Dictionary, state: GameState, event_log: Array[String], log_failures: bool) -> Dictionary:
 	var check: Dictionary = validate_convert_action(action, state)
 	if not bool(check.get("ok", false)):
 		var reason: String = String(check.get("reason", "invalid conversion"))
 		if log_failures:
-			log.append("Action failed (convert): %s" % reason)
+			event_log.append("Action failed (convert): %s" % reason)
 		return {"applied": false, "reason": reason}
 
 	var owner: int = int(action.get("owner", 0))
@@ -304,12 +326,13 @@ func _apply_convert_tile(action: Dictionary, state: GameState, log: Array[String
 	var to_type: String = String(action.get("to_type", "basic"))
 	var block: Dictionary = state.blocks[block_id]
 	var from_type: String = String(block.get("tile_type", "basic"))
-	var energy_delta: int = int(action.get("energy_delta", conversion_energy_delta(from_type, to_type)))
+	var from_tier: int = int(block.get("upgrade_tier", _default_upgrade_tier(from_type)))
+	var energy_delta: int = int(action.get("energy_delta", conversion_energy_delta(from_type, to_type, from_tier)))
 
 	state.players[owner]["nutrients"] = int(state.players[owner]["nutrients"]) - energy_delta
 	block["tile_type"] = to_type
 	block["last_converted_turn"] = state.turn_index
-	block["upgrade_tier"] = 0
+	block["upgrade_tier"] = _default_upgrade_tier(to_type)
 	_apply_tile_stats(block, to_type)
 
 	var new_max_hp: int = _effective_max_hp(block, to_type)
@@ -320,28 +343,29 @@ func _apply_convert_tile(action: Dictionary, state: GameState, log: Array[String
 
 	_refresh_gather_bonus(state, block)
 	state.blocks[block_id] = block
-	log.append("Owner %d converted block %d: %s -> %s" % [owner, block_id, from_type, to_type])
+	event_log.append("Owner %d converted block %d: %s -> %s" % [owner, block_id, from_type, to_type])
 	return {"applied": true}
 
-func _apply_upgrade_tile(action: Dictionary, state: GameState, log: Array[String], log_failures: bool) -> Dictionary:
+func _apply_upgrade_tile(action: Dictionary, state: GameState, event_log: Array[String], log_failures: bool) -> Dictionary:
 	var check: Dictionary = validate_upgrade_action(action, state)
 	if not bool(check.get("ok", false)):
 		var reason: String = String(check.get("reason", "invalid upgrade"))
 		if log_failures:
-			log.append("Action failed (upgrade): %s" % reason)
+			event_log.append("Action failed (upgrade): %s" % reason)
 		return {"applied": false, "reason": reason}
 
 	var owner: int = int(action.get("owner", 0))
 	var block_id: int = int(action.get("block_id", -1))
 	var block: Dictionary = state.blocks[block_id]
 	var tile_type: String = String(block.get("tile_type", "basic"))
+	var current_tier: int = maxi(SPECIALIZATION_TIER, int(block.get("upgrade_tier", _default_upgrade_tier(tile_type))))
 	var planned_type_count: int = int(action.get("planned_type_count", 0))
 	var planned_total_count: int = int(action.get("planned_total_count", 0))
-	var cost: int = int(action.get("cost", upgrade_energy_cost(state, owner, tile_type, planned_type_count, planned_total_count)))
+	var cost: int = int(action.get("cost", upgrade_energy_cost(state, owner, tile_type, planned_type_count, planned_total_count, current_tier)))
 
 	state.players[owner]["nutrients"] = int(state.players[owner]["nutrients"]) - cost
 	var old_max_hp: int = int(block.get("max_hp", int(TILE_RULES[tile_type]["max_hp"])))
-	block["upgrade_tier"] = 1
+	block["upgrade_tier"] = mini(MAX_UPGRADE_TIER, current_tier + 1)
 	_apply_tile_stats(block, tile_type)
 	var new_max_hp: int = _effective_max_hp(block, tile_type)
 	block["max_hp"] = new_max_hp
@@ -352,12 +376,12 @@ func _apply_upgrade_tile(action: Dictionary, state: GameState, log: Array[String
 	_refresh_gather_bonus(state, block)
 	state.blocks[block_id] = block
 	state.register_tile_upgrade(owner, tile_type)
-	log.append("Owner %d upgraded block %d (%s) for %d energy" % [owner, block_id, tile_type, cost])
+	event_log.append("Owner %d upgraded block %d (%s) to tier %d for %d energy" % [owner, block_id, tile_type, int(block["upgrade_tier"]), cost])
 	return {"applied": true}
 
 func _apply_tile_stats(block: Dictionary, tile_type: String) -> void:
 	var rules: Dictionary = TILE_RULES[tile_type]
-	var tier: int = int(block.get("upgrade_tier", 0))
+	var tier_bonus_steps: int = _upgrade_bonus_steps(tile_type, int(block.get("upgrade_tier", 0)))
 	var defense_value: int = int(rules["defense"])
 	var damage_value: int = int(rules["damage"])
 	var range_value: int = int(rules["range"])
@@ -366,19 +390,19 @@ func _apply_tile_stats(block: Dictionary, tile_type: String) -> void:
 	var defense_guard_bonus: int = 0
 	var gather_upgrade_bonus: int = 0
 
-	if tier > 0:
+	if tier_bonus_steps > 0:
 		match tile_type:
 			"melee":
-				damage_value += MELEE_UPGRADE_DAMAGE_BONUS
-				melee_break_bonus = MELEE_UPGRADE_BREAK_BONUS
+				damage_value += MELEE_UPGRADE_DAMAGE_BONUS * tier_bonus_steps
+				melee_break_bonus = MELEE_UPGRADE_BREAK_BONUS * tier_bonus_steps
 			"ranged":
-				range_value += RANGED_UPGRADE_RANGE_BONUS
-				ranged_splash_bonus = RANGED_UPGRADE_SPLASH_RADIUS_BONUS
+				range_value += RANGED_UPGRADE_RANGE_BONUS * tier_bonus_steps
+				ranged_splash_bonus = RANGED_UPGRADE_SPLASH_RADIUS_BONUS * tier_bonus_steps
 			"defense":
-				defense_value += DEFENSE_UPGRADE_DEFENSE_BONUS
-				defense_guard_bonus = DEFENSE_UPGRADE_GUARD_BONUS
+				defense_value += DEFENSE_UPGRADE_DEFENSE_BONUS * tier_bonus_steps
+				defense_guard_bonus = DEFENSE_UPGRADE_GUARD_BONUS * tier_bonus_steps
 			"gather":
-				gather_upgrade_bonus = GATHER_UPGRADE_INCOME_BONUS
+				gather_upgrade_bonus = GATHER_UPGRADE_INCOME_BONUS * tier_bonus_steps
 			_:
 				pass
 
@@ -394,11 +418,21 @@ func _apply_tile_stats(block: Dictionary, tile_type: String) -> void:
 
 func _effective_max_hp(block: Dictionary, tile_type: String) -> int:
 	var max_hp: int = int(TILE_RULES[tile_type]["max_hp"])
-	if tile_type == "defense" and int(block.get("upgrade_tier", 0)) > 0:
-		max_hp += DEFENSE_UPGRADE_HP_BONUS
+	var tier_bonus_steps: int = _upgrade_bonus_steps(tile_type, int(block.get("upgrade_tier", 0)))
+	if tile_type == "defense" and tier_bonus_steps > 0:
+		max_hp += DEFENSE_UPGRADE_HP_BONUS * tier_bonus_steps
 	if bool(block.get("is_heart", false)):
 		max_hp += GameState.HEART_TILE_HP_BONUS
 	return max_hp
+
+func _default_upgrade_tier(tile_type: String) -> int:
+	return 0 if tile_type == "basic" else SPECIALIZATION_TIER
+
+func _upgrade_bonus_steps(tile_type: String, tier: int) -> int:
+	if tile_type == "basic":
+		return 0
+	var normalized_tier: int = maxi(SPECIALIZATION_TIER, tier)
+	return maxi(0, normalized_tier - SPECIALIZATION_TIER)
 
 func _refresh_gather_bonus(state: GameState, block: Dictionary) -> void:
 	block["gather_bonus"] = 0
@@ -411,7 +445,7 @@ func _refresh_gather_bonus(state: GameState, block: Dictionary) -> void:
 	if bool(node.get("consumed", false)):
 		block["gather_bonus"] = Economy.GATHER_RESOURCE_BONUS
 
-func _resolve_melee_damage(state: GameState, log: Array[String]) -> void:
+func _resolve_melee_damage(state: GameState, event_log: Array[String]) -> void:
 	var pending_damage: Dictionary = {}
 
 	for block in state.blocks.values():
@@ -429,7 +463,7 @@ func _resolve_melee_damage(state: GameState, log: Array[String]) -> void:
 			if target_pos == state.door_tile and _can_damage_door(state, owner) and state.door_hp > 0:
 				var door_hit: int = _modified_damage(state, owner, melee_base)
 				state.door_hp = maxi(0, state.door_hp - door_hit)
-				log.append("Melee block %d hit door for %d" % [block_id, door_hit])
+				event_log.append("Melee block %d hit door for %d" % [block_id, door_hit])
 				continue
 
 			var target: Dictionary = state.get_block_at(target_pos)
@@ -441,11 +475,11 @@ func _resolve_melee_damage(state: GameState, log: Array[String]) -> void:
 			var base_damage: int = _modified_damage(state, owner, melee_base)
 			var melee_damage: int = base_damage + _melee_breaker_bonus(state, target) + int(block.get("melee_break_bonus", 0))
 			pending_damage[target_id] = int(pending_damage.get(target_id, 0)) + melee_damage
-			log.append("Melee block %d struck %d" % [block_id, target_id])
+			event_log.append("Melee block %d struck %d" % [block_id, target_id])
 
 	_apply_damage_batch(state, pending_damage)
 
-func _resolve_ranged_damage(state: GameState, log: Array[String]) -> void:
+func _resolve_ranged_damage(state: GameState, event_log: Array[String]) -> void:
 	var pending_damage: Dictionary = {}
 
 	for block in state.blocks.values():
@@ -463,14 +497,14 @@ func _resolve_ranged_damage(state: GameState, log: Array[String]) -> void:
 			ranged_damage = maxi(1, ranged_damage - RANGED_CONTACT_DAMAGE_PENALTY)
 		if String(target_info.get("kind", "")) == "door":
 			state.door_hp = maxi(0, state.door_hp - ranged_damage)
-			log.append("Ranged block %d shot door for %d" % [block_id, ranged_damage])
+			event_log.append("Ranged block %d shot door for %d" % [block_id, ranged_damage])
 			continue
 
 		var target_id: int = int(target_info.get("id", -1))
 		if target_id <= 0:
 			continue
 		pending_damage[target_id] = int(pending_damage.get(target_id, 0)) + ranged_damage
-		log.append("Ranged block %d shot %d" % [block_id, target_id])
+		event_log.append("Ranged block %d shot %d" % [block_id, target_id])
 		if not in_direct_contact:
 			_apply_ranged_splash(
 				state,
@@ -478,7 +512,7 @@ func _resolve_ranged_damage(state: GameState, log: Array[String]) -> void:
 				target_id,
 				ranged_damage,
 				pending_damage,
-				log,
+				event_log,
 				block_id,
 				int(block.get("ranged_splash_bonus", 0))
 			)
@@ -548,7 +582,7 @@ func _apply_ranged_splash(
 	primary_target_id: int,
 	primary_damage: int,
 	pending_damage: Dictionary,
-	log: Array[String],
+	event_log: Array[String],
 	source_id: int,
 	splash_radius_bonus: int
 ) -> void:
@@ -583,7 +617,7 @@ func _apply_ranged_splash(
 				continue
 			seen_targets[splash_id] = true
 			pending_damage[splash_id] = int(pending_damage.get(splash_id, 0)) + splash_damage
-			log.append("Ranged block %d splashed %d" % [source_id, splash_id])
+			event_log.append("Ranged block %d splashed %d" % [source_id, splash_id])
 
 func _has_adjacent_hostile(state: GameState, owner_id: int, pos: Vector2i) -> bool:
 	for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
@@ -594,7 +628,7 @@ func _has_adjacent_hostile(state: GameState, owner_id: int, pos: Vector2i) -> bo
 			return true
 	return false
 
-func _resolve_heart_defeats(state: GameState, log: Array[String]) -> Dictionary:
+func _resolve_heart_defeats(state: GameState, event_log: Array[String]) -> Dictionary:
 	var defeated_owners: Array = []
 
 	for owner_id_variant in state.players.keys():
@@ -615,14 +649,14 @@ func _resolve_heart_defeats(state: GameState, log: Array[String]) -> Dictionary:
 
 		state.players[owner_id]["alive"] = false
 		state.players[owner_id]["nutrients"] = 0
-		log.append("Owner %d defeated (all heart tiles destroyed)" % owner_id)
+		event_log.append("Owner %d defeated (all heart tiles destroyed)" % owner_id)
 
 		if owner_id != GameState.PLAYER_ID and state.players.has(GameState.PLAYER_ID):
 			state.players[GameState.PLAYER_ID]["nutrients"] = int(state.players[GameState.PLAYER_ID]["nutrients"]) + HEART_DEFEAT_BURST_ENERGY
 			player_burst_total += HEART_DEFEAT_BURST_ENERGY
 
 	if player_burst_total > 0:
-		log.append("Player gained %d energy from heart collapse" % player_burst_total)
+		event_log.append("Player gained %d energy from heart collapse" % player_burst_total)
 
 	return {
 		"defeated_owners": defeated_owners,

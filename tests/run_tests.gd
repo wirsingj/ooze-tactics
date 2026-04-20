@@ -1,5 +1,7 @@
 extends SceneTree
 
+const OOZE_AI_SCRIPT: GDScript = preload("res://scripts/systems/OozeAI.gd")
+
 var failures: Array[String] = []
 
 func _init() -> void:
@@ -14,15 +16,21 @@ func _init() -> void:
 	_test_support_and_stability()
 	_test_defense_guard_identity()
 	_test_ranged_contact_penalty_and_splash_role()
-	_test_enemy_ai_frontline_pressure()
-	_test_enemy_ai_engaged_upgrade_commitment()
-	_test_enemy_ai_avoids_ranged_saturation()
-	_test_enemy_ai_objective_upgrade_when_not_engaged()
-	_test_enemy_ai_progression_upgrade_when_far()
-	_test_enemy_ai_conversion_cooldown()
-	_test_enemy_ai_no_duplicate_actions()
+	_test_ooze_ai_frontline_pressure()
+	_test_ooze_ai_engaged_upgrade_commitment()
+	_test_ooze_ai_avoids_ranged_saturation()
+	_test_ooze_ai_objective_upgrade_when_not_engaged()
+	_test_ooze_ai_progression_upgrade_when_far()
+	_test_ooze_ai_conversion_cooldown()
+	_test_ooze_ai_no_duplicate_actions()
+	_test_ooze_ai_safe_phase_reduces_melee_spread()
+	_test_ooze_ai_safe_phase_uses_gather_on_rear_resources()
+	_test_ooze_ai_frontline_defense_density_brake()
+	_test_ooze_ai_safe_backline_downgrade()
 	_test_enemy_alignment_no_friendly_fire()
 	_test_enemy_alignment_dev_mode_hostility()
+	_test_team_color_uniqueness_for_active_owners()
+	_test_ooze_ai_side_swap_fairness_smoke()
 	_test_true_2v2_team_setup()
 	_test_heart_defeat_collapse_and_burst()
 	_test_dev_immortal_blocks_damage()
@@ -30,7 +38,9 @@ func _init() -> void:
 	_test_turn_limit_loss_condition()
 	_test_reclaim_delay_blocks_immediate_rebuild()
 	_test_non_basic_conversion_rejected()
-	_test_enemy_ai_converts_only_basic()
+	_test_ooze_ai_converts_only_basic()
+	_test_specialization_tier_progression_and_cap()
+	_test_downgrade_refund_scales_by_tier()
 	_test_spectator_stall_ignored()
 	_test_spectator_team_loss_condition()
 	_test_dev_spectator_disables_turn_limit()
@@ -327,7 +337,7 @@ func _test_ranged_contact_penalty_and_splash_role() -> void:
 	_assert(backline_primary_after < backline_primary_before, "Backline ranged should damage primary target")
 	_assert(backline_neighbor_after < backline_neighbor_before, "Backline ranged should still apply splash pressure")
 
-func _test_enemy_ai_frontline_pressure() -> void:
+func _test_ooze_ai_frontline_pressure() -> void:
 	var state: GameState = GameState.new()
 	state.width = 12
 	state.height = 8
@@ -340,7 +350,7 @@ func _test_enemy_ai_frontline_pressure() -> void:
 	state.spawn_block(2, Vector2i(6, 4), false, 9, "basic")
 	state.spawn_block(2, Vector2i(6, 3), false, 9, "basic")
 
-	var ai: EnemyAI = EnemyAI.new()
+	var ai = OOZE_AI_SCRIPT.new()
 	var actions: Array = ai.choose_actions(state, 2, 1)
 
 	var has_frontline_investment: bool = false
@@ -349,9 +359,9 @@ func _test_enemy_ai_frontline_pressure() -> void:
 			has_frontline_investment = true
 			break
 
-	_assert(has_frontline_investment, "Enemy AI should make at least one frontline action when possible")
+	_assert(has_frontline_investment, "Ooze AI should make at least one frontline action when possible")
 
-func _test_enemy_ai_engaged_upgrade_commitment() -> void:
+func _test_ooze_ai_engaged_upgrade_commitment() -> void:
 	var state: GameState = GameState.new()
 	state.width = 14
 	state.height = 9
@@ -368,7 +378,7 @@ func _test_enemy_ai_engaged_upgrade_commitment() -> void:
 	state.blocks[enemy_frontline]["last_converted_turn"] = -999999
 	state.blocks[enemy_second_line]["last_converted_turn"] = -999999
 
-	var ai: EnemyAI = EnemyAI.new()
+	var ai = OOZE_AI_SCRIPT.new()
 	var actions: Array = ai.choose_actions(state, 2, 1)
 	_assert(actions.size() > 0, "Engaged enemy should produce actions")
 
@@ -392,7 +402,7 @@ func _test_enemy_ai_engaged_upgrade_commitment() -> void:
 	_assert(has_frontline_upgrade, "Engaged AI should commit at least one frontline upgrade when affordable")
 	_assert(has_second_line_ranged, "Engaged AI should prefer second-line ranged support upgrades")
 
-func _test_enemy_ai_avoids_ranged_saturation() -> void:
+func _test_ooze_ai_avoids_ranged_saturation() -> void:
 	var state: GameState = GameState.new()
 	state.width = 16
 	state.height = 10
@@ -413,7 +423,7 @@ func _test_enemy_ai_avoids_ranged_saturation() -> void:
 	for tile in ranged_tiles:
 		state.spawn_block(2, tile, false, int(Combat.TILE_RULES["ranged"]["max_hp"]), "ranged")
 
-	var ai: EnemyAI = EnemyAI.new()
+	var ai = OOZE_AI_SCRIPT.new()
 	var actions: Array = ai.choose_actions(state, 2, 1)
 	var has_non_ranged_upgrade: bool = false
 	for action in actions:
@@ -425,7 +435,7 @@ func _test_enemy_ai_avoids_ranged_saturation() -> void:
 			has_non_ranged_upgrade = true
 	_assert(has_non_ranged_upgrade, "AI should still commit meaningful non-ranged upgrades when saturated")
 
-func _test_enemy_ai_objective_upgrade_when_not_engaged() -> void:
+func _test_ooze_ai_objective_upgrade_when_not_engaged() -> void:
 	var state: GameState = GameState.new()
 	state.width = 18
 	state.height = 9
@@ -442,7 +452,7 @@ func _test_enemy_ai_objective_upgrade_when_not_engaged() -> void:
 	var enemy_backline_2: int = state.spawn_block(2, Vector2i(12, 3), false, 9, "basic")
 	state.blocks[enemy_backline_2]["last_converted_turn"] = -999999
 
-	var ai: EnemyAI = EnemyAI.new()
+	var ai = OOZE_AI_SCRIPT.new()
 	var actions: Array = ai.choose_actions(state, 2, 1)
 	var has_upgrade: bool = false
 	for action in actions:
@@ -451,7 +461,7 @@ func _test_enemy_ai_objective_upgrade_when_not_engaged() -> void:
 			break
 	_assert(has_upgrade, "Non-engaged AI should still perform objective-facing upgrades instead of only basic spread")
 
-func _test_enemy_ai_progression_upgrade_when_far() -> void:
+func _test_ooze_ai_progression_upgrade_when_far() -> void:
 	var state: GameState = GameState.new()
 	state.width = 34
 	state.height = 12
@@ -470,7 +480,7 @@ func _test_enemy_ai_progression_upgrade_when_far() -> void:
 	state.blocks[edge_b]["last_converted_turn"] = -999999
 	state.blocks[edge_c]["last_converted_turn"] = -999999
 
-	var ai: EnemyAI = EnemyAI.new()
+	var ai = OOZE_AI_SCRIPT.new()
 	var actions: Array = ai.choose_actions(state, 2, 1)
 	var has_progress_plan: bool = false
 	for action in actions:
@@ -485,7 +495,7 @@ func _test_enemy_ai_progression_upgrade_when_far() -> void:
 				break
 	_assert(has_progress_plan, "Far non-engaged AI should still include objective-pressure actions, not only passive economy")
 
-func _test_enemy_ai_conversion_cooldown() -> void:
+func _test_ooze_ai_conversion_cooldown() -> void:
 	var state: GameState = GameState.new()
 	state.width = 10
 	state.height = 8
@@ -500,17 +510,17 @@ func _test_enemy_ai_conversion_cooldown() -> void:
 	state.blocks[enemy_front]["last_converted_turn"] = 9
 	state.blocks[enemy_core]["last_converted_turn"] = -999999
 
-	var ai: EnemyAI = EnemyAI.new()
+	var ai = OOZE_AI_SCRIPT.new()
 	var actions: Array = ai.choose_actions(state, 2, 1)
 	for action in actions:
 		if String(action.get("type", "")) != "convert_tile":
 			continue
 		_assert(
 			int(action.get("block_id", -1)) != enemy_front,
-			"Enemy AI should not reconvert a tile inside conversion cooldown window"
+			"Ooze AI should not reconvert a tile inside conversion cooldown window"
 		)
 
-func _test_enemy_ai_no_duplicate_actions() -> void:
+func _test_ooze_ai_no_duplicate_actions() -> void:
 	var state: GameState = GameState.new()
 	state.width = 14
 	state.height = 10
@@ -525,7 +535,7 @@ func _test_enemy_ai_no_duplicate_actions() -> void:
 	state.spawn_block(2, Vector2i(8, 4), false, 9, "basic")
 	state.spawn_block(2, Vector2i(8, 6), false, 9, "basic")
 
-	var ai: EnemyAI = EnemyAI.new()
+	var ai = OOZE_AI_SCRIPT.new()
 	var actions: Array = ai.choose_actions(state, 2, 1)
 	var seen_targets: Dictionary = {}
 	var seen_blocks: Dictionary = {}
@@ -534,12 +544,114 @@ func _test_enemy_ai_no_duplicate_actions() -> void:
 		var kind: String = String(action.get("type", "pass"))
 		if kind == "place_tile":
 			var key: String = "%s" % [action.get("target", Vector2i(-1, -1))]
-			_assert(not seen_targets.has(key), "Enemy AI should not place on the same tile twice in one turn")
+			_assert(not seen_targets.has(key), "Ooze AI should not place on the same tile twice in one turn")
 			seen_targets[key] = true
 		elif kind == "convert_tile":
 			var block_id: int = int(action.get("block_id", -1))
-			_assert(not seen_blocks.has(block_id), "Enemy AI should not convert the same block twice in one turn")
+			_assert(not seen_blocks.has(block_id), "Ooze AI should not convert the same block twice in one turn")
 			seen_blocks[block_id] = true
+
+func _test_ooze_ai_safe_phase_reduces_melee_spread() -> void:
+	var state: GameState = GameState.new()
+	state.width = 24
+	state.height = 10
+	state.players[1]["nutrients"] = 20
+	state.spawn_block(1, Vector2i(2, 5), true, 9, "basic")
+	state.spawn_block(1, Vector2i(3, 5), false, 9, "basic")
+
+	state.add_owner(2, "Enemy", 16)
+	state.spawn_block(2, Vector2i(20, 5), true, 9, "basic")
+	state.spawn_block(2, Vector2i(19, 5), false, 9, "basic")
+	state.spawn_block(2, Vector2i(19, 4), false, 9, "basic")
+	state.resource_nodes = [{"pos": Vector2i(18, 5), "kind": "gem", "consumed": false}]
+
+	var ai = OOZE_AI_SCRIPT.new()
+	var actions: Array = ai.choose_actions(state, 2, 1)
+	var melee_count: int = 0
+	var has_growth: bool = false
+	for action in actions:
+		var kind: String = String(action.get("type", ""))
+		if kind == "place_tile":
+			var tile_type: String = String(action.get("tile_type", "basic"))
+			if tile_type == "melee":
+				melee_count += 1
+			if tile_type == "basic" or tile_type == "gather":
+				has_growth = true
+		elif kind == "convert_tile":
+			if String(action.get("to_type", "")) == "melee":
+				melee_count += 1
+	_assert(melee_count == 0, "Safe expansion should not default into early melee investment")
+	_assert(has_growth, "Safe expansion should still produce basic/gather growth actions")
+
+func _test_ooze_ai_safe_phase_uses_gather_on_rear_resources() -> void:
+	var state: GameState = GameState.new()
+	state.width = 20
+	state.height = 10
+	state.players[1]["nutrients"] = 20
+	state.spawn_block(1, Vector2i(2, 5), true, 9, "basic")
+	state.spawn_block(1, Vector2i(3, 5), false, 9, "basic")
+
+	state.add_owner(2, "Enemy", 16)
+	state.spawn_block(2, Vector2i(16, 5), true, 9, "basic")
+	state.spawn_block(2, Vector2i(15, 5), false, 9, "basic")
+	state.spawn_block(2, Vector2i(15, 4), false, 9, "basic")
+	state.resource_nodes = [
+		{"pos": Vector2i(14, 5), "kind": "gem", "consumed": false},
+		{"pos": Vector2i(14, 4), "kind": "gem", "consumed": false}
+	]
+
+	var ai = OOZE_AI_SCRIPT.new()
+	var actions: Array = ai.choose_actions(state, 2, 1)
+	var has_gather: bool = false
+	for action in actions:
+		if String(action.get("type", "")) == "place_tile" and String(action.get("tile_type", "")) == "gather":
+			has_gather = true
+			break
+		if String(action.get("type", "")) == "convert_tile" and String(action.get("to_type", "")) == "gather":
+			has_gather = true
+			break
+	_assert(has_gather, "Safe rear resource zones should produce at least one gather-focused AI action")
+
+func _test_ooze_ai_frontline_defense_density_brake() -> void:
+	var state: GameState = GameState.new()
+	state.width = 14
+	state.height = 9
+	state.players[1]["nutrients"] = 20
+	state.spawn_block(1, Vector2i(5, 4), true, 9, "basic")
+	state.spawn_block(1, Vector2i(6, 4), false, 9, "basic")
+	state.spawn_block(1, Vector2i(6, 3), false, 9, "basic")
+
+	state.add_owner(2, "Enemy", 32)
+	state.spawn_block(2, Vector2i(9, 4), true, 9, "basic")
+	var frontline_a: int = state.spawn_block(2, Vector2i(8, 4), false, 9, "basic")
+	var frontline_b: int = state.spawn_block(2, Vector2i(8, 3), false, 9, "basic")
+	var dense_def_a: int = state.spawn_block(2, Vector2i(9, 3), false, int(Combat.TILE_RULES["defense"]["max_hp"]), "defense")
+	var dense_def_b: int = state.spawn_block(2, Vector2i(9, 5), false, int(Combat.TILE_RULES["defense"]["max_hp"]), "defense")
+	state.blocks[frontline_a]["last_converted_turn"] = -999999
+	state.blocks[frontline_b]["last_converted_turn"] = -999999
+	state.blocks[dense_def_a]["last_converted_turn"] = -999999
+	state.blocks[dense_def_b]["last_converted_turn"] = -999999
+
+	var ai = OOZE_AI_SCRIPT.new()
+	var actions: Array = ai.choose_actions(state, 2, 1)
+	var defense_actions: int = 0
+	var has_non_defense_combat: bool = false
+	for action in actions:
+		var kind: String = String(action.get("type", ""))
+		if kind == "place_tile":
+			var tile_type: String = String(action.get("tile_type", "basic"))
+			if tile_type == "defense":
+				defense_actions += 1
+			if tile_type == "melee" or tile_type == "ranged":
+				has_non_defense_combat = true
+		elif kind == "convert_tile":
+			var to_type: String = String(action.get("to_type", "basic"))
+			if to_type == "defense":
+				defense_actions += 1
+			if to_type == "melee" or to_type == "ranged":
+				has_non_defense_combat = true
+	_assert(defense_actions <= 1, "Active fronts should not stack defense actions when local lane already has holders")
+	_assert(has_non_defense_combat, "Active fronts should keep melee/ranged pressure roles available")
 
 func _test_enemy_alignment_no_friendly_fire() -> void:
 	var state: GameState = GameState.new()
@@ -770,7 +882,7 @@ func _test_non_basic_conversion_rejected() -> void:
 	_assert(not bool(queue_check.get("ok", false)), "Queue validation should reject non-basic to non-basic conversion")
 	_assert(String(queue_check.get("reason", "")) == "requires basic tile", "Queue rejection reason should explain basic-only conversion")
 
-func _test_enemy_ai_converts_only_basic() -> void:
+func _test_ooze_ai_converts_only_basic() -> void:
 	var state: GameState = GameState.new()
 	state.width = 12
 	state.height = 8
@@ -789,15 +901,281 @@ func _test_enemy_ai_converts_only_basic() -> void:
 	state.blocks[core_id]["last_converted_turn"] = -999999
 	state.blocks[frontline_basic]["last_converted_turn"] = -999999
 
-	var ai: EnemyAI = EnemyAI.new()
+	var ai = OOZE_AI_SCRIPT.new()
 	var actions: Array = ai.choose_actions(state, 2, 1)
 	for action in actions:
 		if String(action.get("type", "")) != "convert_tile":
 			continue
 		var action_block_id: int = int(action.get("block_id", -1))
 		_assert(state.blocks.has(action_block_id), "AI conversion target block should exist")
+		var to_type: String = String(action.get("to_type", "basic"))
 		var from_type: String = String(state.blocks[action_block_id].get("tile_type", "basic"))
-		_assert(from_type == "basic", "AI should only convert from basic tiles")
+		if to_type == "basic":
+			_assert(int(state.blocks[action_block_id].get("upgrade_tier", 0)) > 0, "AI downgrade should only target upgraded tiles")
+		else:
+			_assert(from_type == "basic", "AI role conversion should start from basic tiles")
+
+func _test_specialization_tier_progression_and_cap() -> void:
+	var state: GameState = GameState.new()
+	state.players[1]["nutrients"] = 100
+	var block_id: int = state.spawn_block(1, Vector2i(3, 3), true, 9, "basic")
+	var combat: Combat = Combat.new()
+
+	var specialize_action: Dictionary = {
+		"type": "convert_tile",
+		"owner": 1,
+		"block_id": block_id,
+		"to_type": "melee",
+		"energy_delta": Combat.conversion_energy_delta("basic", "melee", 0),
+	}
+	combat.resolve_with_report([specialize_action], state)
+	_assert(String(state.blocks[block_id].get("tile_type", "basic")) == "melee", "Specialization should convert basic tiles into the selected role")
+	_assert(int(state.blocks[block_id].get("upgrade_tier", 0)) == Combat.SPECIALIZATION_TIER, "Basic-to-role conversion should create Tier I")
+
+	var cost_tier_ii: int = Combat.upgrade_energy_cost(
+		state,
+		1,
+		"melee",
+		0,
+		0,
+		int(state.blocks[block_id].get("upgrade_tier", Combat.SPECIALIZATION_TIER))
+	)
+	var upgrade_to_tier_ii: Dictionary = {
+		"type": "upgrade_tile",
+		"owner": 1,
+		"block_id": block_id,
+		"tile_type": "melee",
+		"cost": cost_tier_ii,
+		"planned_type_count": 0,
+		"planned_total_count": 0,
+	}
+	combat.resolve_with_report([upgrade_to_tier_ii], state)
+	_assert(int(state.blocks[block_id].get("upgrade_tier", 0)) == 2, "First upgrade action should move specialized tiles to Tier II")
+	var damage_tier_ii: int = int(state.blocks[block_id].get("damage", int(Combat.TILE_RULES["melee"]["damage"])))
+
+	var cost_tier_iii: int = Combat.upgrade_energy_cost(
+		state,
+		1,
+		"melee",
+		0,
+		0,
+		int(state.blocks[block_id].get("upgrade_tier", 2))
+	)
+	_assert(cost_tier_iii > cost_tier_ii, "Tier III upgrade should cost more than Tier II")
+	var upgrade_to_tier_iii: Dictionary = {
+		"type": "upgrade_tile",
+		"owner": 1,
+		"block_id": block_id,
+		"tile_type": "melee",
+		"cost": cost_tier_iii,
+		"planned_type_count": 0,
+		"planned_total_count": 0,
+	}
+	combat.resolve_with_report([upgrade_to_tier_iii], state)
+	_assert(int(state.blocks[block_id].get("upgrade_tier", 0)) == 3, "Second upgrade action should move specialized tiles to Tier III")
+	var damage_tier_iii: int = int(state.blocks[block_id].get("damage", int(Combat.TILE_RULES["melee"]["damage"])))
+	_assert(damage_tier_iii > damage_tier_ii, "Higher tiers should improve combat effectiveness incrementally")
+
+	var blocked_upgrade: Dictionary = combat.validate_upgrade_action(
+		{
+			"type": "upgrade_tile",
+			"owner": 1,
+			"block_id": block_id,
+			"tile_type": "melee",
+			"cost": 1,
+		},
+		state
+	)
+	_assert(not bool(blocked_upgrade.get("ok", false)), "Tier III tiles should reject additional upgrades")
+	_assert(String(blocked_upgrade.get("reason", "")) == "max tier reached", "Upgrade rejection reason should explain max tier cap")
+
+func _test_downgrade_refund_scales_by_tier() -> void:
+	var refund_tier_i: int = -Combat.conversion_energy_delta("defense", "basic", 1)
+	var refund_tier_ii: int = -Combat.conversion_energy_delta("defense", "basic", 2)
+	var refund_tier_iii: int = -Combat.conversion_energy_delta("defense", "basic", 3)
+	_assert(refund_tier_i > refund_tier_ii and refund_tier_ii > refund_tier_iii, "Downgrade refunds should decrease as specialization tier increases")
+
+	var state: GameState = GameState.new()
+	state.players[1]["nutrients"] = 0
+	var block_id: int = state.spawn_block(1, Vector2i(4, 4), true, int(Combat.TILE_RULES["defense"]["max_hp"]), "defense")
+	state.blocks[block_id]["upgrade_tier"] = 3
+	var combat: Combat = Combat.new()
+	var expected_refund: int = -Combat.conversion_energy_delta("defense", "basic", 3)
+	var downgrade_action: Dictionary = {
+		"type": "convert_tile",
+		"owner": 1,
+		"block_id": block_id,
+		"to_type": "basic",
+		"energy_delta": Combat.conversion_energy_delta("defense", "basic", 3),
+	}
+	combat.resolve_with_report([downgrade_action], state)
+	_assert(int(state.players[1]["nutrients"]) == expected_refund, "Downgrading should grant the tier-scaled partial refund")
+	_assert(String(state.blocks[block_id].get("tile_type", "")) == "basic", "Downgrade should return the tile to basic")
+	_assert(int(state.blocks[block_id].get("upgrade_tier", -1)) == 0, "Downgrade should reset specialization tier to zero")
+
+func _test_ooze_ai_safe_backline_downgrade() -> void:
+	var state: GameState = GameState.new()
+	state.width = 18
+	state.height = 10
+	state.turn_index = 9
+	state.players[1]["nutrients"] = 20
+	state.spawn_block(1, Vector2i(2, 5), true, 9, "basic")
+	state.spawn_block(1, Vector2i(3, 5), false, 9, "basic")
+
+	state.add_owner(2, "Enemy", 1)
+	var enemy_core: int = state.spawn_block(2, Vector2i(13, 5), true, 9, "basic")
+	var enemy_backline: int = state.spawn_block(2, Vector2i(12, 5), false, 9, "basic")
+	var upgraded_anchor: int = state.spawn_block(2, Vector2i(12, 4), false, 18, "defense")
+	state.blocks[enemy_core]["last_converted_turn"] = -999999
+	state.blocks[enemy_backline]["last_converted_turn"] = -999999
+	state.blocks[upgraded_anchor]["upgrade_tier"] = 1
+	state.blocks[upgraded_anchor]["last_converted_turn"] = -999999
+
+	var ai = OOZE_AI_SCRIPT.new()
+	var actions: Array = ai.choose_actions(state, 2, 1)
+	var has_safe_downgrade: bool = false
+	for action in actions:
+		if String(action.get("type", "")) != "convert_tile":
+			continue
+		if String(action.get("to_type", "")) != "basic":
+			continue
+		if int(action.get("block_id", -1)) != upgraded_anchor:
+			continue
+		_assert(int(action.get("energy_delta", 0)) < 0, "Safe downgrade should grant a small refund")
+		has_safe_downgrade = true
+		break
+	_assert(has_safe_downgrade, "Low-threat backline upgraded tiles should be considered for conservative downgrade refunds")
+
+func _test_team_color_uniqueness_for_active_owners() -> void:
+	var state: GameState = GameState.new()
+	state.players[1]["alive"] = true
+	state.spawn_block(1, Vector2i(1, 1), true, 9, "basic")
+
+	state.add_owner(2, "Enemy A", 10, GameState.TEAM_ENEMY, true)
+	state.add_owner(50, "Enemy B", 10, GameState.TEAM_ENEMY, true)
+	state.add_owner(77, "Enemy C", 10, GameState.TEAM_ENEMY, true)
+	state.spawn_block(2, Vector2i(4, 3), true, 9, "basic")
+	state.spawn_block(50, Vector2i(6, 3), true, 9, "basic")
+	state.spawn_block(77, Vector2i(8, 3), true, 9, "basic")
+
+	var renderer: BoardRenderer = BoardRenderer.new()
+	var seen: Dictionary = {}
+	for owner_id in [2, 50, 77]:
+		var tint: Color = renderer.owner_tint_for_ui(state, owner_id)
+		var key: String = _color_key(tint)
+		_assert(not seen.has(key), "Active enemy owners should use unique colors while palette entries remain available")
+		seen[key] = true
+
+func _test_ooze_ai_side_swap_fairness_smoke() -> void:
+	var rounds: int = 6
+	var left_setup: Dictionary = _simulate_side_swap_case(true, rounds)
+	var right_setup: Dictionary = _simulate_side_swap_case(false, rounds)
+
+	var owner2_left: Dictionary = left_setup.get("owner_2", {})
+	var owner2_right: Dictionary = right_setup.get("owner_2", {})
+	var owner3_left: Dictionary = left_setup.get("owner_3", {})
+	var owner3_right: Dictionary = right_setup.get("owner_3", {})
+
+	_assert(
+		absi(int(owner2_left.get("blocks", 0)) - int(owner2_right.get("blocks", 0))) <= 2,
+		"Owner-2 performance should stay close after side swap (blocks)"
+	)
+	_assert(
+		absi(int(owner3_left.get("blocks", 0)) - int(owner3_right.get("blocks", 0))) <= 2,
+		"Owner-3 performance should stay close after side swap (blocks)"
+	)
+	_assert(
+		absi(int(owner2_left.get("hp", 0)) - int(owner2_right.get("hp", 0))) <= 14,
+		"Owner-2 performance should stay close after side swap (hp)"
+	)
+	_assert(
+		absi(int(owner3_left.get("hp", 0)) - int(owner3_right.get("hp", 0))) <= 14,
+		"Owner-3 performance should stay close after side swap (hp)"
+	)
+
+	var side_adv_left: int = int(left_setup.get("left_hp", 0)) - int(left_setup.get("right_hp", 0))
+	var side_adv_right: int = int(right_setup.get("left_hp", 0)) - int(right_setup.get("right_hp", 0))
+	_assert(
+		side_adv_left * side_adv_right <= 0 or (absi(side_adv_left) <= 10 and absi(side_adv_right) <= 10),
+		"Side-swap smoke check should not show strong same-side hp advantage in both mirrored runs"
+	)
+
+func _simulate_side_swap_case(owner_2_on_left: bool, rounds: int) -> Dictionary:
+	var state: GameState = _build_side_swap_state(owner_2_on_left)
+	var tick: TickSystem = TickSystem.new()
+	var ai = OOZE_AI_SCRIPT.new()
+	var left_owner: int = 2 if owner_2_on_left else 3
+	var right_owner: int = 3 if owner_2_on_left else 2
+
+	for _turn in range(rounds):
+		var actions: Array = []
+		for owner_id in [2, 3]:
+			var owner_blocks: Array = state.get_owner_blocks(owner_id)
+			if owner_blocks.is_empty():
+				continue
+			if not bool(state.players.get(owner_id, {}).get("alive", true)):
+				continue
+			var owner_actions: Array = ai.choose_actions(state, owner_id, 1)
+			if owner_actions.is_empty():
+				owner_actions = [{"type": "pass", "owner": owner_id}]
+			actions.append_array(owner_actions)
+		state = tick.step(state, actions)
+
+	var owner_2: Dictionary = _owner_summary(state, 2)
+	var owner_3: Dictionary = _owner_summary(state, 3)
+	return {
+		"owner_2": owner_2,
+		"owner_3": owner_3,
+		"left_hp": int(_owner_summary(state, left_owner).get("hp", 0)),
+		"right_hp": int(_owner_summary(state, right_owner).get("hp", 0)),
+	}
+
+func _build_side_swap_state(owner_2_on_left: bool) -> GameState:
+	var state: GameState = GameState.new()
+	state.width = 16
+	state.height = 9
+	state.turn_limit = 0
+	state.enemies_allied = false
+	state.door_tile = Vector2i(8, 4)
+	state.door_hp = 0
+	state.door_max_hp = 0
+	state.players[1]["alive"] = false
+	state.players[1]["ai_controlled"] = false
+
+	state.add_owner(2, "Enemy A", 30, GameState.TEAM_ENEMY, true)
+	state.add_owner(3, "Enemy B", 30, GameState.TEAM_ENEMY, true)
+
+	var left_owner: int = 2 if owner_2_on_left else 3
+	var right_owner: int = 3 if owner_2_on_left else 2
+
+	var left_core: int = state.spawn_block(left_owner, Vector2i(3, 4), true, 12, "basic")
+	var right_core: int = state.spawn_block(right_owner, Vector2i(12, 4), true, 12, "basic")
+	state.blocks[left_core]["is_heart"] = true
+	state.blocks[right_core]["is_heart"] = true
+
+	for pos in [Vector2i(4, 4), Vector2i(3, 3), Vector2i(3, 5), Vector2i(4, 3), Vector2i(4, 5)]:
+		state.spawn_block(left_owner, pos, false, 9, "basic")
+	for pos in [Vector2i(11, 4), Vector2i(12, 3), Vector2i(12, 5), Vector2i(11, 3), Vector2i(11, 5)]:
+		state.spawn_block(right_owner, pos, false, 9, "basic")
+
+	state.resource_nodes = [
+		{"pos": Vector2i(6, 2), "kind": "gem", "consumed": false},
+		{"pos": Vector2i(9, 2), "kind": "gem", "consumed": false},
+		{"pos": Vector2i(6, 6), "kind": "rat", "consumed": false},
+		{"pos": Vector2i(9, 6), "kind": "rat", "consumed": false},
+	]
+	return state
+
+func _owner_summary(state: GameState, owner_id: int) -> Dictionary:
+	var blocks: Array = state.get_owner_blocks(owner_id)
+	var total_hp: int = 0
+	for block in blocks:
+		total_hp += int(block.get("hp", 0))
+	return {
+		"blocks": blocks.size(),
+		"hp": total_hp,
+		"energy": int(state.players.get(owner_id, {}).get("nutrients", 0)),
+	}
 
 func _test_spectator_stall_ignored() -> void:
 	var state: GameState = GameState.new()
@@ -1271,6 +1649,11 @@ func _snapshot(state: GameState) -> String:
 	out.append(str(state.reclaim_timers))
 	return "|".join(out)
 
+func _color_key(c: Color) -> String:
+	return "%.4f|%.4f|%.4f|%.4f" % [c.r, c.g, c.b, c.a]
+
 func _assert(condition: bool, message: String) -> void:
 	if not condition:
 		failures.append(message)
+
+

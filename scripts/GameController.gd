@@ -2,8 +2,8 @@ extends Node2D
 
 # Scene-level orchestrator for input, queueing, turn commits, and UI refresh.
 
-const TILE_SIZE: int = 32
-const MIN_RENDER_TILE_SIZE: int = 10
+const TILE_SIZE: int = 44
+const MIN_RENDER_TILE_SIZE: int = 12
 const ANIM_FRAME_TIME: float = 0.18
 const ENEMY_FLASH_DURATION: float = 0.65
 const TURN_PULSE_BATCH_MIN: int = 2
@@ -18,6 +18,7 @@ const SPECTATOR_STEP_DELAY: float = 0.26
 const MIN_EXPAND_ADJACENT: int = 1
 const ACTION_VALIDATOR_SCRIPT: GDScript = preload("res://scripts/systems/ActionValidator.gd")
 const TURN_RESOLVER_SCRIPT: GDScript = preload("res://scripts/systems/TurnResolver.gd")
+const OOZE_AI_SCRIPT: GDScript = preload("res://scripts/systems/OozeAI.gd")
 const ENEMY_FEEDBACK_SCRIPT: GDScript = preload("res://scripts/systems/EnemyFeedback.gd")
 const WORLD_RENDER_LAYER_SCRIPT: GDScript = preload("res://scripts/ui/WorldRenderLayer.gd")
 const SLIME_LAYER_SHADER: Shader = preload("res://assets/shaders/slime_layer.gdshader")
@@ -34,7 +35,7 @@ const ACTION_BUTTON_HINTS: Dictionary = {
 }
 
 var tick_system: TickSystem = TickSystem.new()
-var ai: EnemyAI = EnemyAI.new()
+var ai: RefCounted = OOZE_AI_SCRIPT.new()
 var generator: LevelGenerator = LevelGenerator.new()
 var director: LevelDirector = LevelDirector.new()
 var renderer: BoardRenderer = BoardRenderer.new()
@@ -444,7 +445,7 @@ func _sync_hover_hint_from_mouse() -> void:
 		var control: Control = binding.get("control", null) as Control
 		if control == null or not is_instance_valid(control):
 			continue
-		if not control.visible_in_tree():
+		if not control.is_visible_in_tree():
 			continue
 		if control.get_global_rect().has_point(mouse_pos):
 			hover_hint = String(binding.get("hint", ""))
@@ -490,6 +491,11 @@ func _apply_ui_theme() -> void:
 	theme.set_color("font_color", "Label", Color(0.96, 0.94, 0.86))
 	theme.set_color("default_color", "RichTextLabel", Color(0.94, 0.93, 0.86))
 	theme.set_color("font_color", "Button", Color(0.97, 0.95, 0.88))
+	theme.set_color("icon_normal_color", "Button", Color(1.0, 1.0, 1.0, 1.0))
+	theme.set_color("icon_hover_color", "Button", Color(1.0, 1.0, 1.0, 1.0))
+	theme.set_color("icon_pressed_color", "Button", Color(1.0, 1.0, 1.0, 1.0))
+	theme.set_color("icon_focus_color", "Button", Color(1.0, 1.0, 1.0, 1.0))
+	theme.set_color("icon_disabled_color", "Button", Color(1.0, 1.0, 1.0, 0.95))
 	theme.set_constant("line_separation", "RichTextLabel", 2)
 	var rich_empty: StyleBoxEmpty = StyleBoxEmpty.new()
 	theme.set_stylebox("normal", "RichTextLabel", rich_empty)
@@ -500,11 +506,11 @@ func _apply_ui_theme() -> void:
 	right_panel.add_theme_stylebox_override("panel", _stylebox_modulated(panel_style, Color(0.93, 0.92, 0.89, 1.0)))
 	bottom_panel.add_theme_stylebox_override("panel", _stylebox_modulated(panel_style, Color(0.95, 0.93, 0.90, 1.0)))
 
-	basic_button.icon = renderer.make_ui_icon("basic", 30)
-	melee_button.icon = renderer.make_ui_icon("melee", 30)
-	ranged_button.icon = renderer.make_ui_icon("ranged", 30)
-	gather_button.icon = renderer.make_ui_icon("gather", 30)
-	defense_button.icon = renderer.make_ui_icon("defense", 30)
+	basic_button.icon = renderer.make_ui_icon("basic", 34)
+	melee_button.icon = renderer.make_ui_icon("melee", 34)
+	ranged_button.icon = renderer.make_ui_icon("ranged", 34)
+	gather_button.icon = renderer.make_ui_icon("gather", 34)
+	defense_button.icon = renderer.make_ui_icon("defense", 34)
 
 	for button in [basic_button, melee_button, ranged_button, gather_button, defense_button]:
 		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -710,7 +716,7 @@ func _should_upgrade_from_click(block: Dictionary, requested_type: String) -> bo
 		return false
 	if requested_type != tile_type:
 		return false
-	return int(block.get("upgrade_tier", 0)) < 1
+	return int(block.get("upgrade_tier", Combat.SPECIALIZATION_TIER)) < Combat.MAX_UPGRADE_TIER
 
 func _queue_place_action(tile: Vector2i, tile_type: String) -> Dictionary:
 	if not Combat.TILE_RULES.has(tile_type):
@@ -930,19 +936,19 @@ func _run_next_spectator_turn() -> void:
 	if not _ensure_active_actor_for_spectator_turn():
 		return
 
-	var owner: int = active_owner_id
-	var actions: Array = ai.choose_actions(state, owner, _min_adjacent_for_owner(owner))
+	var acting_owner_id: int = active_owner_id
+	var actions: Array = ai.choose_actions(state, acting_owner_id, _min_adjacent_for_owner(acting_owner_id))
 	if actions.is_empty():
-		actions = [{"type": "pass", "owner": owner}]
+		actions = [{"type": "pass", "owner": acting_owner_id}]
 
 	var resolution: Dictionary = turn_resolver.resolve_turn(
 		state,
 		actions,
 		[],
-		_min_adjacent_for_owner(owner),
+		_min_adjacent_for_owner(acting_owner_id),
 		_tile_cost("basic")
 	)
-	_apply_resolution_result(resolution, owner, false)
+	_apply_resolution_result(resolution, acting_owner_id, false)
 
 func _apply_resolution_result(resolution: Dictionary, acting_owner: int, include_enemy_feedback: bool) -> void:
 	var previous_state: GameState = state.copy_state() if state != null else null
@@ -1225,9 +1231,9 @@ func _upgrade_button_setup(button: Button, index: int) -> void:
 	button.tooltip_text = String(choice.get("description", ""))
 
 func _upgrade_choice_text(choice: Dictionary) -> String:
-	var name: String = String(choice.get("name", "Upgrade"))
+	var choice_name: String = String(choice.get("name", "Upgrade"))
 	var description: String = String(choice.get("description", ""))
-	return "%s\n%s" % [name, description]
+	return "%s\n%s" % [choice_name, description]
 
 func _on_upgrade_choice_pressed(choice_index: int) -> void:
 	if choice_index < 0 or choice_index >= upgrade_choices.size():
@@ -1325,19 +1331,19 @@ func _start_new_actor_round() -> void:
 		actor_cycle_index = 0
 		active_owner_id = GameState.PLAYER_ID
 		return
-	var seed: int = int(state.run_seed) + int(state.level_index * 4099) + int(actor_round_index * 7919)
+	var round_seed: int = int(state.run_seed) + int(state.level_index * 4099) + int(actor_round_index * 7919)
 	# Spectator order is randomized per round but deterministic for a given seed.
-	actor_cycle_order = _shuffle_owner_order(owners, seed)
+	actor_cycle_order = _shuffle_owner_order(owners, round_seed)
 	actor_cycle_index = 0
 	active_owner_id = int(actor_cycle_order[0])
 	actor_round_index += 1
 
-func _shuffle_owner_order(owners: Array, seed: int) -> Array:
+func _shuffle_owner_order(owners: Array, order_seed: int) -> Array:
 	var shuffled: Array = owners.duplicate()
 	if shuffled.size() <= 1:
 		return shuffled
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	rng.seed = seed
+	rng.seed = order_seed
 	for i in range(shuffled.size() - 1, 0, -1):
 		var j: int = rng.randi_range(0, i)
 		var temp: Variant = shuffled[i]
@@ -1353,9 +1359,9 @@ func _ensure_active_actor_for_spectator_turn() -> bool:
 				return false
 
 		while actor_cycle_index < actor_cycle_order.size():
-			var owner: int = int(actor_cycle_order[actor_cycle_index])
-			if _is_owner_valid_actor(owner):
-				active_owner_id = owner
+			var owner_id_candidate: int = int(actor_cycle_order[actor_cycle_index])
+			if _is_owner_valid_actor(owner_id_candidate):
+				active_owner_id = owner_id_candidate
 				return true
 			actor_cycle_index += 1
 
@@ -1464,8 +1470,8 @@ func _refresh_actor_bar() -> void:
 		return
 
 	var parts: Array[String] = []
-	for owner in owners:
-		var owner_id: int = int(owner)
+	for owner_id_entry in owners:
+		var owner_id: int = int(owner_id_entry)
 		var label: String = "Slime %d" % _owner_display_number(owner_id)
 		var is_active: bool = owner_id == active_owner_id
 		var owner_color: Color = renderer.owner_tint_for_ui(state, owner_id)
@@ -1483,8 +1489,8 @@ func _ordered_owner_display_list() -> Array:
 	if state == null:
 		return owners
 	if _is_spectator_mode() and not actor_cycle_order.is_empty():
-		for owner in actor_cycle_order:
-			var owner_id: int = int(owner)
+		for owner_id_entry in actor_cycle_order:
+			var owner_id: int = int(owner_id_entry)
 			if _is_owner_valid_actor(owner_id):
 				owners.append(owner_id)
 		return owners
@@ -1755,12 +1761,15 @@ func _build_place_candidate(tile: Vector2i, tile_type: String) -> Dictionary:
 	}
 
 func _build_convert_candidate(block_id: int, from_type: String, to_type: String) -> Dictionary:
+	var from_tier: int = 0
+	if state.blocks.has(block_id):
+		from_tier = int(state.blocks[block_id].get("upgrade_tier", 0))
 	return {
 		"type": "convert_tile",
 		"owner": GameState.PLAYER_ID,
 		"block_id": block_id,
 		"to_type": to_type,
-		"energy_delta": Combat.conversion_energy_delta(from_type, to_type),
+		"energy_delta": Combat.conversion_energy_delta(from_type, to_type, from_tier),
 		"_preview_id": _next_preview_id(),
 	}
 
@@ -1867,7 +1876,7 @@ func _debug_hint_text() -> String:
 		]
 		if bool(hovered_block.get("is_heart", false)):
 			label += " heart"
-		if owner_id == GameState.PLAYER_ID and tile_type != "basic" and tier < 1:
+		if owner_id == GameState.PLAYER_ID and tile_type != "basic" and tier < Combat.MAX_UPGRADE_TIER:
 			var plan: Dictionary = _build_player_queue_plan()
 			var upgrade_check: Dictionary = _validate_upgrade_target(hovered_block, plan)
 			if bool(upgrade_check.get("ok", false)):
@@ -1937,20 +1946,14 @@ func _update_board_layout(force: bool = false) -> void:
 
 func _play_region_rect() -> Rect2:
 	var region: Rect2 = board_region.get_global_rect()
-	var pad: float = 6.0
+	var pad: float = 2.0
 
 	var left: float = region.position.x + pad
 	var top: float = region.position.y + pad
 	var right: float = region.end.x - pad
 	var bottom: float = region.end.y - pad
 
-	if top_panel != null:
-		top = maxf(top, top_panel.get_global_rect().end.y + pad)
-	if bottom_panel != null:
-		bottom = minf(bottom, bottom_panel.get_global_rect().position.y - pad)
-	if right_panel != null:
-		right = minf(right, right_panel.get_global_rect().position.x - pad)
-
+	# BoardRegion already reserves space for top/right/bottom UI panels.
 	# Keep a valid minimum draw area even on very small windows.
 	right = maxf(right, left + 64.0)
 	bottom = maxf(bottom, top + 64.0)

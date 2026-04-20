@@ -3,7 +3,7 @@ class_name IntentPlanner
 
 # Shared enemy-intent planner so preview matches executed enemy actions.
 
-func build_enemy_intents(state: GameState, ai: EnemyAI, min_expand_adjacent_by_owner: Dictionary = {}, default_min_expand_adjacent: int = 2) -> Array:
+func build_enemy_intents(state: GameState, ai: RefCounted, min_expand_adjacent_by_owner: Dictionary = {}, default_min_expand_adjacent: int = 2) -> Array:
 	var intents: Array = []
 	if state == null:
 		return intents
@@ -22,3 +22,5 @@ func build_enemy_intents(state: GameState, ai: EnemyAI, min_expand_adjacent_by_o
 		intents.append_array(ai.choose_actions(state, enemy_id, min_adjacent))
 
 	return intents
+
+

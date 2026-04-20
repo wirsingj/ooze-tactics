@@ -1,5 +1,5 @@
 extends RefCounted
-class_name EnemyAI
+class_name OozeAI
 
 const MAX_ACTIONS: int = 3
 const MAX_CONVERSIONS_PER_TURN: int = 2
@@ -10,11 +10,11 @@ const NON_ENGAGED_MIN_UPGRADES_PER_TURN: int = 0
 const ENGAGED_BASIC_EXPANSION_PENALTY: int = 22
 const SECOND_LINE_RANGED_MIN_DIST: int = 2
 const SECOND_LINE_RANGED_MAX_DIST: int = 5
-const MAX_TILE_UPGRADES_PER_TURN: int = 1
+const MAX_TILE_UPGRADES_PER_TURN: int = 2
 const ENGAGED_UPGRADE_ENERGY_THRESHOLD: int = 16
-const NON_ENGAGED_UPGRADE_ENERGY_THRESHOLD: int = 22
+const NON_ENGAGED_UPGRADE_ENERGY_THRESHOLD: int = 18
 const PRE_ENGAGE_OBJECTIVE_UPGRADE_ENERGY_THRESHOLD: int = 16
-const TILE_UPGRADE_MIN_SCORE: int = 74
+const TILE_UPGRADE_MIN_SCORE: int = 66
 const TILE_UPGRADE_SURPLUS_RESERVE: int = 6
 const EARLY_ECON_TURN_WINDOW: int = 6
 const EARLY_ECON_INCOME_THRESHOLD: int = 6
@@ -34,10 +34,59 @@ const DOOR_ADVANCE_WEIGHT: int = 12
 const DOOR_DEFEND_WEIGHT: int = 4
 const CHOKEPOINT_WEIGHT: int = 4
 const HEART_OBJECTIVE_WEIGHT: int = 20
+const RESOURCE_OBJECTIVE_MAX_DISTANCE: int = 9
+const RESOURCE_OBJECTIVE_STEP_WEIGHT: int = 4
+const RESOURCE_SAFE_PHASE_BONUS: int = 10
+const RESOURCE_APPROACHING_PHASE_BONUS: int = 4
+const RESOURCE_NODE_HOLD_BONUS: int = 14
+const RESOURCE_GATHER_FOCUS_BONUS: int = 12
+const RESOURCE_LOW_THREAT_BONUS: int = 6
+const RESOURCE_NEAR_THREAT_PENALTY: int = 10
 const OBJECTIVE_UPGRADE_DISTANCE_MAX: int = 14
 const OBJECTIVE_UPGRADE_ENEMY_DISTANCE_MAX: int = 10
 const OBJECTIVE_PROGRESS_WEIGHT: int = 22
 const OBJECTIVE_BACKFILL_PENALTY: int = 32
+const LOW_THREAT_MIN_ENEMY_DISTANCE: int = 5
+const LOW_THREAT_MAX_LOCAL_SCORE: int = 6
+const GATHER_CONVERSION_RESOURCE_MAX_DIST: int = 2
+const GATHER_SAFE_MIN_ENEMY_DISTANCE: int = 4
+const SAFE_DOWNGRADE_MIN_TURN: int = 6
+const SAFE_DOWNGRADE_MIN_ENEMY_DISTANCE: int = 6
+const SAFE_DOWNGRADE_MAX_THREAT: int = 4
+const SAFE_DOWNGRADE_MIN_SCORE: int = 22
+const PHASE_SAFE_EXPANSION: int = 0
+const PHASE_APPROACHING_CONTACT: int = 1
+const PHASE_ACTIVE_FRONTLINE: int = 2
+const PHASE_ACTIVE_FRONTLINE_MAX_ENEMY_DISTANCE: int = 2
+const PHASE_APPROACHING_CONTACT_MAX_ENEMY_DISTANCE: int = 4
+const PHASE_APPROACHING_LOCAL_THREAT_MIN: int = 6
+const DEFENSE_DENSITY_RADIUS: int = 2
+const DEFENSE_NEARBY_SOFT_LIMIT: int = 2
+const DEFENSE_LOCAL_RATIO_SOFT_CAP: float = 0.40
+const DEFENSE_LOCAL_RATIO_HARD_CAP: float = 0.55
+const ROLE_POSITION_BLOCK_SCORE: int = -10000000
+const RANGED_CHAIN_ADJACENT_PENALTY: int = 9
+const RANGED_CHAIN_CLUSTER_PENALTY: int = 5
+const RANGED_EXPOSED_PENALTY: int = 28
+const RANGED_SAFE_EXPANSION_PENALTY: int = 34
+const RANGED_APPROACHING_PHASE_PENALTY: int = 12
+const RANGED_LOCAL_RATIO_SOFT_CAP: float = 0.34
+const RANGED_LOCAL_RATIO_HARD_CAP: float = 0.50
+const RANGED_LOCAL_RATIO_SOFT_PENALTY: int = 12
+const RANGED_LOCAL_RATIO_HARD_PENALTY: int = 24
+const RANGED_NO_FRONTLINE_PENALTY: int = 20
+const SPECIALIZATION_SOFT_CAP: float = 0.45
+const SPECIALIZATION_HARD_CAP: float = 0.62
+const SPECIALIZATION_MAX_PENALTY: int = 30
+const SPECIALIZATION_MIN_TILES: int = 9
+const SPECIALIZATION_LOCAL_RADIUS: int = 2
+const SPECIALIZATION_LOCAL_SOFT_LIMIT: int = 3
+const SPECIALIZATION_LOCAL_CLUSTER_PENALTY: int = 5
+const SPECIALIZATION_ADJACENT_PENALTY: int = 3
+const SPECIALIZATION_SAFE_PHASE_PENALTY: int = 16
+const SPECIALIZATION_BACKLINE_BLANKET_PENALTY: int = 12
+const SPECIALIZATION_PATH_PENALTY: int = 12
+const UPGRADE_PRIORITY_MARGIN: int = 10
 
 # Enemy uses deterministic, pressure-biased heuristics:
 # 1) secure at least one frontline action when possible
@@ -64,6 +113,7 @@ func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array
 	var reserved_convert_blocks: Dictionary = {}
 	var engaged: bool = _is_owner_engaged(state, owner_id)
 	var desired_upgrade_count: int = 0
+	var low_threat: bool = _is_owner_low_threat(state, owner_id)
 	if engaged and _can_afford_any_upgrade(energy):
 		desired_upgrade_count = ENGAGED_MIN_UPGRADES_PER_TURN
 	elif _can_afford_any_upgrade(energy):
@@ -206,14 +256,24 @@ func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array
 			candidate = _best_heart_pressure_conversion_action(state, owner_id, energy, reserved_convert_blocks)
 
 		var upgrade_energy_threshold: int = ENGAGED_UPGRADE_ENERGY_THRESHOLD if engaged else NON_ENGAGED_UPGRADE_ENERGY_THRESHOLD
-		if candidate.is_empty() and tile_upgrades_used < MAX_TILE_UPGRADES_PER_TURN and energy >= upgrade_energy_threshold:
+		if tile_upgrades_used < MAX_TILE_UPGRADES_PER_TURN and energy >= upgrade_energy_threshold:
 			var prefer_frontline_upgrade: bool = engaged
 			var tile_upgrade_candidate: Dictionary = _best_tile_upgrade_action(state, owner_id, energy, reserved_convert_blocks, prefer_frontline_upgrade)
-			if not tile_upgrade_candidate.is_empty():
+			if _should_prefer_tile_upgrade_candidate(candidate, tile_upgrade_candidate, engaged):
 				candidate = tile_upgrade_candidate
 
 		if candidate.is_empty() and energy >= int(Combat.TILE_RULES["gather"]["cost"]):
 			candidate = _best_resource_place_action(state, owner_id, min_adjacent, actions, energy, reserved_place_tiles, false)
+
+		if candidate.is_empty() and conversions_used < MAX_CONVERSIONS_PER_TURN:
+			candidate = _best_safe_backline_downgrade_action(
+				state,
+				owner_id,
+				energy,
+				reserved_convert_blocks,
+				engaged,
+				low_threat
+			)
 
 		if candidate.is_empty():
 			break
@@ -227,11 +287,12 @@ func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array
 		energy -= cost
 		if String(action.get("type", "")) == "convert_tile":
 			conversions_used += 1
-			upgrades_committed += 1
-			if _is_frontline_conversion(state, owner_id, action):
-				frontline_upgraded = true
-			elif _is_second_line_conversion(state, owner_id, action):
-				second_line_support_upgraded = true
+			if _is_upgrade_conversion_action(action):
+				upgrades_committed += 1
+				if _is_frontline_conversion(state, owner_id, action):
+					frontline_upgraded = true
+				elif _is_second_line_conversion(state, owner_id, action):
+					second_line_support_upgraded = true
 		elif String(action.get("type", "")) == "upgrade_tile":
 			tile_upgrades_used += 1
 
@@ -348,6 +409,8 @@ func _best_second_line_ranged_upgrade_action(state: GameState, owner_id: int, en
 			continue
 		if not _is_near_front_tile(state, owner_id, pos):
 			continue
+		if not _is_ranged_position_allowed(state, owner_id, pos):
+			continue
 
 		var from_type: String = String(block.get("tile_type", "basic"))
 		if from_type == "ranged":
@@ -361,6 +424,8 @@ func _best_second_line_ranged_upgrade_action(state: GameState, owner_id: int, en
 			continue
 
 		var support: int = state.count_owned_within_manhattan(owner_id, pos, 2)
+		var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, pos)
+		var phase: int = _local_threat_phase(state, owner_id, pos, dist, adjacent_enemy)
 		var score: int = 64
 		score += support * 2
 		score += maxi(0, 8 - dist) * 4
@@ -369,6 +434,9 @@ func _best_second_line_ranged_upgrade_action(state: GameState, owner_id: int, en
 		score += _heart_objective_score(state, owner_id, pos)
 		score += _zone_role_score("second_line", "ranged")
 		score -= _ranged_saturation_penalty(state, owner_id)
+		score -= _ranged_position_penalty(state, owner_id, pos, "second_line", phase)
+		score -= _specialization_spread_penalty(state, owner_id, pos, "ranged", phase, "second_line", dist, support)
+		score += _ranged_preferred_depth_bonus(state, owner_id, pos)
 		if score > best_score:
 			best_score = score
 			best = {
@@ -411,17 +479,42 @@ func _best_objective_upgrade_action(state: GameState, owner_id: int, energy: int
 		if objective_dist > OBJECTIVE_UPGRADE_DISTANCE_MAX and nearest_enemy_dist > OBJECTIVE_UPGRADE_ENEMY_DISTANCE_MAX:
 			continue
 
+		var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, pos)
+		var support: int = state.count_owned_within_manhattan(owner_id, pos, 2)
+		var phase: int = _local_threat_phase(state, owner_id, pos, nearest_enemy_dist, adjacent_enemy)
+		var zone: String = _tile_zone(state, owner_id, pos)
 		var to_type: String = "melee"
-		if _is_frontline_tile(state, owner_id, pos):
-			to_type = _desired_frontline_role(state, owner_id, block)
-		elif _is_second_line_tile(state, owner_id, pos) and not _is_ranged_hard_capped(state, owner_id) and _chokepoint_score(state, pos) >= 2:
-			to_type = "ranged"
-		elif nearest_enemy_dist <= 3:
-			to_type = "melee"
-		elif _local_threat_score(state, owner_id, pos) >= THREAT_SPIKE_THRESHOLD:
-			to_type = "defense"
-		elif door_relevant and door_dist <= 5:
-			to_type = "melee"
+		if phase == PHASE_SAFE_EXPANSION:
+			if _should_prefer_gather_conversion(state, owner_id, pos, nearest_enemy_dist, false):
+				to_type = "gather"
+			elif _is_second_line_tile(state, owner_id, pos) and not _is_ranged_hard_capped(state, owner_id) and support >= 2 and _distance_to_nearest_owned_frontline(state, owner_id, pos) <= 2:
+				to_type = "ranged"
+			elif door_relevant and door_dist <= 4 and objective_dist <= 5 and support >= 3:
+				to_type = "melee"
+			elif support >= 2 and objective_dist <= OBJECTIVE_UPGRADE_DISTANCE_MAX:
+				to_type = "melee"
+			else:
+				continue
+		elif phase == PHASE_APPROACHING_CONTACT:
+			if _is_second_line_tile(state, owner_id, pos) and not _is_ranged_hard_capped(state, owner_id) and _chokepoint_score(state, pos) >= 2:
+				to_type = "ranged"
+			elif _should_prefer_gather_conversion(state, owner_id, pos, nearest_enemy_dist, false):
+				to_type = "gather"
+			elif nearest_enemy_dist <= 3 and support >= 2:
+				to_type = "melee"
+			elif _local_threat_score(state, owner_id, pos) >= THREAT_SPIKE_THRESHOLD and _defense_density_penalty(state, owner_id, pos, phase) < 26:
+				to_type = "defense"
+			else:
+				to_type = "melee"
+		else:
+			if _is_frontline_tile(state, owner_id, pos):
+				to_type = _desired_frontline_role(state, owner_id, block)
+			elif _is_second_line_tile(state, owner_id, pos) and not _is_ranged_hard_capped(state, owner_id) and _chokepoint_score(state, pos) >= 2:
+				to_type = "ranged"
+			elif _local_threat_score(state, owner_id, pos) >= THREAT_SPIKE_THRESHOLD and _defense_density_penalty(state, owner_id, pos, phase) < 30:
+				to_type = "defense"
+			else:
+				to_type = "melee"
 
 		var delta: int = Combat.conversion_energy_delta(from_type, to_type)
 		if delta > energy:
@@ -430,14 +523,47 @@ func _best_objective_upgrade_action(state: GameState, owner_id: int, energy: int
 		var score: int = 28
 		score += _heart_objective_score(state, owner_id, pos)
 		score += _door_objective_score(state, owner_id, pos)
+		score += _resource_objective_score(state, owner_id, pos, phase, to_type)
 		score += maxi(0, OBJECTIVE_UPGRADE_DISTANCE_MAX - objective_dist) * 2
 		score += maxi(0, OBJECTIVE_UPGRADE_ENEMY_DISTANCE_MAX - nearest_enemy_dist)
-		score += _zone_role_score(_tile_zone(state, owner_id, pos), to_type)
+		score += _zone_role_score(zone, to_type)
+		match phase:
+			PHASE_SAFE_EXPANSION:
+				if to_type == "melee":
+					score -= 18
+				elif to_type == "defense":
+					score -= 24
+				elif to_type == "gather":
+					score += 12
+			PHASE_APPROACHING_CONTACT:
+				if to_type == "melee":
+					score += 5
+				elif to_type == "defense":
+					score -= 4
+				elif to_type == "ranged":
+					score += 4
+			PHASE_ACTIVE_FRONTLINE:
+				if to_type == "melee":
+					score += 10
+				elif to_type == "defense":
+					score += 5
 		if to_type == "melee" or to_type == "defense":
 			score += 8
 		elif to_type == "ranged":
 			score += 6
 			score -= _ranged_saturation_penalty(state, owner_id)
+			score -= _ranged_position_penalty(state, owner_id, pos, zone, phase)
+		elif to_type == "gather":
+			var income_gap: int = maxi(0, MID_ECON_INCOME_THRESHOLD - _estimated_owner_income(state, owner_id))
+			var resource_dist: int = _nearest_open_resource_distance(state, pos)
+			score += 16 + income_gap * 4
+			if resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
+				score += (GATHER_CONVERSION_RESOURCE_MAX_DIST - resource_dist + 1) * 6
+			if objective_dist <= 5:
+				score -= 10
+		if to_type == "defense":
+			score -= _defense_density_penalty(state, owner_id, pos, phase)
+		score -= _specialization_spread_penalty(state, owner_id, pos, to_type, phase, zone, nearest_enemy_dist, support)
 
 		if score > best_score:
 			best_score = score
@@ -484,16 +610,43 @@ func _best_progression_upgrade_action(state: GameState, owner_id: int, energy: i
 
 		var zone: String = _tile_zone(state, owner_id, pos)
 		var support: int = state.count_owned_within_manhattan(owner_id, pos, 2)
+		var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, pos)
+		var phase: int = _local_threat_phase(state, owner_id, pos, nearest_enemy_dist, adjacent_enemy)
 
 		var to_type: String = "melee"
-		if _is_frontline_tile(state, owner_id, pos) or nearest_enemy_dist <= 3:
-			to_type = "melee"
-		elif support <= 2:
-			to_type = "defense"
-		elif _is_second_line_tile(state, owner_id, pos) and not _is_ranged_hard_capped(state, owner_id) and _chokepoint_score(state, pos) >= 2:
-			to_type = "ranged"
-		elif door_relevant and door_dist <= 6:
-			to_type = "melee"
+		if phase == PHASE_SAFE_EXPANSION:
+			if _should_prefer_gather_conversion(state, owner_id, pos, nearest_enemy_dist, false):
+				to_type = "gather"
+			elif _is_second_line_tile(state, owner_id, pos) and not _is_ranged_hard_capped(state, owner_id) and support >= 2 and _distance_to_nearest_owned_frontline(state, owner_id, pos) <= 2:
+				to_type = "ranged"
+			elif door_relevant and door_dist <= 4 and support >= 3:
+				to_type = "melee"
+			elif support >= 2 and objective_dist <= OBJECTIVE_UPGRADE_DISTANCE_MAX:
+				to_type = "melee"
+			else:
+				continue
+		elif phase == PHASE_APPROACHING_CONTACT:
+			if _is_second_line_tile(state, owner_id, pos) and not _is_ranged_hard_capped(state, owner_id) and _chokepoint_score(state, pos) >= 2:
+				to_type = "ranged"
+			elif nearest_enemy_dist <= 3 and support >= 2:
+				to_type = "melee"
+			elif _local_threat_score(state, owner_id, pos) >= THREAT_SPIKE_THRESHOLD and _defense_density_penalty(state, owner_id, pos, phase) < 26:
+				to_type = "defense"
+			elif _should_prefer_gather_conversion(state, owner_id, pos, nearest_enemy_dist, false):
+				to_type = "gather"
+			else:
+				to_type = "melee"
+		else:
+			if _is_frontline_tile(state, owner_id, pos) or nearest_enemy_dist <= 3:
+				to_type = "melee"
+			elif _local_threat_score(state, owner_id, pos) >= THREAT_SPIKE_THRESHOLD and _defense_density_penalty(state, owner_id, pos, phase) < 30:
+				to_type = "defense"
+			elif _is_second_line_tile(state, owner_id, pos) and not _is_ranged_hard_capped(state, owner_id) and _chokepoint_score(state, pos) >= 2:
+				to_type = "ranged"
+			elif _should_prefer_gather_conversion(state, owner_id, pos, nearest_enemy_dist, false):
+				to_type = "gather"
+			else:
+				to_type = "melee"
 
 		var delta: int = Combat.conversion_energy_delta(from_type, to_type)
 		if delta > energy:
@@ -505,11 +658,42 @@ func _best_progression_upgrade_action(state: GameState, owner_id: int, energy: i
 		score += maxi(0, 12 - nearest_enemy_dist) * 2
 		score += int(round(_heart_objective_score(state, owner_id, pos) * 0.5))
 		score += int(round(_door_objective_score(state, owner_id, pos) * 0.5))
+		score += _resource_objective_score(state, owner_id, pos, phase, to_type)
 		score += _zone_role_score(zone, to_type)
+		match phase:
+			PHASE_SAFE_EXPANSION:
+				if to_type == "melee":
+					score -= 20
+				elif to_type == "defense":
+					score -= 24
+				elif to_type == "gather":
+					score += 14
+			PHASE_APPROACHING_CONTACT:
+				if to_type == "melee":
+					score += 6
+				elif to_type == "defense":
+					score -= 4
+				elif to_type == "ranged":
+					score += 4
+			PHASE_ACTIVE_FRONTLINE:
+				if to_type == "melee":
+					score += 10
+				elif to_type == "defense":
+					score += 5
 		if to_type == "ranged":
 			score -= _ranged_saturation_penalty(state, owner_id)
+			score -= _ranged_position_penalty(state, owner_id, pos, zone, phase)
+		elif to_type == "gather":
+			var income_gap: int = maxi(0, MID_ECON_INCOME_THRESHOLD - _estimated_owner_income(state, owner_id))
+			var resource_dist: int = _nearest_open_resource_distance(state, pos)
+			score += 14 + income_gap * 5
+			if resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
+				score += (GATHER_CONVERSION_RESOURCE_MAX_DIST - resource_dist + 1) * 5
+		if to_type == "defense":
+			score -= _defense_density_penalty(state, owner_id, pos, phase)
+		score -= _specialization_spread_penalty(state, owner_id, pos, to_type, phase, zone, nearest_enemy_dist, support)
 		if zone == "backline" and to_type == "melee":
-			score -= 6
+			score -= 14
 		if support <= 1:
 			score -= 6
 
@@ -561,8 +745,15 @@ func _best_threat_response_action(
 			var delta: int = Combat.conversion_energy_delta(from_type, "defense")
 			if delta > energy:
 				continue
+			var phase: int = _local_threat_phase(state, owner_id, block["pos"], _nearest_enemy_distance(state, owner_id, block["pos"]), _adjacent_enemy_count(state, owner_id, block["pos"]))
+			if phase == PHASE_SAFE_EXPANSION:
+				continue
+			var density_penalty: int = _defense_density_penalty(state, owner_id, block["pos"], phase)
+			if density_penalty >= 34:
+				continue
 			var score: int = 90 + threat * 3 + _door_objective_score(state, owner_id, block["pos"])
 			score += _heart_objective_score(state, owner_id, block["pos"])
+			score -= density_penalty
 			if score > best_score:
 				best_score = score
 				best = {
@@ -593,6 +784,12 @@ func _best_threat_response_action(
 			var cost: int = int(Combat.TILE_RULES["defense"]["cost"])
 			if cost > energy:
 				continue
+			var phase: int = _local_threat_phase(state, owner_id, tile, _nearest_enemy_distance(state, owner_id, tile), _adjacent_enemy_count(state, owner_id, tile))
+			if phase == PHASE_SAFE_EXPANSION:
+				continue
+			var density_penalty: int = _defense_density_penalty(state, owner_id, tile, phase)
+			if density_penalty >= 34:
+				continue
 			var zone_score: int = 0
 			if _is_frontline_tile(state, owner_id, tile):
 				zone_score = 12
@@ -600,6 +797,7 @@ func _best_threat_response_action(
 				zone_score = 5
 			var score: int = 70 + threat_score * 2 + zone_score + _door_objective_score(state, owner_id, tile)
 			score += _heart_objective_score(state, owner_id, tile)
+			score -= density_penalty
 			if score > best_score:
 				best_score = score
 				best = {
@@ -686,6 +884,7 @@ func _best_frontline_place_action(
 
 			var support: int = state.count_owned_within_manhattan(owner_id, tile, 2, planned_tiles)
 			var zone: String = _tile_zone(state, owner_id, tile)
+			var phase: int = _local_threat_phase(state, owner_id, tile, nearest_enemy_dist, adjacent_enemy)
 			var tile_type: String = _preferred_place_type_for_zone(state, owner_id, tile, zone, adjacent_enemy, nearest_enemy_dist, support, energy)
 
 			var cost: int = int(Combat.TILE_RULES[tile_type]["cost"])
@@ -699,14 +898,27 @@ func _best_frontline_place_action(
 			score += _chokepoint_score(state, tile) * CHOKEPOINT_WEIGHT
 			score += _door_objective_score(state, owner_id, tile)
 			score += _heart_objective_score(state, owner_id, tile)
+			score += _resource_objective_score(state, owner_id, tile, phase, tile_type)
 			score += _objective_progress_delta_score(state, owner_id, tile, baseline_objective_dist, false)
 			score += _zone_role_score(zone, tile_type)
 			if support <= 1:
 				score -= 8
 			if tile_type == "defense":
 				score += 8
+				score -= _defense_density_penalty(state, owner_id, tile, phase)
+			elif tile_type == "ranged":
+				score -= _ranged_position_penalty(state, owner_id, tile, zone, phase)
 			elif tile_type == "melee":
-				score += 10
+				if phase == PHASE_ACTIVE_FRONTLINE:
+					score += 18
+				elif phase == PHASE_APPROACHING_CONTACT:
+					score += 10
+				elif adjacent_enemy > 0 or nearest_enemy_dist <= 2:
+					score += 14
+				else:
+					score -= 18
+			if tile_type != "basic":
+				score -= _specialization_spread_penalty(state, owner_id, tile, tile_type, phase, zone, nearest_enemy_dist, support)
 
 			if score > best_score:
 				best_score = score
@@ -754,6 +966,7 @@ func _best_pressure_growth_action(
 			var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, tile)
 			var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, tile)
 			var zone: String = _tile_zone(state, owner_id, tile)
+			var phase: int = _local_threat_phase(state, owner_id, tile, nearest_enemy_dist, adjacent_enemy)
 
 			var tile_type: String = _preferred_place_type_for_zone(state, owner_id, tile, zone, adjacent_enemy, nearest_enemy_dist, support, energy)
 
@@ -768,12 +981,29 @@ func _best_pressure_growth_action(
 			score += _chokepoint_score(state, tile) * CHOKEPOINT_WEIGHT
 			score += _door_objective_score(state, owner_id, tile)
 			score += _heart_objective_score(state, owner_id, tile)
+			score += _resource_objective_score(state, owner_id, tile, phase, tile_type)
 			score += _objective_progress_delta_score(state, owner_id, tile, baseline_objective_dist, not engaged)
 			score += _zone_role_score(zone, tile_type)
 			if engaged and tile_type == "basic" and zone != "frontline":
 				score -= ENGAGED_BASIC_EXPANSION_PENALTY
+			if phase == PHASE_SAFE_EXPANSION and tile_type == "basic":
+				score += 10
+			if phase == PHASE_SAFE_EXPANSION and tile_type == "gather":
+				score += 16
+			if tile_type == "defense":
+				score -= _defense_density_penalty(state, owner_id, tile, phase)
 			if _is_second_line_tile(state, owner_id, tile) and tile_type == "ranged":
-				score += 18
+				score += 10
+			if tile_type == "ranged":
+				score -= _ranged_position_penalty(state, owner_id, tile, zone, phase)
+			if phase == PHASE_ACTIVE_FRONTLINE and tile_type == "melee" and adjacent_enemy > 0 and support >= 2:
+				score += 16
+			if phase == PHASE_SAFE_EXPANSION and tile_type == "melee":
+				score -= 24
+			elif zone == "backline" and tile_type == "melee":
+				score -= 14
+			if tile_type != "basic":
+				score -= _specialization_spread_penalty(state, owner_id, tile, tile_type, phase, zone, nearest_enemy_dist, support)
 			if support <= 1:
 				score -= 14
 
@@ -828,30 +1058,41 @@ func _best_resource_place_action(
 			continue
 
 		var zone: String = _tile_zone(state, owner_id, tile)
+		var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, tile)
+		var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, tile)
+		var phase: int = _local_threat_phase(state, owner_id, tile, nearest_enemy_dist, adjacent_enemy)
+		if not _is_gather_position_allowed(state, owner_id, tile, nearest_enemy_dist, phase):
+			continue
 		if avoid_high_pressure_zones:
-			if zone == "frontline" or zone == "second_line":
-				continue
-			if _local_threat_score(state, owner_id, tile) >= THREAT_SPIKE_THRESHOLD:
+			if phase != PHASE_SAFE_EXPANSION:
 				continue
 
 		var support: int = state.count_owned_within_manhattan(owner_id, tile, 2, planned_tiles)
-		var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, tile)
 		var score: int = 16
 		score += support * 3
-		score += maxi(0, 8 - nearest_enemy_dist)
+		score += mini(6, maxi(0, nearest_enemy_dist - 2))
 		score += int(round(_door_objective_score(state, owner_id, tile) * 0.15))
 		score += int(round(_heart_objective_score(state, owner_id, tile) * 0.2))
 		score += _chokepoint_score(state, tile) * 2
+		var income_gap: int = maxi(0, MID_ECON_INCOME_THRESHOLD - _estimated_owner_income(state, owner_id))
+		score += income_gap * 4
 		if support <= 1:
 			score -= 8
 		if zone == "backline":
-			score += 16
+			score += 20
 		elif zone == "second_line":
-			score -= 10
-		else:
-			score -= 24
-		if _local_threat_score(state, owner_id, tile) >= THREAT_SPIKE_THRESHOLD:
 			score -= 20
+		else:
+			score -= 38
+		var local_threat: int = _local_threat_score(state, owner_id, tile)
+		if local_threat >= THREAT_SPIKE_THRESHOLD:
+			score -= 24
+		if phase == PHASE_SAFE_EXPANSION:
+			score += 22
+		elif phase == PHASE_APPROACHING_CONTACT:
+			score += 2
+		else:
+			score -= 26
 
 		if score > best_score:
 			best_score = score
@@ -893,13 +1134,19 @@ func _best_support_conversion_action(
 		var nearest_dist: int = _nearest_enemy_distance(state, owner_id, pos)
 		if nearest_dist < 2 or nearest_dist > 4:
 			continue
+		var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, pos)
+		var phase: int = _local_threat_phase(state, owner_id, pos, nearest_dist, adjacent_enemy)
+		if phase == PHASE_SAFE_EXPANSION:
+			continue
 
 		var from_type: String = String(block.get("tile_type", "basic"))
 		if from_type == "ranged":
 			continue
 		var to_type: String = "ranged"
 		if _is_ranged_hard_capped(state, owner_id):
-			to_type = "defense"
+			to_type = "melee" if phase != PHASE_APPROACHING_CONTACT and state.count_owned_within_manhattan(owner_id, pos, 2) >= 2 else "defense"
+		elif nearest_dist <= 2 and state.count_owned_within_manhattan(owner_id, pos, 2) >= 3:
+			to_type = "melee"
 		var delta: int = Combat.conversion_energy_delta(from_type, to_type)
 		if delta > energy:
 			continue
@@ -907,6 +1154,12 @@ func _best_support_conversion_action(
 		var score: int = _conversion_score(state, owner_id, block, from_type, to_type, false)
 		if _is_second_line_tile(state, owner_id, pos):
 			score += 12
+		if to_type == "melee" and nearest_dist <= 2:
+			score += 10
+		if to_type == "defense":
+			score -= _defense_density_penalty(state, owner_id, pos, phase)
+			if phase == PHASE_APPROACHING_CONTACT:
+				score -= 10
 		if score <= 0:
 			continue
 		if score > best_score:
@@ -919,6 +1172,108 @@ func _best_support_conversion_action(
 					"block_id": block_id,
 					"to_type": to_type,
 					"energy_delta": delta,
+				}
+			}
+	return best
+
+func _best_safe_backline_downgrade_action(
+	state: GameState,
+	owner_id: int,
+	energy: int,
+	reserved_convert_blocks: Dictionary,
+	engaged: bool,
+	low_threat: bool
+) -> Dictionary:
+	if engaged or not low_threat:
+		return {}
+	if state.turn_index < SAFE_DOWNGRADE_MIN_TURN:
+		return {}
+
+	var basic_cost: int = int(Combat.TILE_RULES["basic"]["cost"])
+	var gather_cost: int = int(Combat.TILE_RULES["gather"]["cost"])
+	var income_gap: int = maxi(0, MID_ECON_INCOME_THRESHOLD - _estimated_owner_income(state, owner_id))
+	var wants_econ_boost: bool = _count_gather_tiles(state, owner_id) < MID_GATHER_TARGET and income_gap > 0
+	var target_energy: int = basic_cost
+	if wants_econ_boost:
+		target_energy = gather_cost
+	if energy >= target_energy:
+		return {}
+
+	var best: Dictionary = {}
+	var best_score: int = -999999
+	for block in state.get_owner_blocks(owner_id):
+		if bool(block.get("core", false)):
+			continue
+		if bool(block.get("is_heart", false)):
+			continue
+		var block_id: int = int(block["id"])
+		if reserved_convert_blocks.has(block_id):
+			continue
+
+		var from_type: String = String(block.get("tile_type", "basic"))
+		if from_type == "basic" or from_type == "gather":
+			continue
+		var from_tier: int = int(block.get("upgrade_tier", 0))
+		if from_tier <= 0:
+			continue
+		var downgrade_delta: int = Combat.conversion_energy_delta(from_type, "basic", from_tier)
+		var downgrade_refund: int = -downgrade_delta
+		if downgrade_refund <= 0:
+			continue
+		if energy + downgrade_refund < target_energy:
+			continue
+
+		var last_turn: int = int(block.get("last_converted_turn", -999999))
+		if state.turn_index - last_turn < CONVERSION_COOLDOWN_TURNS:
+			continue
+
+		var pos: Vector2i = block["pos"]
+		if _is_frontline_tile(state, owner_id, pos):
+			continue
+		if _is_second_line_tile(state, owner_id, pos):
+			continue
+		if _is_near_front_tile(state, owner_id, pos):
+			continue
+		if _has_adjacent_allied_heart(state, owner_id, pos):
+			continue
+
+		var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, pos)
+		if nearest_enemy_dist < SAFE_DOWNGRADE_MIN_ENEMY_DISTANCE:
+			continue
+		var local_threat: int = _local_threat_score(state, owner_id, pos)
+		if local_threat > SAFE_DOWNGRADE_MAX_THREAT:
+			continue
+
+		var choke: int = _chokepoint_score(state, pos)
+		if choke >= 6:
+			continue
+
+		var support: int = state.count_owned_within_manhattan(owner_id, pos, 2)
+		var objective_dist: int = _primary_objective_distance(state, owner_id, pos)
+		var score: int = 18
+		score += nearest_enemy_dist * 2
+		score += support
+		score -= local_threat * 2
+		score -= choke * 2
+		if objective_dist <= 6:
+			score -= (7 - objective_dist) * 6
+		if from_type == "ranged":
+			score -= 6
+		elif from_type == "defense":
+			score -= 4
+
+		if score < SAFE_DOWNGRADE_MIN_SCORE:
+			continue
+		if score > best_score:
+			best_score = score
+			best = {
+				"score": score,
+				"action": {
+					"type": "convert_tile",
+					"owner": owner_id,
+					"block_id": block_id,
+					"to_type": "basic",
+					"energy_delta": downgrade_delta,
 				}
 			}
 	return best
@@ -941,54 +1296,94 @@ func _best_tile_upgrade_action(
 			continue
 
 		var tile_type: String = String(block.get("tile_type", "basic"))
-		var cost: int = Combat.upgrade_energy_cost(state, owner_id, tile_type)
+		var current_tier: int = maxi(Combat.SPECIALIZATION_TIER, int(block.get("upgrade_tier", Combat.SPECIALIZATION_TIER)))
+		var cost: int = Combat.upgrade_energy_cost(state, owner_id, tile_type, 0, 0, current_tier)
 		if cost <= 0 or cost > energy:
 			continue
 
 		var pos: Vector2i = block["pos"]
+		var support: int = state.count_owned_within_manhattan(owner_id, pos, 2)
+		var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, pos)
+		var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, pos)
+		var phase: int = _local_threat_phase(state, owner_id, pos, nearest_enemy_dist, adjacent_enemy)
 		var zone: String = _tile_zone(state, owner_id, pos)
-		if tile_type in ["defense", "melee"] and zone != "frontline":
+		var choke: int = _chokepoint_score(state, pos)
+		var frontline_depth: int = _distance_to_nearest_owned_frontline(state, owner_id, pos)
+		var objective_dist: int = _primary_objective_distance(state, owner_id, pos)
+
+		if tile_type == "defense" and zone == "backline" and choke < 4 and phase == PHASE_SAFE_EXPANSION:
 			continue
-		if tile_type == "ranged" and zone != "second_line":
+		if tile_type == "melee" and zone == "backline" and nearest_enemy_dist > 4:
 			continue
+		if tile_type == "ranged":
+			if zone == "frontline":
+				continue
+			if not _is_ranged_position_allowed(state, owner_id, pos):
+				continue
 		if tile_type == "gather" and zone != "backline":
 			continue
 		if tile_type == "gather" and int(block.get("gather_bonus", 0)) <= 0:
 			continue
 
-		var must_keep_reserve: int = int(Combat.TILE_RULES["basic"]["cost"]) + TILE_UPGRADE_SURPLUS_RESERVE
+		var must_keep_reserve: int = int(Combat.TILE_RULES["basic"]["cost"]) + maxi(2, TILE_UPGRADE_SURPLUS_RESERVE - 2)
 		if energy - cost < must_keep_reserve:
 			continue
 
-		var support: int = state.count_owned_within_manhattan(owner_id, pos, 2)
-		var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, pos)
 		var objective_delta_score: int = _objective_progress_delta_score(state, owner_id, pos, objective_baseline_dist, false)
 		var score: int = 0
 		match tile_type:
 			"defense":
-				score = 84 if zone == "frontline" else 38
+				score = 78 if zone == "frontline" else (46 if choke >= 4 else 20)
 			"melee":
-				score = 80 if zone == "frontline" else 34
+				score = 74 if zone == "frontline" else (42 if nearest_enemy_dist <= 3 else 18)
 			"ranged":
-				score = 74 if zone == "second_line" else (24 if zone == "backline" else 4)
+				score = 72 if zone == "second_line" else (56 if zone == "backline" else 8)
 			"gather":
-				score = 46 if zone == "backline" else 18
+				score = 54 if zone == "backline" else 20
 			_:
 				score = 0
 
+		var tier_step: int = current_tier - Combat.SPECIALIZATION_TIER + 1
+		score += tier_step * 16
 		if prefer_frontline and zone == "frontline":
 			score += 12
 		if zone == "frontline" and tile_type == "ranged":
-			score -= 18
+			score -= 22
+		score += _upgrade_focus_bonus(
+			state,
+			owner_id,
+			pos,
+			tile_type,
+			phase,
+			zone,
+			support,
+			nearest_enemy_dist,
+			adjacent_enemy,
+			choke,
+			frontline_depth
+		)
 		score += _door_objective_score(state, owner_id, pos)
-		score += int(round(_heart_objective_score(state, owner_id, pos) * 0.8))
+		score += int(round(_heart_objective_score(state, owner_id, pos) * 0.85))
 		score += support * 2
 		score += maxi(0, 8 - nearest_enemy_dist) * 2
 		if tile_type == "gather":
 			var income_gap: int = maxi(0, MID_ECON_INCOME_THRESHOLD - _estimated_owner_income(state, owner_id))
 			score += income_gap * 6
+			var resource_dist: int = _nearest_open_resource_distance(state, pos)
+			if resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
+				score += 16 + (GATHER_CONVERSION_RESOURCE_MAX_DIST - resource_dist + 1) * 4
+		if tile_type == "defense":
+			score += choke * 2
+		if tile_type == "ranged":
+			score += _ranged_preferred_depth_bonus(state, owner_id, pos)
+			if frontline_depth > 3:
+				score -= 14
+		if tile_type == "melee" and (adjacent_enemy > 0 or nearest_enemy_dist <= 2):
+			score += 12
+		if phase == PHASE_SAFE_EXPANSION and objective_dist > 8 and tile_type in ["defense", "ranged"]:
+			score -= 12
 		score += objective_delta_score
-		score -= cost * 5
+		score -= cost * 3
 
 		if score > best_score:
 			best_score = score
@@ -1007,6 +1402,82 @@ func _best_tile_upgrade_action(
 	if best_score < TILE_UPGRADE_MIN_SCORE:
 		return {}
 	return best
+
+func _should_prefer_tile_upgrade_candidate(current_candidate: Dictionary, tile_upgrade_candidate: Dictionary, engaged: bool) -> bool:
+	if tile_upgrade_candidate.is_empty():
+		return false
+	if current_candidate.is_empty():
+		return true
+
+	var upgrade_score: int = int(tile_upgrade_candidate.get("score", -999999))
+	var current_score: int = int(current_candidate.get("score", -999999))
+	var current_action: Dictionary = current_candidate.get("action", {})
+	var kind: String = String(current_action.get("type", "pass"))
+	if kind == "convert_tile":
+		var to_type: String = String(current_action.get("to_type", "basic"))
+		if engaged and to_type == "defense":
+			return upgrade_score >= current_score + UPGRADE_PRIORITY_MARGIN + 10
+		return upgrade_score >= current_score + UPGRADE_PRIORITY_MARGIN - 2
+	if kind == "place_tile":
+		var placed_type: String = String(current_action.get("tile_type", "basic"))
+		if placed_type == "basic":
+			return upgrade_score >= current_score + UPGRADE_PRIORITY_MARGIN - 4
+		return upgrade_score >= current_score + UPGRADE_PRIORITY_MARGIN
+	return upgrade_score > current_score
+
+func _upgrade_focus_bonus(
+	state: GameState,
+	owner_id: int,
+	tile: Vector2i,
+	tile_type: String,
+	phase: int,
+	zone: String,
+	support: int,
+	nearest_enemy_dist: int,
+	adjacent_enemy: int,
+	choke: int,
+	frontline_depth: int
+) -> int:
+	var bonus: int = 0
+	var objective_dist: int = _primary_objective_distance(state, owner_id, tile)
+	if objective_dist <= 4:
+		bonus += 28
+	elif objective_dist <= 7:
+		bonus += 18
+	elif objective_dist <= 10:
+		bonus += 10
+
+	var resource_dist: int = _nearest_open_resource_distance(state, tile)
+	if resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
+		if tile_type == "gather":
+			bonus += 20
+		else:
+			bonus += 12
+	elif resource_dist <= 5:
+		bonus += 4
+
+	if zone == "frontline" or phase == PHASE_ACTIVE_FRONTLINE:
+		bonus += 8
+	if support >= 3:
+		bonus += 6
+
+	match tile_type:
+		"defense":
+			if choke >= 4:
+				bonus += 14
+		"ranged":
+			if _has_friendly_screen_toward_nearest_enemy(state, owner_id, tile):
+				bonus += 10
+			else:
+				bonus -= 12
+			if frontline_depth >= 1 and frontline_depth <= 2:
+				bonus += 8
+		"melee":
+			if adjacent_enemy > 0 or nearest_enemy_dist <= 3:
+				bonus += 12
+		_:
+			pass
+	return bonus
 
 func _reserve_action(action: Dictionary, reserved_place_tiles: Dictionary, reserved_convert_blocks: Dictionary) -> void:
 	var kind: String = String(action.get("type", "pass"))
@@ -1027,6 +1498,8 @@ func _should_seek_midgame_gather(state: GameState, owner_id: int, energy: int, e
 	if _count_gather_tiles(state, owner_id) >= MID_GATHER_TARGET:
 		return false
 	var income: int = _estimated_owner_income(state, owner_id)
+	if _is_owner_low_threat(state, owner_id) and income <= MID_ECON_INCOME_THRESHOLD + 1:
+		return true
 	if income < MID_ECON_INCOME_THRESHOLD:
 		return true
 	if energy <= MID_ECON_ENERGY_LOW_THRESHOLD:
@@ -1049,6 +1522,35 @@ func _count_gather_tiles(state: GameState, owner_id: int) -> int:
 		if String(block.get("tile_type", "basic")) == "gather":
 			total += 1
 	return total
+
+func _is_owner_low_threat(state: GameState, owner_id: int) -> bool:
+	for block in state.get_owner_blocks(owner_id):
+		if _local_threat_phase(state, owner_id, block["pos"]) != PHASE_SAFE_EXPANSION:
+			return false
+	return true
+
+func _should_prefer_gather_conversion(
+	state: GameState,
+	owner_id: int,
+	tile: Vector2i,
+	nearest_enemy_dist: int,
+	engaged: bool
+) -> bool:
+	if engaged:
+		return false
+	var phase: int = _local_threat_phase(state, owner_id, tile, nearest_enemy_dist, _adjacent_enemy_count(state, owner_id, tile))
+	if not _is_gather_position_allowed(state, owner_id, tile, nearest_enemy_dist, phase):
+		return false
+	if _count_gather_tiles(state, owner_id) >= MID_GATHER_TARGET:
+		return false
+	if _nearest_open_resource_distance(state, tile) > GATHER_CONVERSION_RESOURCE_MAX_DIST:
+		return false
+	return true
+
+func _is_upgrade_conversion_action(action: Dictionary) -> bool:
+	if String(action.get("type", "")) != "convert_tile":
+		return false
+	return String(action.get("to_type", "basic")) != "basic"
 
 func _is_frontline_conversion(state: GameState, owner_id: int, action: Dictionary) -> bool:
 	if String(action.get("type", "")) != "convert_tile":
@@ -1079,7 +1581,8 @@ func _can_afford_any_upgrade(energy: int) -> bool:
 	)
 	var cheapest_tile_upgrade: int = 999999
 	for role in Combat.UPGRADE_BASE_COST.keys():
-		cheapest_tile_upgrade = mini(cheapest_tile_upgrade, int(Combat.UPGRADE_BASE_COST[role]))
+		var tier_ii_cost: int = int(Combat.UPGRADE_BASE_COST[role]) + int(Combat.UPGRADE_TIER_II_SURCHARGE)
+		cheapest_tile_upgrade = mini(cheapest_tile_upgrade, tier_ii_cost)
 	var cheapest: int = mini(cheapest_conversion, cheapest_tile_upgrade)
 	return energy >= cheapest
 
@@ -1095,6 +1598,173 @@ func _tile_zone(state: GameState, owner_id: int, tile: Vector2i) -> String:
 		return "second_line"
 	return "backline"
 
+func _is_gather_position_allowed(state: GameState, owner_id: int, tile: Vector2i, nearest_enemy_dist: int, phase: int) -> bool:
+	if phase != PHASE_SAFE_EXPANSION:
+		return false
+	if nearest_enemy_dist < GATHER_SAFE_MIN_ENEMY_DISTANCE:
+		return false
+	if _is_near_front_tile(state, owner_id, tile):
+		return false
+	return _tile_zone(state, owner_id, tile) == "backline"
+
+func _is_ranged_position_allowed(state: GameState, owner_id: int, tile: Vector2i) -> bool:
+	if _is_frontline_tile(state, owner_id, tile):
+		return false
+	return _has_friendly_screen_toward_nearest_enemy(state, owner_id, tile)
+
+func _ranged_position_penalty(state: GameState, owner_id: int, tile: Vector2i, zone: String, phase: int = PHASE_ACTIVE_FRONTLINE) -> int:
+	var adjacent_ranged: int = _adjacent_owned_type_count(state, owner_id, tile, "ranged")
+	var nearby_ranged: int = _owned_type_count_within_manhattan(state, owner_id, tile, 2, "ranged")
+	var penalty: int = adjacent_ranged * RANGED_CHAIN_ADJACENT_PENALTY
+	penalty += maxi(0, nearby_ranged - 2) * RANGED_CHAIN_CLUSTER_PENALTY
+	if not _has_friendly_screen_toward_nearest_enemy(state, owner_id, tile):
+		penalty += RANGED_EXPOSED_PENALTY + adjacent_ranged * 6
+	if zone == "backline":
+		penalty += 10
+	var nearby_owned: int = maxi(1, state.count_owned_within_manhattan(owner_id, tile, 2))
+	var local_ratio: float = float(nearby_ranged) / float(nearby_owned)
+	if local_ratio >= RANGED_LOCAL_RATIO_HARD_CAP:
+		penalty += RANGED_LOCAL_RATIO_HARD_PENALTY
+	elif local_ratio >= RANGED_LOCAL_RATIO_SOFT_CAP:
+		penalty += RANGED_LOCAL_RATIO_SOFT_PENALTY
+	var frontline_depth: int = _distance_to_nearest_owned_frontline(state, owner_id, tile)
+	if frontline_depth > 3:
+		penalty += RANGED_NO_FRONTLINE_PENALTY + mini(12, maxi(0, frontline_depth - 4) * 4)
+	if phase == PHASE_SAFE_EXPANSION:
+		penalty += RANGED_SAFE_EXPANSION_PENALTY
+	elif phase == PHASE_APPROACHING_CONTACT:
+		penalty += RANGED_APPROACHING_PHASE_PENALTY
+	return penalty
+
+func _ranged_preferred_depth_bonus(state: GameState, owner_id: int, tile: Vector2i) -> int:
+	var depth: int = _distance_to_nearest_owned_frontline(state, owner_id, tile)
+	if depth >= 1 and depth <= 2:
+		return 12
+	if depth == 3:
+		return 4
+	if depth > 3:
+		return -8
+	return 0
+
+func _distance_to_nearest_owned_frontline(state: GameState, owner_id: int, tile: Vector2i) -> int:
+	var best: int = 99
+	for block in state.get_owner_blocks(owner_id):
+		var pos: Vector2i = block["pos"]
+		if not _is_frontline_tile(state, owner_id, pos):
+			continue
+		best = mini(best, _distance_to_tile(tile, pos))
+	return best
+
+func _has_friendly_screen_toward_nearest_enemy(state: GameState, owner_id: int, tile: Vector2i) -> bool:
+	var enemy_tile: Vector2i = _nearest_hostile_tile(state, owner_id, tile)
+	if enemy_tile == Vector2i(-1, -1):
+		return true
+	var step: Vector2i = _step_toward_tile(tile, enemy_tile)
+	if step == Vector2i.ZERO:
+		return true
+	var screen_block: Dictionary = state.get_block_at(tile + step)
+	if screen_block.is_empty():
+		return false
+	return int(screen_block.get("owner", 0)) == owner_id
+
+func _nearest_hostile_tile(state: GameState, owner_id: int, tile: Vector2i) -> Vector2i:
+	var best_dist: int = 999999
+	var best_tile: Vector2i = Vector2i(-1, -1)
+	var block_ids: Array = state.blocks.keys()
+	block_ids.sort()
+	for block_id_variant in block_ids:
+		var block_id: int = int(block_id_variant)
+		if not state.blocks.has(block_id):
+			continue
+		var block: Dictionary = state.blocks[block_id]
+		if not state.are_hostile(owner_id, int(block.get("owner", 0))):
+			continue
+		var enemy_tile: Vector2i = block["pos"]
+		var dist: int = _distance_to_tile(tile, enemy_tile)
+		if dist < best_dist:
+			best_dist = dist
+			best_tile = enemy_tile
+			continue
+		if dist != best_dist or best_tile == Vector2i(-1, -1):
+			continue
+		if enemy_tile.y < best_tile.y:
+			best_tile = enemy_tile
+		elif enemy_tile.y == best_tile.y and enemy_tile.x < best_tile.x:
+			best_tile = enemy_tile
+	return best_tile
+
+func _step_toward_tile(from_tile: Vector2i, to_tile: Vector2i) -> Vector2i:
+	var dx: int = to_tile.x - from_tile.x
+	var dy: int = to_tile.y - from_tile.y
+	if dx == 0 and dy == 0:
+		return Vector2i.ZERO
+	if absi(dx) >= absi(dy):
+		if dx != 0:
+			return Vector2i(signi(dx), 0)
+		return Vector2i(0, signi(dy))
+	return Vector2i(0, signi(dy))
+
+func _local_threat_phase(
+	state: GameState,
+	owner_id: int,
+	tile: Vector2i,
+	nearest_enemy_dist: int = -1,
+	adjacent_enemy: int = -1
+) -> int:
+	var nearest_dist: int = nearest_enemy_dist if nearest_enemy_dist >= 0 else _nearest_enemy_distance(state, owner_id, tile)
+	var adjacent: int = adjacent_enemy if adjacent_enemy >= 0 else _adjacent_enemy_count(state, owner_id, tile)
+	var local_threat: int = _local_threat_score(state, owner_id, tile)
+	if adjacent > 0 or nearest_dist <= PHASE_ACTIVE_FRONTLINE_MAX_ENEMY_DISTANCE or local_threat >= THREAT_SPIKE_THRESHOLD:
+		return PHASE_ACTIVE_FRONTLINE
+	if nearest_dist <= PHASE_APPROACHING_CONTACT_MAX_ENEMY_DISTANCE or local_threat >= PHASE_APPROACHING_LOCAL_THREAT_MIN:
+		return PHASE_APPROACHING_CONTACT
+	return PHASE_SAFE_EXPANSION
+
+func _owned_type_count_within_manhattan(state: GameState, owner_id: int, tile: Vector2i, radius: int, tile_type: String) -> int:
+	var total: int = 0
+	for block in state.get_owner_blocks(owner_id):
+		if String(block.get("tile_type", "basic")) != tile_type:
+			continue
+		if _distance_to_tile(tile, block["pos"]) <= radius:
+			total += 1
+	return total
+
+func _adjacent_owned_type_count(state: GameState, owner_id: int, tile: Vector2i, tile_type: String) -> int:
+	var total: int = 0
+	for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var block: Dictionary = state.get_block_at(tile + step)
+		if block.is_empty():
+			continue
+		if int(block.get("owner", 0)) != owner_id:
+			continue
+		if String(block.get("tile_type", "basic")) != tile_type:
+			continue
+		total += 1
+	return total
+
+func _defense_density_penalty(state: GameState, owner_id: int, tile: Vector2i, phase: int) -> int:
+	var nearby_defense: int = _owned_type_count_within_manhattan(state, owner_id, tile, DEFENSE_DENSITY_RADIUS, "defense")
+	var adjacent_defense: int = _adjacent_owned_type_count(state, owner_id, tile, "defense")
+	var nearby_owned: int = maxi(1, state.count_owned_within_manhattan(owner_id, tile, DEFENSE_DENSITY_RADIUS))
+	var defense_ratio: float = float(nearby_defense) / float(nearby_owned)
+
+	var penalty: int = 0
+	penalty += adjacent_defense * 9
+	penalty += maxi(0, nearby_defense - DEFENSE_NEARBY_SOFT_LIMIT) * 5
+	if defense_ratio >= DEFENSE_LOCAL_RATIO_HARD_CAP:
+		penalty += 18
+	elif defense_ratio >= DEFENSE_LOCAL_RATIO_SOFT_CAP:
+		penalty += 8
+
+	match phase:
+		PHASE_SAFE_EXPANSION:
+			penalty += 22
+		PHASE_APPROACHING_CONTACT:
+			penalty += 10
+		PHASE_ACTIVE_FRONTLINE:
+			penalty += 4
+	return penalty
+
 func _preferred_place_type_for_zone(
 	state: GameState,
 	owner_id: int,
@@ -1105,27 +1775,57 @@ func _preferred_place_type_for_zone(
 	support: int,
 	energy: int
 ) -> String:
+	var local_threat: int = _local_threat_score(state, owner_id, tile)
+	var phase: int = _local_threat_phase(state, owner_id, tile, nearest_enemy_dist, adjacent_enemy)
+	var gather_cost: int = int(Combat.TILE_RULES["gather"]["cost"])
+	var gather_count: int = _count_gather_tiles(state, owner_id)
+	var resource_dist: int = _nearest_open_resource_distance(state, tile)
+	var gather_ready: bool = gather_count < MID_GATHER_TARGET and energy >= gather_cost
+	var defense_penalty: int = _defense_density_penalty(state, owner_id, tile, phase)
+	var choke_score: int = _chokepoint_score(state, tile)
+	var ranged_penalty: int = _ranged_position_penalty(state, owner_id, tile, zone, phase)
+
+	if phase == PHASE_SAFE_EXPANSION:
+		if zone == "backline" and gather_ready and resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST and support >= 2 and _is_gather_position_allowed(state, owner_id, tile, nearest_enemy_dist, phase):
+			return "gather"
+		return "basic"
+
+	if phase == PHASE_APPROACHING_CONTACT:
+		if zone == "backline" and gather_ready and resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST and local_threat <= LOW_THREAT_MAX_LOCAL_SCORE and _is_gather_position_allowed(state, owner_id, tile, nearest_enemy_dist, phase):
+			return "gather"
+		if zone == "frontline":
+			if local_threat >= THREAT_SPIKE_THRESHOLD + 2 and defense_penalty < 24 and support <= 2 and energy >= int(Combat.TILE_RULES["defense"]["cost"]):
+				return "defense"
+			if energy >= int(Combat.TILE_RULES["melee"]["cost"]):
+				return "melee"
+			return "basic"
+		if zone == "second_line":
+			if support >= 2 and choke_score >= 2 and not _is_ranged_hard_capped(state, owner_id) and energy >= int(Combat.TILE_RULES["ranged"]["cost"]) and _is_ranged_position_allowed(state, owner_id, tile) and ranged_penalty < 36:
+				return "ranged"
+			if nearest_enemy_dist <= 3 and support >= 2 and energy >= int(Combat.TILE_RULES["melee"]["cost"]):
+				return "melee"
+			if local_threat >= THREAT_SPIKE_THRESHOLD and defense_penalty < 26 and energy >= int(Combat.TILE_RULES["defense"]["cost"]):
+				return "defense"
+			return "basic"
+
 	if zone == "frontline":
-		if _local_threat_score(state, owner_id, tile) >= THREAT_SPIKE_THRESHOLD and energy >= int(Combat.TILE_RULES["defense"]["cost"]):
-			return "defense"
-		if support <= 2 and energy >= int(Combat.TILE_RULES["defense"]["cost"]):
+		if local_threat >= THREAT_SPIKE_THRESHOLD + 2 and defense_penalty < 30 and support <= 2 and energy >= int(Combat.TILE_RULES["defense"]["cost"]):
 			return "defense"
 		if energy >= int(Combat.TILE_RULES["melee"]["cost"]):
 			return "melee"
 	if zone == "second_line":
-		var choke_score: int = _chokepoint_score(state, tile)
-		if support >= 2 and choke_score >= 2 and not _is_ranged_hard_capped(state, owner_id) and energy >= int(Combat.TILE_RULES["ranged"]["cost"]):
+		if support >= 2 and choke_score >= 2 and not _is_ranged_hard_capped(state, owner_id) and energy >= int(Combat.TILE_RULES["ranged"]["cost"]) and _is_ranged_position_allowed(state, owner_id, tile) and ranged_penalty < 36:
 			return "ranged"
-		if support >= 3 and not _is_ranged_hard_capped(state, owner_id) and energy >= int(Combat.TILE_RULES["ranged"]["cost"]):
-			return "ranged"
-		if adjacent_enemy > 0 and energy >= int(Combat.TILE_RULES["defense"]["cost"]):
-			return "defense"
-		if nearest_enemy_dist <= 3 and energy >= int(Combat.TILE_RULES["melee"]["cost"]):
+		if nearest_enemy_dist <= 3 and support >= 2 and energy >= int(Combat.TILE_RULES["melee"]["cost"]):
 			return "melee"
+		if local_threat >= THREAT_SPIKE_THRESHOLD + 2 and defense_penalty < 30 and energy >= int(Combat.TILE_RULES["defense"]["cost"]):
+			return "defense"
 	if zone == "backline":
-		if nearest_enemy_dist <= 3 and support >= 3 and not _is_ranged_hard_capped(state, owner_id) and energy >= int(Combat.TILE_RULES["ranged"]["cost"]):
+		if gather_ready and resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST and local_threat <= LOW_THREAT_MAX_LOCAL_SCORE and _is_gather_position_allowed(state, owner_id, tile, nearest_enemy_dist, phase):
+			return "gather"
+		if nearest_enemy_dist <= 3 and support >= 3 and not _is_ranged_hard_capped(state, owner_id) and energy >= int(Combat.TILE_RULES["ranged"]["cost"]) and _is_ranged_position_allowed(state, owner_id, tile) and ranged_penalty < 34:
 			return "ranged"
-		if adjacent_enemy > 0 and energy >= int(Combat.TILE_RULES["defense"]["cost"]):
+		if adjacent_enemy > 0 and defense_penalty < 24 and energy >= int(Combat.TILE_RULES["defense"]["cost"]):
 			return "defense"
 	if nearest_enemy_dist <= 2 and support >= 2 and energy >= int(Combat.TILE_RULES["melee"]["cost"]):
 		return "melee"
@@ -1134,27 +1834,27 @@ func _preferred_place_type_for_zone(
 func _zone_role_score(zone: String, tile_type: String) -> int:
 	if zone == "frontline":
 		if tile_type == "defense":
-			return 22
+			return 16
 		if tile_type == "melee":
-			return 18
+			return 22
 		if tile_type == "ranged":
 			return -18
 	if zone == "second_line":
 		if tile_type == "ranged":
 			return 24
 		if tile_type == "defense":
-			return 6
+			return -2
 		if tile_type == "melee":
-			return -6
+			return 6
 	if zone == "backline":
 		if tile_type == "ranged":
 			return -6
 		if tile_type == "gather":
-			return 12
+			return 16
 		if tile_type == "defense":
-			return -8
+			return -16
 		if tile_type == "melee":
-			return -12
+			return -18
 	return 0
 
 func _door_objective_score(state: GameState, owner_id: int, tile: Vector2i) -> int:
@@ -1176,6 +1876,42 @@ func _hostile_near_door_count(state: GameState, owner_id: int, radius: int) -> i
 		if _distance_to_tile(state.door_tile, block["pos"]) <= radius:
 			count += 1
 	return count
+
+func _resource_objective_score(state: GameState, owner_id: int, tile: Vector2i, phase: int, tile_type: String = "basic") -> int:
+	var best_dist: int = 999999
+	var on_open_resource: bool = false
+	for node in state.resource_nodes:
+		if bool(node.get("consumed", false)):
+			continue
+		var resource_tile: Vector2i = node.get("pos", Vector2i(-1, -1))
+		if not state.is_inside(resource_tile):
+			continue
+		var dist: int = _distance_to_tile(tile, resource_tile)
+		best_dist = mini(best_dist, dist)
+		if dist == 0:
+			on_open_resource = true
+	if best_dist >= 999999:
+		return 0
+
+	var score: int = maxi(0, RESOURCE_OBJECTIVE_MAX_DISTANCE - best_dist + 1) * RESOURCE_OBJECTIVE_STEP_WEIGHT
+	match phase:
+		PHASE_SAFE_EXPANSION:
+			score += RESOURCE_SAFE_PHASE_BONUS
+		PHASE_APPROACHING_CONTACT:
+			score += RESOURCE_APPROACHING_PHASE_BONUS
+		_:
+			pass
+	if best_dist <= 1 and phase != PHASE_ACTIVE_FRONTLINE:
+		score += RESOURCE_LOW_THREAT_BONUS
+	if on_open_resource:
+		score += RESOURCE_NODE_HOLD_BONUS
+	if tile_type == "gather" and best_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
+		score += RESOURCE_GATHER_FOCUS_BONUS
+
+	var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, tile)
+	if nearest_enemy_dist <= 2 and phase != PHASE_ACTIVE_FRONTLINE:
+		score -= RESOURCE_NEAR_THREAT_PENALTY
+	return maxi(0, score)
 
 func _adjacent_open_ground_count(state: GameState, tile: Vector2i) -> int:
 	var count: int = 0
@@ -1216,7 +1952,9 @@ func _conversion_score(state: GameState, owner_id: int, block: Dictionary, from_
 	var support: int = state.count_owned_within_manhattan(owner_id, pos, 2)
 	var pressure: int = _enemy_pressure_score(state, owner_id, pos)
 	var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, pos)
+	var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, pos)
 	var zone: String = _tile_zone(state, owner_id, pos)
+	var phase: int = _local_threat_phase(state, owner_id, pos, nearest_enemy_dist, adjacent_enemy)
 	var score: int = 0
 
 	score += pressure * 2
@@ -1224,6 +1962,7 @@ func _conversion_score(state: GameState, owner_id: int, block: Dictionary, from_
 	score += maxi(0, 8 - nearest_enemy_dist) * 3
 	score += _door_objective_score(state, owner_id, pos)
 	score += _heart_objective_score(state, owner_id, pos)
+	score += _resource_objective_score(state, owner_id, pos, phase, to_type)
 	score += _zone_role_score(zone, to_type)
 
 	if is_frontline_target:
@@ -1232,12 +1971,29 @@ func _conversion_score(state: GameState, owner_id: int, block: Dictionary, from_
 		score -= 30
 
 	if to_type == "defense":
+		if phase == PHASE_SAFE_EXPANSION:
+			return ROLE_POSITION_BLOCK_SCORE
 		score += 6 if is_frontline_target else -8
+		score -= _defense_density_penalty(state, owner_id, pos, phase)
+		if phase == PHASE_SAFE_EXPANSION:
+			score -= 22
+		elif phase == PHASE_APPROACHING_CONTACT:
+			score -= 6
 	elif to_type == "melee":
 		score += 5 if is_frontline_target else -6
+		if phase == PHASE_SAFE_EXPANSION and not is_frontline_target:
+			score -= 16
+		elif phase == PHASE_APPROACHING_CONTACT:
+			score += 4
+		elif phase == PHASE_ACTIVE_FRONTLINE:
+			score += 8
 	elif to_type == "ranged":
+		if not _is_ranged_position_allowed(state, owner_id, pos):
+			return ROLE_POSITION_BLOCK_SCORE
 		score += 10 if nearest_enemy_dist >= 2 and nearest_enemy_dist <= 4 else -12
 		score -= _ranged_saturation_penalty(state, owner_id)
+		score -= _ranged_position_penalty(state, owner_id, pos, zone, phase)
+		score += _ranged_preferred_depth_bonus(state, owner_id, pos)
 		var choke: int = _chokepoint_score(state, pos)
 		if zone == "second_line" and choke >= 2:
 			score += 10
@@ -1246,10 +2002,18 @@ func _conversion_score(state: GameState, owner_id: int, block: Dictionary, from_
 		elif zone == "backline":
 			score -= RANGED_BACKLINE_PENALTY
 	elif to_type == "gather":
+		if not _is_gather_position_allowed(state, owner_id, pos, nearest_enemy_dist, phase):
+			return ROLE_POSITION_BLOCK_SCORE
 		score -= 12
+		if phase == PHASE_SAFE_EXPANSION:
+			score += 24
+		if _nearest_open_resource_distance(state, pos) <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
+			score += 12
 
 	if from_type in ["defense", "melee"] and to_type in ["defense", "melee"] and not is_frontline_target:
 		score -= 14
+	if from_type == "basic" and to_type != "basic":
+		score -= _specialization_spread_penalty(state, owner_id, pos, to_type, phase, zone, nearest_enemy_dist, support)
 
 	return score
 
@@ -1281,16 +2045,110 @@ func _owner_type_ratio(owner_blocks: Array, tile_type: String) -> float:
 			matches += 1
 	return float(matches) / float(owner_blocks.size())
 
+func _is_specialized_tile_type(tile_type: String) -> bool:
+	return tile_type != "basic"
+
+func _owner_specialization_ratio(owner_blocks: Array) -> float:
+	if owner_blocks.is_empty():
+		return 0.0
+	var specialized: int = 0
+	for block in owner_blocks:
+		if _is_specialized_tile_type(String(block.get("tile_type", "basic"))):
+			specialized += 1
+	return float(specialized) / float(owner_blocks.size())
+
+func _specialization_saturation_penalty(state: GameState, owner_id: int) -> int:
+	var owner_blocks: Array = state.get_owner_blocks(owner_id)
+	var total_tiles: int = owner_blocks.size()
+	if total_tiles < SPECIALIZATION_MIN_TILES:
+		return 0
+	var ratio: float = _owner_specialization_ratio(owner_blocks)
+	if ratio <= SPECIALIZATION_SOFT_CAP:
+		return 0
+	var band: float = maxf(0.0001, SPECIALIZATION_HARD_CAP - SPECIALIZATION_SOFT_CAP)
+	var t: float = clampf((ratio - SPECIALIZATION_SOFT_CAP) / band, 0.0, 1.0)
+	return int(round(float(SPECIALIZATION_MAX_PENALTY) * t))
+
+func _owned_specialized_count_within_manhattan(state: GameState, owner_id: int, tile: Vector2i, radius: int) -> int:
+	var total: int = 0
+	for block in state.get_owner_blocks(owner_id):
+		var tile_type: String = String(block.get("tile_type", "basic"))
+		if not _is_specialized_tile_type(tile_type):
+			continue
+		if _distance_to_tile(tile, block["pos"]) <= radius:
+			total += 1
+	return total
+
+func _adjacent_owned_specialized_count(state: GameState, owner_id: int, tile: Vector2i) -> int:
+	var total: int = 0
+	for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var block: Dictionary = state.get_block_at(tile + step)
+		if block.is_empty():
+			continue
+		if int(block.get("owner", 0)) != owner_id:
+			continue
+		if not _is_specialized_tile_type(String(block.get("tile_type", "basic"))):
+			continue
+		total += 1
+	return total
+
+func _specialization_spread_penalty(
+	state: GameState,
+	owner_id: int,
+	tile: Vector2i,
+	tile_type: String,
+	phase: int,
+	zone: String,
+	nearest_enemy_dist: int,
+	support: int
+) -> int:
+	if not _is_specialized_tile_type(tile_type):
+		return 0
+
+	var penalty: int = _specialization_saturation_penalty(state, owner_id)
+	var nearby_specialized: int = _owned_specialized_count_within_manhattan(state, owner_id, tile, SPECIALIZATION_LOCAL_RADIUS)
+	var adjacent_specialized: int = _adjacent_owned_specialized_count(state, owner_id, tile)
+	penalty += maxi(0, nearby_specialized - SPECIALIZATION_LOCAL_SOFT_LIMIT) * SPECIALIZATION_LOCAL_CLUSTER_PENALTY
+	penalty += adjacent_specialized * SPECIALIZATION_ADJACENT_PENALTY
+	if phase == PHASE_SAFE_EXPANSION:
+		penalty += SPECIALIZATION_SAFE_PHASE_PENALTY
+	if zone == "backline" and nearest_enemy_dist >= LOW_THREAT_MIN_ENEMY_DISTANCE:
+		penalty += SPECIALIZATION_BACKLINE_BLANKET_PENALTY
+	if zone != "frontline" and nearest_enemy_dist >= PHASE_APPROACHING_CONTACT_MAX_ENEMY_DISTANCE + 1 and support <= 2:
+		penalty += SPECIALIZATION_PATH_PENALTY
+
+	var objective_dist: int = _primary_objective_distance(state, owner_id, tile)
+	if objective_dist <= 5:
+		penalty -= 18
+	elif objective_dist <= 8:
+		penalty -= 10
+	if _nearest_open_resource_distance(state, tile) <= GATHER_CONVERSION_RESOURCE_MAX_DIST and tile_type == "gather":
+		penalty -= 14
+	if zone == "frontline" or phase == PHASE_ACTIVE_FRONTLINE:
+		penalty -= 12
+	return maxi(0, penalty)
+
 func _desired_frontline_role(state: GameState, owner_id: int, block: Dictionary) -> String:
 	var pressure: int = _enemy_pressure_score(state, owner_id, block["pos"])
 	var support: int = state.count_owned_within_manhattan(owner_id, block["pos"], 2)
 	var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, block["pos"])
+	var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, block["pos"])
 	var threat: int = _local_threat_score(state, owner_id, block["pos"])
-	if pressure >= 6 or support <= 2:
+	var phase: int = _local_threat_phase(state, owner_id, block["pos"], nearest_enemy_dist, adjacent_enemy)
+	var defense_penalty: int = _defense_density_penalty(state, owner_id, block["pos"], phase)
+	if phase == PHASE_SAFE_EXPANSION:
+		return "melee"
+	if phase == PHASE_APPROACHING_CONTACT:
+		if threat >= THREAT_SPIKE_THRESHOLD and support <= 2 and defense_penalty < 24:
+			return "defense"
+		return "melee"
+	if threat >= THREAT_SPIKE_THRESHOLD + 4 and support <= 2 and defense_penalty < 30:
 		return "defense"
-	if threat >= THREAT_SPIKE_THRESHOLD:
+	if support <= 1 and defense_penalty < 28:
 		return "defense"
-	if adjacent_enemy >= 2 and support >= 3:
+	if pressure >= 10 and support <= 2 and defense_penalty < 30:
+		return "defense"
+	if adjacent_enemy >= 2 and support >= 2:
 		return "melee"
 	return "melee"
 
@@ -1306,7 +2164,8 @@ func _can_upgrade_block(block: Dictionary) -> bool:
 		return false
 	if not Combat.UPGRADE_BASE_COST.has(tile_type):
 		return false
-	return int(block.get("upgrade_tier", 0)) < 1
+	var tier: int = maxi(Combat.SPECIALIZATION_TIER, int(block.get("upgrade_tier", Combat.SPECIALIZATION_TIER)))
+	return tier < Combat.MAX_UPGRADE_TIER
 
 func _is_frontline_tile(state: GameState, owner_id: int, tile: Vector2i) -> bool:
 	return _adjacent_enemy_count(state, owner_id, tile) > 0
@@ -1459,5 +2318,20 @@ func _adjacent_hostile_heart_count(state: GameState, owner_id: int, tile: Vector
 		count += 1
 	return count
 
+func _has_adjacent_allied_heart(state: GameState, owner_id: int, tile: Vector2i) -> bool:
+	for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var target: Dictionary = state.get_block_at(tile + step)
+		if target.is_empty():
+			continue
+		if not bool(target.get("is_heart", false)):
+			continue
+		var target_owner: int = int(target.get("owner", 0))
+		if target_owner == owner_id:
+			return true
+		if not state.are_hostile(owner_id, target_owner):
+			return true
+	return false
+
 func _tile_key(tile: Vector2i) -> String:
 	return "%d,%d" % [tile.x, tile.y]
+
