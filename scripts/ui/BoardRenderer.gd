@@ -16,6 +16,9 @@ const HEART_GLOW_BASE_ALPHA: float = 0.18
 const HEART_GLOW_PULSE_ALPHA: float = 0.18
 const UPGRADE_BADGE_FILL_ALPHA: float = 0.74
 const UPGRADE_BADGE_LINE_ALPHA: float = 0.92
+const UPGRADE_RING_ALPHA: float = 0.84
+const UPGRADE_RING_SHADOW_ALPHA: float = 0.54
+const UPGRADE_CORNER_DOT_ALPHA: float = 0.92
 const EMISSIVE_STRENGTH: float = 0.28
 const EMISSIVE_BLOOM_STRENGTH: float = 0.24
 const EMISSIVE_BLOOM_RADIUS_TILES: float = 0.44
@@ -731,7 +734,32 @@ func _draw_role_readability_accent(canvas: Node2D, overlay_rect: Rect2, tile_typ
 func _draw_upgrade_badge(canvas: Node2D, tile_rect: Rect2, tile_type: String, modulate: Color) -> void:
 	var accent: Color = _overlay_role_tint(tile_type).lerp(Color(1.0, 1.0, 1.0, 1.0), 0.26)
 	var alpha_scale: float = clampf(modulate.a, 0.0, 1.0)
-	var badge_size: float = tile_size * 0.25
+	var ring_rect: Rect2 = tile_rect.grow(-1.2)
+	canvas.draw_rect(
+		ring_rect.grow(0.8),
+		Color(0.07, 0.10, 0.14, UPGRADE_RING_SHADOW_ALPHA * alpha_scale),
+		false,
+		2.8
+	)
+	canvas.draw_rect(
+		ring_rect,
+		Color(accent.r, accent.g, accent.b, UPGRADE_RING_ALPHA * alpha_scale),
+		false,
+		1.8
+	)
+
+	var corner_radius: float = maxf(1.8, tile_size * 0.055)
+	var corners: Array[Vector2] = [
+		ring_rect.position + Vector2(2.0, 2.0),
+		Vector2(ring_rect.end.x - 2.0, ring_rect.position.y + 2.0),
+		Vector2(ring_rect.position.x + 2.0, ring_rect.end.y - 2.0),
+		Vector2(ring_rect.end.x - 2.0, ring_rect.end.y - 2.0),
+	]
+	for corner in corners:
+		canvas.draw_circle(corner, corner_radius + 0.8, Color(0.05, 0.08, 0.12, 0.56 * alpha_scale))
+		canvas.draw_circle(corner, corner_radius, Color(0.98, 0.97, 0.88, UPGRADE_CORNER_DOT_ALPHA * alpha_scale))
+
+	var badge_size: float = tile_size * 0.27
 	var badge_rect: Rect2 = Rect2(
 		tile_rect.position.x + tile_rect.size.x - badge_size - 2.0,
 		tile_rect.position.y + 2.0,

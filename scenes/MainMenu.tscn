@@ -40,7 +40,7 @@ grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center"]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 22
 
 [node name="TopSpacer" type="Control" parent="Center/VBox"]
 custom_minimum_size = Vector2(0, 460)
@@ -48,26 +48,26 @@ layout_mode = 2
 
 [node name="ButtonsRow" type="HBoxContainer" parent="Center/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 18
 alignment = 1
 
 [node name="StartButton" type="Button" parent="Center/VBox/ButtonsRow"]
-custom_minimum_size = Vector2(180, 58)
+custom_minimum_size = Vector2(196, 62)
 layout_mode = 2
 text = "Start"
 
 [node name="DevStartButton" type="Button" parent="Center/VBox/ButtonsRow"]
-custom_minimum_size = Vector2(180, 58)
+custom_minimum_size = Vector2(196, 62)
 layout_mode = 2
 text = "Dev Start"
 
 [node name="SettingsButton" type="Button" parent="Center/VBox/ButtonsRow"]
-custom_minimum_size = Vector2(180, 58)
+custom_minimum_size = Vector2(196, 62)
 layout_mode = 2
 text = "Settings"
 
 [node name="ExitButton" type="Button" parent="Center/VBox/ButtonsRow"]
-custom_minimum_size = Vector2(180, 58)
+custom_minimum_size = Vector2(196, 62)
 layout_mode = 2
 text = "Exit"
 
@@ -90,19 +90,19 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="DevPanel" type="PanelContainer" parent="DevOverlay/DevPanelCenter"]
-custom_minimum_size = Vector2(560, 300)
+custom_minimum_size = Vector2(620, 340)
 layout_mode = 2
 
 [node name="DevMargin" type="MarginContainer" parent="DevOverlay/DevPanelCenter/DevPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
 
 [node name="DevVBox" type="VBoxContainer" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 14
 
 [node name="DevTitle" type="Label" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox"]
 layout_mode = 2
@@ -117,7 +117,7 @@ autowrap_mode = 2
 
 [node name="TeamRow" type="HBoxContainer" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 12
 alignment = 1
 
 [node name="PlayerTeamLabel" type="Label" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/TeamRow"]
@@ -125,7 +125,7 @@ layout_mode = 2
 text = "Player Team (X)"
 
 [node name="PlayerTeamSize" type="SpinBox" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/TeamRow"]
-custom_minimum_size = Vector2(110, 0)
+custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 min_value = 1.0
 max_value = 4.0
@@ -141,7 +141,7 @@ layout_mode = 2
 text = "Enemy Team (Y)"
 
 [node name="EnemyTeamSize" type="SpinBox" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/TeamRow"]
-custom_minimum_size = Vector2(110, 0)
+custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 min_value = 1.0
 max_value = 4.0
@@ -164,14 +164,14 @@ text = "Spectator Mode (no player slot, AI vs AI)"
 [node name="DevButtons" type="HBoxContainer" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox"]
 layout_mode = 2
 alignment = 1
-theme_override_constants/separation = 12
+theme_override_constants/separation = 14
 
 [node name="DevConfirmButton" type="Button" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/DevButtons"]
-custom_minimum_size = Vector2(180, 52)
+custom_minimum_size = Vector2(190, 54)
 layout_mode = 2
 text = "Launch Dev Run"
 
 [node name="DevCancelButton" type="Button" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/DevButtons"]
-custom_minimum_size = Vector2(180, 52)
+custom_minimum_size = Vector2(190, 54)
 layout_mode = 2
 text = "Cancel"
