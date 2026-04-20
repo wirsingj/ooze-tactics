@@ -12,6 +12,10 @@ func build_enemy_intents(state: GameState, ai: EnemyAI, min_expand_adjacent_by_o
 		var enemy_id: int = int(owner_id)
 		if enemy_id == GameState.PLAYER_ID:
 			continue
+		if not bool(state.players[owner_id].get("alive", true)):
+			continue
+		if not bool(state.players[owner_id].get("ai_controlled", true)):
+			continue
 		var min_adjacent: int = default_min_expand_adjacent
 		if min_expand_adjacent_by_owner.has(enemy_id):
 			min_adjacent = int(min_expand_adjacent_by_owner[enemy_id])

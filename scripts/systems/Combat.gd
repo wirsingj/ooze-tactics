@@ -5,29 +5,66 @@ class_name Combat
 # Order is deterministic so previews and outcomes stay stable.
 
 const TILE_RULES: Dictionary = {
-	"basic": {"max_hp": 9, "defense": 0, "damage": 0, "range": 1, "cost": 1},
+	"basic": {"max_hp": 9, "defense": 0, "damage": 0, "range": 1, "cost": 2},
 	"gather": {"max_hp": 8, "defense": 0, "damage": 0, "range": 1, "cost": 4},
-	"defense": {"max_hp": 18, "defense": 3, "damage": 0, "range": 1, "cost": 3},
-	"melee": {"max_hp": 10, "defense": 0, "damage": 2, "range": 1, "cost": 3},
-	"ranged": {"max_hp": 8, "defense": 0, "damage": 2, "range": 4, "cost": 3},
+	"defense": {"max_hp": 18, "defense": 3, "damage": 0, "range": 1, "cost": 4},
+	"melee": {"max_hp": 10, "defense": 0, "damage": 3, "range": 1, "cost": 4},
+	"ranged": {"max_hp": 7, "defense": 0, "damage": 2, "range": 4, "cost": 5},
 }
 
 const SUPPORT_RADIUS: int = 2
 const SUPPORT_DIVISOR: int = 3
-const SUPPORT_MAX_BONUS: int = 3
-const DEFENSE_GUARD_MAX: int = 2
+const SUPPORT_MAX_BONUS: int = 2
+const DEFENSE_GUARD_MAX: int = 1
 const DEFENSE_GUARD_PER_ADJACENT: int = 1
 const STABILITY_FRAGILE_AGE: int = 0
 const STABILITY_REINFORCED_AGE: int = 2
+const HEART_DEFEAT_BURST_ENERGY: int = 6
+const RANGED_SPLASH_RATIO: float = 0.4
+const RANGED_SPLASH_MAX: int = 1
+const RANGED_CONTACT_DAMAGE_PENALTY: int = 1
+const MELEE_BREAK_DEFENSE_BONUS: int = 3
+const MELEE_BREAK_FORTIFIED_BONUS: int = 2
+const FORTIFIED_SUPPORT_THRESHOLD: int = 5
+const UPGRADE_BASE_COST: Dictionary = {
+	"melee": 6,
+	"ranged": 8,
+	"defense": 7,
+	"gather": 6,
+}
+const UPGRADE_TYPE_STEP_EVERY: int = 1
+const UPGRADE_GLOBAL_STEP_EVERY: int = 3
+const MELEE_UPGRADE_DAMAGE_BONUS: int = 1
+const MELEE_UPGRADE_BREAK_BONUS: int = 1
+const RANGED_UPGRADE_RANGE_BONUS: int = 1
+const RANGED_UPGRADE_SPLASH_RADIUS_BONUS: int = 1
+const DEFENSE_UPGRADE_DEFENSE_BONUS: int = 1
+const DEFENSE_UPGRADE_HP_BONUS: int = 4
+const DEFENSE_UPGRADE_GUARD_BONUS: int = 1
+const GATHER_UPGRADE_INCOME_BONUS: int = 1
 
 static func conversion_energy_delta(from_type: String, to_type: String) -> int:
 	if from_type == to_type:
 		return 0
 	if to_type == "basic":
-		return 0
+		return int(TILE_RULES["basic"]["cost"])
 	if from_type == "basic":
 		return int(TILE_RULES[to_type]["cost"])
 	return 2
+
+static func upgrade_energy_cost(
+	state: GameState,
+	owner_id: int,
+	tile_type: String,
+	planned_type_count: int = 0,
+	planned_total_count: int = 0
+) -> int:
+	if not UPGRADE_BASE_COST.has(tile_type):
+		return -1
+	var base: int = int(UPGRADE_BASE_COST[tile_type])
+	var prior_type: int = state.get_upgrade_count(owner_id, tile_type) + maxi(0, planned_type_count)
+	var prior_total: int = state.get_total_upgrade_count(owner_id) + maxi(0, planned_total_count)
+	return base + int(prior_type / UPGRADE_TYPE_STEP_EVERY) + int(prior_total / UPGRADE_GLOBAL_STEP_EVERY)
 
 func resolve(actions: Array, state: GameState) -> Array[String]:
 	var report: Dictionary = resolve_with_report(actions, state)
@@ -40,9 +77,23 @@ func resolve_with_report(actions: Array, state: GameState) -> Dictionary:
 	_resolve_melee_damage(state, log)
 	_resolve_ranged_damage(state, log)
 
+	var removed_positions: Array[Vector2i] = []
+	for block_id_variant in state.blocks.keys():
+		var block_id: int = int(block_id_variant)
+		var block: Dictionary = state.blocks[block_id]
+		if int(block.get("hp", 0)) > 0:
+			continue
+		removed_positions.append(block.get("pos", Vector2i(-1, -1)))
+
 	var removed: Array[int] = state.remove_dead_blocks()
 	for block_id in removed:
 		log.append("Block %d dissolved" % block_id)
+	for tile in removed_positions:
+		state.mark_reclaim_block(tile, 1)
+
+	var defeat_report: Dictionary = _resolve_heart_defeats(state, log)
+	report["defeated_owners"] = defeat_report.get("defeated_owners", [])
+	report["player_heart_burst"] = int(defeat_report.get("player_heart_burst", 0))
 
 	report["log"] = log
 	return report
@@ -66,6 +117,8 @@ func _apply_staged_actions(actions: Array, state: GameState, log_failures: bool)
 				result = _apply_place_tile(action, state, log, log_failures)
 			"convert_tile":
 				result = _apply_convert_tile(action, state, log, log_failures)
+			"upgrade_tile":
+				result = _apply_upgrade_tile(action, state, log, log_failures)
 			"pass":
 				result = {"applied": true}
 			_:
@@ -95,7 +148,10 @@ func _apply_staged_actions(actions: Array, state: GameState, log_failures: bool)
 	}
 
 func _sort_actions(a: Dictionary, b: Dictionary) -> bool:
-	var weights: Dictionary = {"convert_tile": 0, "place_tile": 1, "pass": 2}
+	# Deterministic action ordering contract:
+	# type priority -> owner priority (player first) -> owner id -> queue index.
+	# Preview validation relies on this exact ordering.
+	var weights: Dictionary = {"convert_tile": 0, "upgrade_tile": 0, "place_tile": 1, "pass": 2}
 	var type_weight_a: int = int(weights.get(String(a.get("type", "pass")), 99))
 	var type_weight_b: int = int(weights.get(String(b.get("type", "pass")), 99))
 	if type_weight_a != type_weight_b:
@@ -114,6 +170,7 @@ func _sort_actions(a: Dictionary, b: Dictionary) -> bool:
 	return int(a.get("_order_index", 0)) < int(b.get("_order_index", 0))
 
 func _order_actions(actions: Array) -> Array:
+	# Preserve original queue order as final tie-breaker for stable outcomes.
 	var ordered: Array = []
 	for i in range(actions.size()):
 		var action: Dictionary = actions[i].duplicate(true)
@@ -137,8 +194,12 @@ func validate_place_action(action: Dictionary, state: GameState) -> Dictionary:
 
 	if not state.players.has(owner):
 		return {"ok": false, "reason": "unknown owner"}
+	if pos == state.entrance_tile:
+		return {"ok": false, "reason": "entrance tile"}
 	if pos == state.door_tile:
 		return {"ok": false, "reason": "exit tile"}
+	if state.is_reclaim_blocked(pos):
+		return {"ok": false, "reason": "cell reforming"}
 	if not state.is_empty_ground(pos):
 		return {"ok": false, "reason": "not empty"}
 	var growth_check: Dictionary = state.evaluate_growth_target(owner, pos, min_adjacent, {})
@@ -166,6 +227,8 @@ func _apply_place_tile(action: Dictionary, state: GameState, log: Array[String],
 	var block_id: int = state.spawn_block(owner, pos, false, int(TILE_RULES[tile_type]["max_hp"]), tile_type)
 	var block: Dictionary = state.blocks[block_id]
 	_apply_tile_stats(block, tile_type)
+	block["max_hp"] = _effective_max_hp(block, tile_type)
+	block["hp"] = int(block["max_hp"])
 	_refresh_gather_bonus(state, block)
 	state.blocks[block_id] = block
 
@@ -191,11 +254,41 @@ func validate_convert_action(action: Dictionary, state: GameState) -> Dictionary
 	var from_type: String = String(block.get("tile_type", "basic"))
 	if from_type == to_type:
 		return {"ok": false, "reason": "already target type"}
+	if from_type != "basic" and to_type != "basic":
+		return {"ok": false, "reason": "requires basic tile"}
 
 	var energy_delta: int = int(action.get("energy_delta", conversion_energy_delta(from_type, to_type)))
 	if energy_delta > 0 and int(state.players[owner]["nutrients"]) < energy_delta:
 		return {"ok": false, "reason": "insufficient energy"}
 
+	return {"ok": true}
+
+func validate_upgrade_action(action: Dictionary, state: GameState) -> Dictionary:
+	var owner: int = int(action.get("owner", 0))
+	var block_id: int = int(action.get("block_id", -1))
+	if not state.players.has(owner):
+		return {"ok": false, "reason": "unknown owner"}
+	if not state.blocks.has(block_id):
+		return {"ok": false, "reason": "missing block"}
+
+	var block: Dictionary = state.blocks[block_id]
+	if int(block.get("owner", 0)) != owner:
+		return {"ok": false, "reason": "not owned"}
+	var tile_type: String = String(block.get("tile_type", "basic"))
+	if tile_type == "basic":
+		return {"ok": false, "reason": "basic cannot upgrade"}
+	if not UPGRADE_BASE_COST.has(tile_type):
+		return {"ok": false, "reason": "tile cannot upgrade"}
+	if int(block.get("upgrade_tier", 0)) >= 1:
+		return {"ok": false, "reason": "already upgraded"}
+
+	var planned_type_count: int = int(action.get("planned_type_count", 0))
+	var planned_total_count: int = int(action.get("planned_total_count", 0))
+	var cost: int = int(action.get("cost", upgrade_energy_cost(state, owner, tile_type, planned_type_count, planned_total_count)))
+	if cost <= 0:
+		return {"ok": false, "reason": "invalid upgrade cost"}
+	if int(state.players[owner]["nutrients"]) < cost:
+		return {"ok": false, "reason": "insufficient energy"}
 	return {"ok": true}
 
 func _apply_convert_tile(action: Dictionary, state: GameState, log: Array[String], log_failures: bool) -> Dictionary:
@@ -216,9 +309,10 @@ func _apply_convert_tile(action: Dictionary, state: GameState, log: Array[String
 	state.players[owner]["nutrients"] = int(state.players[owner]["nutrients"]) - energy_delta
 	block["tile_type"] = to_type
 	block["last_converted_turn"] = state.turn_index
+	block["upgrade_tier"] = 0
 	_apply_tile_stats(block, to_type)
 
-	var new_max_hp: int = int(TILE_RULES[to_type]["max_hp"])
+	var new_max_hp: int = _effective_max_hp(block, to_type)
 	block["max_hp"] = new_max_hp
 	block["hp"] = mini(int(block["hp"]), new_max_hp)
 	if int(block["hp"]) <= 0:
@@ -229,13 +323,82 @@ func _apply_convert_tile(action: Dictionary, state: GameState, log: Array[String
 	log.append("Owner %d converted block %d: %s -> %s" % [owner, block_id, from_type, to_type])
 	return {"applied": true}
 
+func _apply_upgrade_tile(action: Dictionary, state: GameState, log: Array[String], log_failures: bool) -> Dictionary:
+	var check: Dictionary = validate_upgrade_action(action, state)
+	if not bool(check.get("ok", false)):
+		var reason: String = String(check.get("reason", "invalid upgrade"))
+		if log_failures:
+			log.append("Action failed (upgrade): %s" % reason)
+		return {"applied": false, "reason": reason}
+
+	var owner: int = int(action.get("owner", 0))
+	var block_id: int = int(action.get("block_id", -1))
+	var block: Dictionary = state.blocks[block_id]
+	var tile_type: String = String(block.get("tile_type", "basic"))
+	var planned_type_count: int = int(action.get("planned_type_count", 0))
+	var planned_total_count: int = int(action.get("planned_total_count", 0))
+	var cost: int = int(action.get("cost", upgrade_energy_cost(state, owner, tile_type, planned_type_count, planned_total_count)))
+
+	state.players[owner]["nutrients"] = int(state.players[owner]["nutrients"]) - cost
+	var old_max_hp: int = int(block.get("max_hp", int(TILE_RULES[tile_type]["max_hp"])))
+	block["upgrade_tier"] = 1
+	_apply_tile_stats(block, tile_type)
+	var new_max_hp: int = _effective_max_hp(block, tile_type)
+	block["max_hp"] = new_max_hp
+	block["hp"] = mini(new_max_hp, int(block.get("hp", new_max_hp)) + maxi(0, new_max_hp - old_max_hp))
+	if int(block["hp"]) <= 0:
+		block["hp"] = new_max_hp
+
+	_refresh_gather_bonus(state, block)
+	state.blocks[block_id] = block
+	state.register_tile_upgrade(owner, tile_type)
+	log.append("Owner %d upgraded block %d (%s) for %d energy" % [owner, block_id, tile_type, cost])
+	return {"applied": true}
+
 func _apply_tile_stats(block: Dictionary, tile_type: String) -> void:
 	var rules: Dictionary = TILE_RULES[tile_type]
-	block["defense"] = int(rules["defense"])
-	block["damage"] = int(rules["damage"])
-	block["range"] = int(rules["range"])
+	var tier: int = int(block.get("upgrade_tier", 0))
+	var defense_value: int = int(rules["defense"])
+	var damage_value: int = int(rules["damage"])
+	var range_value: int = int(rules["range"])
+	var melee_break_bonus: int = 0
+	var ranged_splash_bonus: int = 0
+	var defense_guard_bonus: int = 0
+	var gather_upgrade_bonus: int = 0
+
+	if tier > 0:
+		match tile_type:
+			"melee":
+				damage_value += MELEE_UPGRADE_DAMAGE_BONUS
+				melee_break_bonus = MELEE_UPGRADE_BREAK_BONUS
+			"ranged":
+				range_value += RANGED_UPGRADE_RANGE_BONUS
+				ranged_splash_bonus = RANGED_UPGRADE_SPLASH_RADIUS_BONUS
+			"defense":
+				defense_value += DEFENSE_UPGRADE_DEFENSE_BONUS
+				defense_guard_bonus = DEFENSE_UPGRADE_GUARD_BONUS
+			"gather":
+				gather_upgrade_bonus = GATHER_UPGRADE_INCOME_BONUS
+			_:
+				pass
+
+	block["defense"] = defense_value
+	block["damage"] = damage_value
+	block["range"] = range_value
+	block["melee_break_bonus"] = melee_break_bonus
+	block["ranged_splash_bonus"] = ranged_splash_bonus
+	block["defense_guard_bonus"] = defense_guard_bonus
+	block["gather_upgrade_bonus"] = gather_upgrade_bonus
 	if tile_type != "gather":
 		block["gather_bonus"] = 0
+
+func _effective_max_hp(block: Dictionary, tile_type: String) -> int:
+	var max_hp: int = int(TILE_RULES[tile_type]["max_hp"])
+	if tile_type == "defense" and int(block.get("upgrade_tier", 0)) > 0:
+		max_hp += DEFENSE_UPGRADE_HP_BONUS
+	if bool(block.get("is_heart", false)):
+		max_hp += GameState.HEART_TILE_HP_BONUS
+	return max_hp
 
 func _refresh_gather_bonus(state: GameState, block: Dictionary) -> void:
 	block["gather_bonus"] = 0
@@ -257,12 +420,26 @@ func _resolve_melee_damage(state: GameState, log: Array[String]) -> void:
 		if String(block.get("tile_type", "basic")) != "melee":
 			continue
 
+		var melee_base: int = int(block.get("damage", 3))
+		if owner == GameState.PLAYER_ID:
+			melee_base += int(state.card_modifiers.get("melee_damage_bonus", 0))
+
 		for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-			var target: Dictionary = state.get_block_at(block["pos"] + step)
-			if target.is_empty() or int(target["owner"]) == owner:
+			var target_pos: Vector2i = block["pos"] + step
+			if target_pos == state.door_tile and _can_damage_door(state, owner) and state.door_hp > 0:
+				var door_hit: int = _modified_damage(state, owner, melee_base)
+				state.door_hp = maxi(0, state.door_hp - door_hit)
+				log.append("Melee block %d hit door for %d" % [block_id, door_hit])
+				continue
+
+			var target: Dictionary = state.get_block_at(target_pos)
+			if target.is_empty():
+				continue
+			if not state.are_hostile(owner, int(target["owner"])):
 				continue
 			var target_id: int = int(target["id"])
-			var melee_damage: int = _modified_damage(state, owner, int(block.get("damage", 2)))
+			var base_damage: int = _modified_damage(state, owner, melee_base)
+			var melee_damage: int = base_damage + _melee_breaker_bonus(state, target) + int(block.get("melee_break_bonus", 0))
 			pending_damage[target_id] = int(pending_damage.get(target_id, 0)) + melee_damage
 			log.append("Melee block %d struck %d" % [block_id, target_id])
 
@@ -277,12 +454,34 @@ func _resolve_ranged_damage(state: GameState, log: Array[String]) -> void:
 		if String(block.get("tile_type", "basic")) != "ranged":
 			continue
 
-		var target_id: int = _nearest_enemy_block_id(state, owner, block["pos"], int(block.get("range", 4)))
-		if target_id <= 0:
+		var target_info: Dictionary = _nearest_ranged_target(state, owner, block["pos"], int(block.get("range", 4)))
+		if target_info.is_empty():
 			continue
 		var ranged_damage: int = _modified_damage(state, owner, int(block.get("damage", 2)))
+		var in_direct_contact: bool = _has_adjacent_hostile(state, owner, block["pos"])
+		if in_direct_contact:
+			ranged_damage = maxi(1, ranged_damage - RANGED_CONTACT_DAMAGE_PENALTY)
+		if String(target_info.get("kind", "")) == "door":
+			state.door_hp = maxi(0, state.door_hp - ranged_damage)
+			log.append("Ranged block %d shot door for %d" % [block_id, ranged_damage])
+			continue
+
+		var target_id: int = int(target_info.get("id", -1))
+		if target_id <= 0:
+			continue
 		pending_damage[target_id] = int(pending_damage.get(target_id, 0)) + ranged_damage
 		log.append("Ranged block %d shot %d" % [block_id, target_id])
+		if not in_direct_contact:
+			_apply_ranged_splash(
+				state,
+				owner,
+				target_id,
+				ranged_damage,
+				pending_damage,
+				log,
+				block_id,
+				int(block.get("ranged_splash_bonus", 0))
+			)
 
 	_apply_damage_batch(state, pending_damage)
 
@@ -293,8 +492,16 @@ func _apply_damage_batch(state: GameState, pending_damage: Dictionary) -> void:
 		var target: Dictionary = state.blocks[target_id]
 		var raw: int = int(pending_damage[target_id])
 		var owner: int = int(target["owner"])
+		if owner == GameState.PLAYER_ID and state.dev_player_immortal:
+			target["hp"] = int(target["max_hp"])
+			state.blocks[target_id] = target
+			continue
 		var support_count: int = state.count_owned_within_manhattan(owner, target["pos"], SUPPORT_RADIUS)
-		var support_bonus: int = mini(SUPPORT_MAX_BONUS, int(support_count / SUPPORT_DIVISOR))
+		var support_cap: int = SUPPORT_MAX_BONUS
+		if owner == GameState.PLAYER_ID:
+			support_cap += int(state.card_modifiers.get("support_bonus_cap_bonus", 0))
+		support_cap = maxi(0, support_cap)
+		var support_bonus: int = mini(support_cap, int(support_count / SUPPORT_DIVISOR))
 		var stability_bonus: int = _stability_defense_bonus(int(target.get("age", 0)))
 		var guard_bonus: int = _adjacent_defense_guard_bonus(state, int(target["id"]))
 		var effective_defense: int = int(target.get("defense", 0)) + support_bonus + stability_bonus + guard_bonus
@@ -302,22 +509,130 @@ func _apply_damage_batch(state: GameState, pending_damage: Dictionary) -> void:
 		target["hp"] = int(target["hp"]) - reduced
 		state.blocks[target_id] = target
 
-func _nearest_enemy_block_id(state: GameState, owner_id: int, origin: Vector2i, max_range: int) -> int:
+func _nearest_ranged_target(state: GameState, owner_id: int, origin: Vector2i, max_range: int) -> Dictionary:
+	var best_kind: String = ""
 	var best_id: int = -1
 	var best_dist: int = 999999
+
 	for block in state.blocks.values():
-		if int(block["owner"]) == owner_id:
+		var target_owner: int = int(block["owner"])
+		if not state.are_hostile(owner_id, target_owner):
 			continue
 		var block_pos: Vector2i = block["pos"]
 		var dist: int = absi(origin.x - block_pos.x) + absi(origin.y - block_pos.y)
-		if dist <= max_range and dist < best_dist:
+		if dist > max_range:
+			continue
+		if dist < best_dist or (dist == best_dist and best_kind == "door"):
 			best_dist = dist
+			best_kind = "block"
 			best_id = int(block["id"])
-	return best_id
+
+	if _can_damage_door(state, owner_id) and state.door_hp > 0:
+		var door_dist: int = absi(origin.x - state.door_tile.x) + absi(origin.y - state.door_tile.y)
+		if door_dist <= max_range and door_dist < best_dist:
+			best_dist = door_dist
+			best_kind = "door"
+			best_id = -1
+
+	if best_kind.is_empty():
+		return {}
+	return {
+		"kind": best_kind,
+		"id": best_id,
+		"distance": best_dist,
+	}
+
+func _apply_ranged_splash(
+	state: GameState,
+	owner: int,
+	primary_target_id: int,
+	primary_damage: int,
+	pending_damage: Dictionary,
+	log: Array[String],
+	source_id: int,
+	splash_radius_bonus: int
+) -> void:
+	if not state.blocks.has(primary_target_id):
+		return
+	var target_pos: Vector2i = state.blocks[primary_target_id]["pos"]
+	var splash_damage: int = mini(RANGED_SPLASH_MAX, maxi(1, int(round(primary_damage * RANGED_SPLASH_RATIO))))
+	if splash_damage <= 0:
+		return
+
+	var splash_radius: int = 1 + maxi(0, splash_radius_bonus)
+	if owner == GameState.PLAYER_ID:
+		splash_radius += maxi(0, int(state.card_modifiers.get("ranged_splash_radius_bonus", 0)))
+	splash_radius = clampi(splash_radius, 1, 4)
+
+	var seen_targets: Dictionary = {}
+	for y in range(target_pos.y - splash_radius, target_pos.y + splash_radius + 1):
+		for x in range(target_pos.x - splash_radius, target_pos.x + splash_radius + 1):
+			var candidate: Vector2i = Vector2i(x, y)
+			var distance: int = absi(candidate.x - target_pos.x) + absi(candidate.y - target_pos.y)
+			if distance <= 0 or distance > splash_radius:
+				continue
+			var splash_target: Dictionary = state.get_block_at(candidate)
+			if splash_target.is_empty():
+				continue
+			if not state.are_hostile(owner, int(splash_target["owner"])):
+				continue
+			var splash_id: int = int(splash_target["id"])
+			if splash_id == primary_target_id:
+				continue
+			if seen_targets.has(splash_id):
+				continue
+			seen_targets[splash_id] = true
+			pending_damage[splash_id] = int(pending_damage.get(splash_id, 0)) + splash_damage
+			log.append("Ranged block %d splashed %d" % [source_id, splash_id])
+
+func _has_adjacent_hostile(state: GameState, owner_id: int, pos: Vector2i) -> bool:
+	for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var target: Dictionary = state.get_block_at(pos + step)
+		if target.is_empty():
+			continue
+		if state.are_hostile(owner_id, int(target["owner"])):
+			return true
+	return false
+
+func _resolve_heart_defeats(state: GameState, log: Array[String]) -> Dictionary:
+	var defeated_owners: Array = []
+
+	for owner_id_variant in state.players.keys():
+		var owner_id: int = int(owner_id_variant)
+		if state.get_owner_blocks(owner_id).is_empty():
+			state.players[owner_id]["alive"] = false
+			continue
+		if state.count_heart_tiles(owner_id) > 0:
+			continue
+		defeated_owners.append(owner_id)
+
+	var player_burst_total: int = 0
+	for owner_id in defeated_owners:
+		var owner_blocks: Array = state.get_owner_blocks(owner_id)
+		for block in owner_blocks:
+			state.mark_reclaim_block(block["pos"], 1)
+			state.blocks.erase(int(block["id"]))
+
+		state.players[owner_id]["alive"] = false
+		state.players[owner_id]["nutrients"] = 0
+		log.append("Owner %d defeated (all heart tiles destroyed)" % owner_id)
+
+		if owner_id != GameState.PLAYER_ID and state.players.has(GameState.PLAYER_ID):
+			state.players[GameState.PLAYER_ID]["nutrients"] = int(state.players[GameState.PLAYER_ID]["nutrients"]) + HEART_DEFEAT_BURST_ENERGY
+			player_burst_total += HEART_DEFEAT_BURST_ENERGY
+
+	if player_burst_total > 0:
+		log.append("Player gained %d energy from heart collapse" % player_burst_total)
+
+	return {
+		"defeated_owners": defeated_owners,
+		"player_heart_burst": player_burst_total,
+	}
 
 func _modified_damage(state: GameState, owner: int, base_damage: int) -> int:
 	if owner != GameState.PLAYER_ID:
 		return base_damage
+	# Run upgrade hook: optional global damage multiplier for player actions.
 	var multiplier: float = float(state.card_modifiers.get("base_damage_mult", 1.0))
 	return maxi(1, int(round(base_damage * multiplier)))
 
@@ -344,9 +659,26 @@ func _adjacent_defense_guard_bonus(state: GameState, target_id: int) -> int:
 			continue
 		if String(neighbor.get("tile_type", "basic")) != "defense":
 			continue
-		guards += DEFENSE_GUARD_PER_ADJACENT
+		guards += DEFENSE_GUARD_PER_ADJACENT + int(neighbor.get("defense_guard_bonus", 0))
 
-	return mini(DEFENSE_GUARD_MAX, guards)
+	var guard_cap: int = DEFENSE_GUARD_MAX
+	if owner == GameState.PLAYER_ID:
+		guard_cap += int(state.card_modifiers.get("defense_guard_cap_bonus", 0))
+	guard_cap = maxi(0, guard_cap)
+	return mini(guard_cap, guards)
+
+func _melee_breaker_bonus(state: GameState, target: Dictionary) -> int:
+	var bonus: int = 0
+	if String(target.get("tile_type", "basic")) == "defense":
+		bonus += MELEE_BREAK_DEFENSE_BONUS
+	var owner: int = int(target.get("owner", 0))
+	var support: int = state.count_owned_within_manhattan(owner, target["pos"], SUPPORT_RADIUS)
+	if support >= FORTIFIED_SUPPORT_THRESHOLD or int(target.get("age", 0)) >= STABILITY_REINFORCED_AGE:
+		bonus += MELEE_BREAK_FORTIFIED_BONUS
+	return bonus
+
+func _can_damage_door(state: GameState, owner_id: int) -> bool:
+	return not state.are_hostile(owner_id, GameState.PLAYER_ID)
 
 func _public_action_copy(action: Dictionary) -> Dictionary:
 	var out: Dictionary = action.duplicate(true)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://cj2tr2ob3vlqv"]
+[gd_scene load_steps=2 format=3 uid="uid://cj2tr2ob3vlqv"]
 
 [ext_resource type="Script" path="res://scripts/GameController.gd" id="1_controller"]
 
@@ -20,9 +20,9 @@ mouse_filter = 2
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_left = 8.0
-offset_top = 8.0
-offset_right = -8.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
 offset_bottom = 58.0
 
 [node name="BoardRegion" type="Control" parent="CanvasLayer/UI"]
@@ -30,10 +30,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = 72.0
-offset_right = -244.0
-offset_bottom = -136.0
+offset_left = 12.0
+offset_top = 76.0
+offset_right = -256.0
+offset_bottom = -96.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -45,26 +45,64 @@ theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 6
 
-[node name="TopRow" type="HBoxContainer" parent="CanvasLayer/UI/TopPanel/TopMargin"]
+[node name="TopVBox" type="VBoxContainer" parent="CanvasLayer/UI/TopPanel/TopMargin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="TopRow" type="HBoxContainer" parent="CanvasLayer/UI/TopPanel/TopMargin/TopVBox"]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="PlayerLabel" type="Label" parent="CanvasLayer/UI/TopPanel/TopMargin/TopRow"]
+[node name="PlayerLabel" type="Label" parent="CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "PLAYER HP 0"
 
-[node name="TurnLabel" type="Label" parent="CanvasLayer/UI/TopPanel/TopMargin/TopRow"]
+[node name="TurnLabel" type="Label" parent="CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow"]
 layout_mode = 2
 size_flags_horizontal = 4
 horizontal_alignment = 1
 text = "TURN 1"
 
-[node name="EnemyLabel" type="Label" parent="CanvasLayer/UI/TopPanel/TopMargin/TopRow"]
+[node name="EnemyLabel" type="Label" parent="CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 horizontal_alignment = 2
 text = "ENEMY HP 0"
+
+[node name="TopRightControls" type="HBoxContainer" parent="CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 2
+
+[node name="PauseButton" type="Button" parent="CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow/TopRightControls"]
+visible = false
+custom_minimum_size = Vector2(70, 20)
+layout_mode = 2
+text = "PAUSE"
+
+[node name="Speed1Button" type="Button" parent="CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow/TopRightControls"]
+custom_minimum_size = Vector2(38, 20)
+layout_mode = 2
+text = "x1"
+
+[node name="Speed4Button" type="Button" parent="CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow/TopRightControls"]
+custom_minimum_size = Vector2(38, 20)
+layout_mode = 2
+text = "x4"
+
+[node name="Speed8Button" type="Button" parent="CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow/TopRightControls"]
+custom_minimum_size = Vector2(38, 20)
+layout_mode = 2
+text = "x8"
+
+[node name="ActorBar" type="RichTextLabel" parent="CanvasLayer/UI/TopPanel/TopMargin/TopVBox"]
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+fit_content = false
+scroll_active = false
+bbcode_enabled = true
+text = ""
 
 [node name="RightPanel" type="PanelContainer" parent="CanvasLayer/UI"]
 layout_mode = 1
@@ -72,10 +110,10 @@ anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -228.0
-offset_top = 72.0
-offset_right = -8.0
-offset_bottom = -136.0
+offset_left = -244.0
+offset_top = 76.0
+offset_right = -12.0
+offset_bottom = -96.0
 grow_horizontal = 0
 grow_vertical = 2
 
@@ -99,29 +137,29 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = -128.0
-offset_right = -8.0
-offset_bottom = -8.0
+offset_left = 12.0
+offset_top = -84.0
+offset_right = -12.0
+offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 0
 
 [node name="BottomMargin" type="MarginContainer" parent="CanvasLayer/UI/BottomPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 8
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
 
 [node name="BottomRow" type="HBoxContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
 
 [node name="StatsColumn" type="VBoxContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow"]
-custom_minimum_size = Vector2(260, 0)
+custom_minimum_size = Vector2(272, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="EnergyLabel" type="Label" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/StatsColumn"]
 layout_mode = 2
@@ -147,15 +185,24 @@ size_flags_horizontal = 3
 clip_text = true
 text = "Debug"
 
-[node name="TileButtons" type="GridContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow"]
+[node name="ActionGroups" type="HBoxContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-columns = 3
-theme_override_constants/h_separation = 6
-theme_override_constants/v_separation = 6
+theme_override_constants/separation = 8
 
-[node name="BasicButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/TileButtons"]
-custom_minimum_size = Vector2(92, 38)
+[node name="ExpansionGroup" type="PanelContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups"]
+custom_minimum_size = Vector2(116, 0)
+layout_mode = 2
+
+[node name="ExpansionMargin" type="MarginContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/ExpansionGroup"]
+layout_mode = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="BasicButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/ExpansionGroup/ExpansionMargin"]
+custom_minimum_size = Vector2(108, 56)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Basic\n1"
@@ -163,8 +210,24 @@ icon_alignment = 0
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="MeleeButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/TileButtons"]
-custom_minimum_size = Vector2(92, 38)
+[node name="CombatGroup" type="PanelContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups"]
+custom_minimum_size = Vector2(342, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CombatMargin" type="MarginContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/CombatGroup"]
+layout_mode = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="CombatButtons" type="HBoxContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/CombatGroup/CombatMargin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="MeleeButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/CombatGroup/CombatMargin/CombatButtons"]
+custom_minimum_size = Vector2(108, 56)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Melee\n2"
@@ -172,8 +235,8 @@ icon_alignment = 0
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="RangedButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/TileButtons"]
-custom_minimum_size = Vector2(92, 38)
+[node name="RangedButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/CombatGroup/CombatMargin/CombatButtons"]
+custom_minimum_size = Vector2(108, 56)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Ranged\n2"
@@ -181,20 +244,31 @@ icon_alignment = 0
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="GatherButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/TileButtons"]
-custom_minimum_size = Vector2(92, 38)
+[node name="DefenseButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/CombatGroup/CombatMargin/CombatButtons"]
+custom_minimum_size = Vector2(108, 56)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Gather\n3"
+text = "Defense\n2"
 icon_alignment = 0
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="DefenseButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/TileButtons"]
-custom_minimum_size = Vector2(92, 38)
+[node name="EconomyGroup" type="PanelContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups"]
+custom_minimum_size = Vector2(116, 0)
+layout_mode = 2
+
+[node name="EconomyMargin" type="MarginContainer" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/EconomyGroup"]
+layout_mode = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="GatherButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ActionGroups/EconomyGroup/EconomyMargin"]
+custom_minimum_size = Vector2(108, 56)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Defense\n2"
+text = "Gather\n3"
 icon_alignment = 0
 vertical_icon_alignment = 0
 expand_icon = true
@@ -209,56 +283,145 @@ custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 text = "END TURN"
 
-[node name="SkipButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ControlsColumn"]
-custom_minimum_size = Vector2(0, 24)
-layout_mode = 2
-text = "SKIP"
-
 [node name="ClearQueueButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ControlsColumn"]
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
 text = "CLEAR QUEUE"
 
-[node name="CardPanel" type="PanelContainer" parent="CanvasLayer/UI"]
+[node name="ReturnMenuButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ControlsColumn"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+text = "MENU"
+
+[node name="DevUpgradeButton" type="Button" parent="CanvasLayer/UI/BottomPanel/BottomMargin/BottomRow/ControlsColumn"]
+visible = false
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+text = "TEST UPGRADE"
+
+[node name="MenuConfirmOverlay" type="ColorRect" parent="CanvasLayer/UI"]
 visible = false
 layout_mode = 1
-anchors_preset = 0
-anchor_left = 0.22
-anchor_top = 0.2
-anchor_right = 0.78
-anchor_bottom = 0.8
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+color = Color(0, 0, 0, 0.58)
 
-[node name="CardMargin" type="MarginContainer" parent="CanvasLayer/UI/CardPanel"]
+[node name="Center" type="CenterContainer" parent="CanvasLayer/UI/MenuConfirmOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="CanvasLayer/UI/MenuConfirmOverlay/Center"]
+custom_minimum_size = Vector2(420, 220)
 layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
 
-[node name="CardVBox" type="VBoxContainer" parent="CanvasLayer/UI/CardPanel/CardMargin"]
+[node name="Margin" type="MarginContainer" parent="CanvasLayer/UI/MenuConfirmOverlay/Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/UI/MenuConfirmOverlay/Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="CanvasLayer/UI/MenuConfirmOverlay/Center/Panel/Margin/VBox"]
+layout_mode = 2
+horizontal_alignment = 1
+text = "Return To Menu?"
+
+[node name="Body" type="Label" parent="CanvasLayer/UI/MenuConfirmOverlay/Center/Panel/Margin/VBox"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 2
+text = "Current level progress will be lost."
+
+[node name="ButtonRow" type="HBoxContainer" parent="CanvasLayer/UI/MenuConfirmOverlay/Center/Panel/Margin/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/UI/MenuConfirmOverlay/Center/Panel/Margin/VBox/ButtonRow"]
+custom_minimum_size = Vector2(160, 42)
+layout_mode = 2
+text = "YES, RETURN"
+
+[node name="CancelButton" type="Button" parent="CanvasLayer/UI/MenuConfirmOverlay/Center/Panel/Margin/VBox/ButtonRow"]
+custom_minimum_size = Vector2(160, 42)
+layout_mode = 2
+text = "CANCEL"
+
+[node name="UpgradeOverlay" type="ColorRect" parent="CanvasLayer/UI"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+color = Color(0, 0, 0, 0.62)
+
+[node name="Center" type="CenterContainer" parent="CanvasLayer/UI/UpgradeOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="CanvasLayer/UI/UpgradeOverlay/Center"]
+custom_minimum_size = Vector2(940, 360)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="CanvasLayer/UI/UpgradeOverlay/Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/UI/UpgradeOverlay/Center/Panel/Margin"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Title" type="Label" parent="CanvasLayer/UI/CardPanel/CardMargin/CardVBox"]
+[node name="HeaderLabel" type="Label" parent="CanvasLayer/UI/UpgradeOverlay/Center/Panel/Margin/VBox"]
 layout_mode = 2
 horizontal_alignment = 1
-text = "CHOOSE AN UPGRADE"
+text = "Choose Evolution"
 
-[node name="Card1" type="Button" parent="CanvasLayer/UI/CardPanel/CardMargin/CardVBox"]
-custom_minimum_size = Vector2(0, 80)
+[node name="HintLabel" type="Label" parent="CanvasLayer/UI/UpgradeOverlay/Center/Panel/Margin/VBox"]
 layout_mode = 2
-text = "Card 1"
+horizontal_alignment = 1
+autowrap_mode = 2
+text = "Pick one run upgrade."
 
-[node name="Card2" type="Button" parent="CanvasLayer/UI/CardPanel/CardMargin/CardVBox"]
-custom_minimum_size = Vector2(0, 80)
+[node name="ChoiceRow" type="HBoxContainer" parent="CanvasLayer/UI/UpgradeOverlay/Center/Panel/Margin/VBox"]
 layout_mode = 2
-text = "Card 2"
+theme_override_constants/separation = 12
 
-[node name="Card3" type="Button" parent="CanvasLayer/UI/CardPanel/CardMargin/CardVBox"]
-custom_minimum_size = Vector2(0, 80)
+[node name="ChoiceButton1" type="Button" parent="CanvasLayer/UI/UpgradeOverlay/Center/Panel/Margin/VBox/ChoiceRow"]
+custom_minimum_size = Vector2(0, 92)
 layout_mode = 2
-text = "Card 3"
+size_flags_horizontal = 3
+text = "Choice 1"
+
+[node name="ChoiceButton2" type="Button" parent="CanvasLayer/UI/UpgradeOverlay/Center/Panel/Margin/VBox/ChoiceRow"]
+custom_minimum_size = Vector2(0, 92)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Choice 2"
+
+[node name="ChoiceButton3" type="Button" parent="CanvasLayer/UI/UpgradeOverlay/Center/Panel/Margin/VBox/ChoiceRow"]
+custom_minimum_size = Vector2(0, 92)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Choice 3"

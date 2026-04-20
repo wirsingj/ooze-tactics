@@ -10,7 +10,7 @@ var combat: Combat = Combat.new()
 var director: LevelDirector = LevelDirector.new()
 
 var min_expand_adjacent: int = 1
-var basic_tile_cost: int = 1
+var basic_tile_cost: int = int(Combat.TILE_RULES["basic"]["cost"])
 
 func step(state: GameState, queued_actions: Array) -> GameState:
 	var next: GameState = state.copy_state()
@@ -26,6 +26,8 @@ func step(state: GameState, queued_actions: Array) -> GameState:
 	log.append("Economy settled")
 	_advance_tile_ages(next)
 	log.append("Stability advanced")
+	next.tick_reclaim_blocks()
+	log.append("Reclaim settled")
 
 	_update_stall_counter(next)
 
@@ -38,6 +40,13 @@ func step(state: GameState, queued_actions: Array) -> GameState:
 	return next
 
 func _update_stall_counter(state: GameState) -> void:
+	if bool(state.spectator_mode):
+		state.stall_counter = 0
+		return
+	if not bool(state.players.get(GameState.PLAYER_ID, {}).get("alive", true)):
+		state.stall_counter = 0
+		return
+
 	var energy: int = int(state.players[GameState.PLAYER_ID]["nutrients"])
 	var can_act: bool = state.has_any_legal_action(GameState.PLAYER_ID, min_expand_adjacent, basic_tile_cost)
 	if energy <= 0 and not can_act:

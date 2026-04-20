@@ -4,7 +4,7 @@ class_name Economy
 # Economy intentionally favors resources/gather tiles over pure tile count.
 
 const BASE_TURN_ENERGY: int = 2
-const RESOURCE_CAPTURE_BURST: int = 3
+const RESOURCE_CAPTURE_BURST: int = 2
 const GATHER_BASE_INCOME: int = 1
 const GATHER_RESOURCE_BONUS: int = 1
 
@@ -37,22 +37,30 @@ func compute_income_and_upkeep(state: GameState) -> Dictionary:
 	var income_by_owner: Dictionary = {}
 	var upkeep_by_owner: Dictionary = {}
 
+	# Player run upgrades feed through card_modifiers for deterministic economy math.
 	var income_flat: int = int(state.card_modifiers.get("income_flat", 0))
+	var gather_income_bonus: int = int(state.card_modifiers.get("gather_income_bonus", 0))
 
 	for owner_id in state.players.keys():
-		var base_income: int = BASE_TURN_ENERGY
-		if int(owner_id) == GameState.PLAYER_ID:
+		var is_alive: bool = bool(state.players[owner_id].get("alive", true))
+		var base_income: int = BASE_TURN_ENERGY if is_alive else 0
+		if int(owner_id) == GameState.PLAYER_ID and is_alive:
 			base_income += income_flat
 		income_by_owner[owner_id] = base_income
 		upkeep_by_owner[owner_id] = 0
 
 	for block in state.blocks.values():
 		var owner: int = int(block["owner"])
+		if not bool(state.players.get(owner, {}).get("alive", true)):
+			continue
 		if String(block.get("tile_type", "basic")) == "gather":
 			var bonus: int = int(block.get("gather_bonus", 0))
 			if bonus > 0 and not _gather_bonus_active_this_turn(state, block):
 				bonus = 0
-			income_by_owner[owner] = int(income_by_owner[owner]) + GATHER_BASE_INCOME + bonus
+			var gather_income: int = GATHER_BASE_INCOME + bonus + int(block.get("gather_upgrade_bonus", 0))
+			if owner == GameState.PLAYER_ID:
+				gather_income += gather_income_bonus
+			income_by_owner[owner] = int(income_by_owner[owner]) + gather_income
 
 	var deltas: Dictionary = {}
 	for owner_id in state.players.keys():
@@ -66,6 +74,8 @@ func compute_income_and_upkeep(state: GameState) -> Dictionary:
 
 func apply_income_and_upkeep(state: GameState, report: Dictionary, bursts: Dictionary = {}) -> void:
 	for owner_id in state.players.keys():
+		if not bool(state.players[owner_id].get("alive", true)):
+			continue
 		var delta: int = int(report["delta"].get(owner_id, 0)) + int(bursts.get(owner_id, 0))
 		state.players[owner_id]["nutrients"] = int(state.players[owner_id]["nutrients"]) + delta
 

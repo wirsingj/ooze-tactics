@@ -1,0 +1,177 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/MainMenu.gd" id="1_script"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Overlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.04, 0.05, 0.08, 0.2)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="TopSpacer" type="Control" parent="Center/VBox"]
+custom_minimum_size = Vector2(0, 460)
+layout_mode = 2
+
+[node name="ButtonsRow" type="HBoxContainer" parent="Center/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="StartButton" type="Button" parent="Center/VBox/ButtonsRow"]
+custom_minimum_size = Vector2(180, 58)
+layout_mode = 2
+text = "Start"
+
+[node name="DevStartButton" type="Button" parent="Center/VBox/ButtonsRow"]
+custom_minimum_size = Vector2(180, 58)
+layout_mode = 2
+text = "Dev Start"
+
+[node name="SettingsButton" type="Button" parent="Center/VBox/ButtonsRow"]
+custom_minimum_size = Vector2(180, 58)
+layout_mode = 2
+text = "Settings"
+
+[node name="ExitButton" type="Button" parent="Center/VBox/ButtonsRow"]
+custom_minimum_size = Vector2(180, 58)
+layout_mode = 2
+text = "Exit"
+
+[node name="DevOverlay" type="ColorRect" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="DevPanelCenter" type="CenterContainer" parent="DevOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DevPanel" type="PanelContainer" parent="DevOverlay/DevPanelCenter"]
+custom_minimum_size = Vector2(560, 300)
+layout_mode = 2
+
+[node name="DevMargin" type="MarginContainer" parent="DevOverlay/DevPanelCenter/DevPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="DevVBox" type="VBoxContainer" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="DevTitle" type="Label" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox"]
+layout_mode = 2
+text = "Dev Start Config"
+horizontal_alignment = 1
+
+[node name="DevHint" type="Label" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox"]
+layout_mode = 2
+text = "Choose team sizes (X vs Y), instant test tools, then start."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="TeamRow" type="HBoxContainer" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="PlayerTeamLabel" type="Label" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/TeamRow"]
+layout_mode = 2
+text = "Player Team (X)"
+
+[node name="PlayerTeamSize" type="SpinBox" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/TeamRow"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+min_value = 1.0
+max_value = 4.0
+step = 1.0
+value = 1.0
+
+[node name="VsLabel" type="Label" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/TeamRow"]
+layout_mode = 2
+text = "vs"
+
+[node name="EnemyTeamLabel" type="Label" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/TeamRow"]
+layout_mode = 2
+text = "Enemy Team (Y)"
+
+[node name="EnemyTeamSize" type="SpinBox" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/TeamRow"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+min_value = 1.0
+max_value = 4.0
+step = 1.0
+value = 1.0
+
+[node name="DevInfo" type="Label" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox"]
+layout_mode = 2
+text = "Dev player starts with 500 energy. Clicking enemy heart tiles instantly defeats that owner."
+autowrap_mode = 2
+
+[node name="ImmortalCheck" type="CheckBox" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox"]
+layout_mode = 2
+text = "Dev Player Immortal (always full health)"
+
+[node name="SpectatorCheck" type="CheckBox" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox"]
+layout_mode = 2
+text = "Spectator Mode (no player slot, AI vs AI)"
+
+[node name="DevButtons" type="HBoxContainer" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="DevConfirmButton" type="Button" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/DevButtons"]
+custom_minimum_size = Vector2(180, 52)
+layout_mode = 2
+text = "Launch Dev Run"
+
+[node name="DevCancelButton" type="Button" parent="DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/DevButtons"]
+custom_minimum_size = Vector2(180, 52)
+layout_mode = 2
+text = "Cancel"

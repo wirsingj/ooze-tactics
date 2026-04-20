@@ -9,6 +9,12 @@ from PIL import Image, ImageDraw, ImageFilter
 
 TILE = 32
 COLS = 16
+BASE_VARIANTS = 3
+# Higher supersample improves edge smoothness and pooled silhouette quality
+# without changing runtime grid alignment or atlas contracts.
+AUTOTILE_SCALE = 8
+AUTOTILE_SIZE = TILE * AUTOTILE_SCALE
+RESAMPLE_LANCZOS = Image.Resampling.LANCZOS if hasattr(Image, "Resampling") else Image.LANCZOS
 
 ROOT = Path(__file__).resolve().parents[1]
 ATLAS_DIR = ROOT / "assets" / "atlas"
@@ -123,61 +129,113 @@ def build_blob_alpha(mask: int, frame: int) -> Image.Image:
     s = (mask & 4) != 0
     w = (mask & 8) != 0
 
-    alpha = Image.new("L", (TILE, TILE), 0)
-    d = ImageDraw.Draw(alpha)
+    # Build topology at high resolution, then downsample for smooth curves.
+    alpha_hr = Image.new("L", (AUTOTILE_SIZE, AUTOTILE_SIZE), 255)
+    d = ImageDraw.Draw(alpha_hr)
 
-    # Core puddle mass: thicker center to keep connected tiles visually unified.
-    d.ellipse((1, 2, 30, 30), fill=255)
-    d.rounded_rectangle((2, 4, 29, 29), radius=10, fill=255)
-    d.ellipse((5, 6, 26, 27), fill=255)
+    # Slightly thicker pooled mass and stronger connectors.
+    side_inset: int = 4 * AUTOTILE_SCALE + (frame % 2)
+    side_radius: int = 7 * AUTOTILE_SCALE
+    transition: int = 4 * AUTOTILE_SCALE
+    corner_radius: int = 10 * AUTOTILE_SCALE
+    goop: int = 2 * AUTOTILE_SCALE + (frame % 2)
 
-    if n:
-        d.rounded_rectangle((5, 0, 26, 19), radius=8, fill=255)
-    if s:
-        d.rounded_rectangle((5, 12, 26, 31), radius=8, fill=255)
-    if w:
-        d.rounded_rectangle((0, 5, 19, 26), radius=8, fill=255)
-    if e:
-        d.rounded_rectangle((12, 5, 31, 26), radius=8, fill=255)
+    def carve_top() -> None:
+        x0 = 0 if not w else transition
+        x1 = AUTOTILE_SIZE if not e else AUTOTILE_SIZE - transition
+        d.rectangle((x0, 0, x1, side_inset), fill=0)
+        d.rounded_rectangle((x0, 0, x1, side_inset * 2), radius=side_radius, fill=0)
 
-    if n and w:
-        d.ellipse((0, 0, 20, 20), fill=255)
-    if n and e:
-        d.ellipse((11, 0, 31, 20), fill=255)
-    if s and w:
-        d.ellipse((0, 11, 20, 31), fill=255)
-    if s and e:
-        d.ellipse((11, 11, 31, 31), fill=255)
+    def carve_bottom() -> None:
+        x0 = 0 if not w else transition
+        x1 = AUTOTILE_SIZE if not e else AUTOTILE_SIZE - transition
+        d.rectangle((x0, AUTOTILE_SIZE - side_inset, x1, AUTOTILE_SIZE), fill=0)
+        d.rounded_rectangle((x0, AUTOTILE_SIZE - side_inset * 2, x1, AUTOTILE_SIZE), radius=side_radius, fill=0)
 
-    # Exposed edge goop for outer silhouette irregularity.
-    wobble = [-1, 0, 1][frame % 3]
+    def carve_left() -> None:
+        y0 = 0 if not n else transition
+        y1 = AUTOTILE_SIZE if not s else AUTOTILE_SIZE - transition
+        d.rectangle((0, y0, side_inset, y1), fill=0)
+        d.rounded_rectangle((0, y0, side_inset * 2, y1), radius=side_radius, fill=0)
+
+    def carve_right() -> None:
+        y0 = 0 if not n else transition
+        y1 = AUTOTILE_SIZE if not s else AUTOTILE_SIZE - transition
+        d.rectangle((AUTOTILE_SIZE - side_inset, y0, AUTOTILE_SIZE, y1), fill=0)
+        d.rounded_rectangle((AUTOTILE_SIZE - side_inset * 2, y0, AUTOTILE_SIZE, y1), radius=side_radius, fill=0)
+
     if not n:
-        d.ellipse((7 + wobble, 0, 15 + wobble, 6), fill=255)
-        d.ellipse((17 - wobble, 0, 25 - wobble, 6), fill=255)
-        d.ellipse((13, 0, 20, 4), fill=255)
+        carve_top()
     if not s:
-        d.ellipse((7 - wobble, 25, 15 - wobble, 31), fill=255)
-        d.ellipse((18 + wobble, 25, 26 + wobble, 31), fill=255)
-        d.ellipse((12, 27, 20, 31), fill=255)
+        carve_bottom()
     if not w:
-        d.ellipse((0, 8 - wobble, 6, 15 - wobble), fill=255)
-        d.ellipse((0, 18 + wobble, 6, 25 + wobble), fill=255)
-        d.ellipse((0, 13, 4, 20), fill=255)
+        carve_left()
     if not e:
-        d.ellipse((25, 8 + wobble, 31, 15 + wobble), fill=255)
-        d.ellipse((25, 18 - wobble, 31, 25 - wobble), fill=255)
-        d.ellipse((27, 13, 31, 20), fill=255)
+        carve_right()
 
-    # Keep inner seams smooth by softening alpha transitions.
-    alpha = alpha.filter(ImageFilter.GaussianBlur(radius=0.75))
+    # Outer (convex) corners.
+    if not n and not w:
+        d.pieslice((0, 0, corner_radius * 2, corner_radius * 2), 180, 270, fill=0)
+    if not n and not e:
+        d.pieslice((AUTOTILE_SIZE - corner_radius * 2, 0, AUTOTILE_SIZE, corner_radius * 2), 270, 360, fill=0)
+    if not s and not e:
+        d.pieslice((AUTOTILE_SIZE - corner_radius * 2, AUTOTILE_SIZE - corner_radius * 2, AUTOTILE_SIZE, AUTOTILE_SIZE), 0, 90, fill=0)
+    if not s and not w:
+        d.pieslice((0, AUTOTILE_SIZE - corner_radius * 2, corner_radius * 2, AUTOTILE_SIZE), 90, 180, fill=0)
+
+    # Inner (concave transition) corners where exposed sides meet connected sides.
+    if not n and w:
+        d.ellipse((0, 0, transition * 2, transition * 2), fill=255)
+    if not n and e:
+        d.ellipse((AUTOTILE_SIZE - transition * 2, 0, AUTOTILE_SIZE, transition * 2), fill=255)
+    if not s and w:
+        d.ellipse((0, AUTOTILE_SIZE - transition * 2, transition * 2, AUTOTILE_SIZE), fill=255)
+    if not s and e:
+        d.ellipse((AUTOTILE_SIZE - transition * 2, AUTOTILE_SIZE - transition * 2, AUTOTILE_SIZE, AUTOTILE_SIZE), fill=255)
+
+    # Slight goopy protrusions only on exposed boundaries.
+    if not n:
+        d.ellipse((AUTOTILE_SIZE // 2 - side_radius // 2, 0, AUTOTILE_SIZE // 2 + side_radius // 2, goop * 2), fill=0)
+    if not s:
+        d.ellipse((AUTOTILE_SIZE // 2 - side_radius // 2, AUTOTILE_SIZE - goop * 2, AUTOTILE_SIZE // 2 + side_radius // 2, AUTOTILE_SIZE), fill=0)
+    if not w:
+        d.ellipse((0, AUTOTILE_SIZE // 2 - side_radius // 2, goop * 2, AUTOTILE_SIZE // 2 + side_radius // 2), fill=0)
+    if not e:
+        d.ellipse((AUTOTILE_SIZE - goop * 2, AUTOTILE_SIZE // 2 - side_radius // 2, AUTOTILE_SIZE, AUTOTILE_SIZE // 2 + side_radius // 2), fill=0)
+
+    alpha_hr = alpha_hr.filter(ImageFilter.GaussianBlur(radius=1.5))
+    alpha = alpha_hr.resize((TILE, TILE), resample=RESAMPLE_LANCZOS)
     ap = alpha.load()
+
     for y in range(TILE):
         for x in range(TILE):
             a = ap[x, y]
-            if a < 22:
+            if a < 16:
                 ap[x, y] = 0
-            elif a < 255:
-                ap[x, y] = min(255, a + 32)
+            elif a < 248:
+                ap[x, y] = min(255, a + 20)
+
+    # Force connected borders to remain fully sealed to prevent seams/gaps.
+    if n:
+        for x in range(TILE):
+            ap[x, 0] = 255
+            ap[x, 1] = max(ap[x, 1], 250)
+            ap[x, 2] = max(ap[x, 2], 242)
+    if s:
+        for x in range(TILE):
+            ap[x, TILE - 1] = 255
+            ap[x, TILE - 2] = max(ap[x, TILE - 2], 250)
+            ap[x, TILE - 3] = max(ap[x, TILE - 3], 242)
+    if w:
+        for y in range(TILE):
+            ap[0, y] = 255
+            ap[1, y] = max(ap[1, y], 250)
+            ap[2, y] = max(ap[2, y], 242)
+    if e:
+        for y in range(TILE):
+            ap[TILE - 1, y] = 255
+            ap[TILE - 2, y] = max(ap[TILE - 2, y], 250)
+            ap[TILE - 3, y] = max(ap[TILE - 3, y], 242)
 
     return alpha
 
@@ -195,51 +253,83 @@ def _distance_to_transparent(ap, x: int, y: int, max_r: int = 5) -> int:
     return max_r + 1
 
 
-def colorize_blob(alpha: Image.Image, frame: int, mask: int) -> Image.Image:
+def colorize_blob(alpha: Image.Image, frame: int, mask: int, variant: int) -> Image.Image:
     base = Image.new("RGBA", (TILE, TILE), (0, 0, 0, 0))
     px = base.load()
     ap = alpha.load()
-
-    cx = 16 + (mask % 3) - 1
-    cy = 15 + ((mask // 2) % 3) - 1
-    cx2, cy2 = cx - 5, cy - 4
-    cx3, cy3 = cx + 6, cy + 5
+    variant_phase = float(variant) * 1.21
+    phase = float(frame) * 0.64 + variant_phase
+    tau = 2.0 * math.pi
+    n = (mask & 1) != 0
+    e = (mask & 2) != 0
+    s = (mask & 4) != 0
+    w = (mask & 8) != 0
 
     for y in range(TILE):
         for x in range(TILE):
             a = ap[x, y]
             if a == 0:
                 continue
-            d1 = math.dist((x, y), (cx, cy))
-            d2 = math.dist((x, y), (cx2, cy2))
-            d3 = math.dist((x, y), (cx3, cy3))
+            # Exposed-edge shading follows connectivity mask, but interior shading
+            # stays pooled and directional (not per-tile radial bubble lighting).
+            dist_top = float(y)
+            dist_right = float(TILE - 1 - x)
+            dist_bottom = float(TILE - 1 - y)
+            dist_left = float(x)
 
-            # Volumetric mass: bright center, soft shoulder, dark edge.
-            center_lift = max(0.0, 1.0 - d1 / 13.0) * 38.0
-            lobe_lift = max(0.0, 1.0 - d2 / 10.0) * 14.0
-            lobe_drop = max(0.0, 1.0 - d3 / 10.0) * 12.0
+            exposed = 0.0
+            if not n:
+                exposed = max(exposed, max(0.0, 1.0 - dist_top / 6.0))
+            if not e:
+                exposed = max(exposed, max(0.0, 1.0 - dist_right / 6.0))
+            if not s:
+                exposed = max(exposed, max(0.0, 1.0 - dist_bottom / 6.0))
+            if not w:
+                exposed = max(exposed, max(0.0, 1.0 - dist_left / 6.0))
 
-            edge_dist = _distance_to_transparent(ap, x, y, 5)
-            edge_drop = max(0, 6 - edge_dist) * 7
+            # Slightly reinforce convex corner darkening.
+            corner_exposed = 0.0
+            if not n and not w:
+                corner_exposed = max(corner_exposed, max(0.0, 1.0 - max(dist_top, dist_left) / 7.0))
+            if not n and not e:
+                corner_exposed = max(corner_exposed, max(0.0, 1.0 - max(dist_top, dist_right) / 7.0))
+            if not s and not e:
+                corner_exposed = max(corner_exposed, max(0.0, 1.0 - max(dist_bottom, dist_right) / 7.0))
+            if not s and not w:
+                corner_exposed = max(corner_exposed, max(0.0, 1.0 - max(dist_bottom, dist_left) / 7.0))
 
-            l = int(122 + center_lift + lobe_lift - lobe_drop - edge_drop)
+            edge_strength = max(exposed, corner_exposed)
+            edge_dist: float = float(_distance_to_transparent(ap, x, y, max_r=6))
+            interior_factor: float = min(1.0, edge_dist / 6.0)
+            u = float(x) / float(TILE - 1)
+            v = float(y) / float(TILE - 1)
+            directional = (1.0 - (0.68 * u + 0.90 * v)) * 15.0
+            # Low-frequency surface detail that tiles seamlessly.
+            wave_a = math.sin((u + v) * tau + phase * 0.60)
+            wave_b = math.sin((u * 1.90 - v * 1.25) * tau - phase * 0.46)
+            wave_c = math.sin((u * 1.25 + v * 2.10) * tau + phase * 0.38)
+            pooled_surface = (wave_a * 1.6 + wave_b * 1.3 + wave_c * 1.1) * (0.24 + interior_factor * 0.76)
+            # Sparse "snap" pits add life without noisy micro texture.
+            snap_field = math.sin((u * 3.1 + v * 2.3) * tau + phase * 0.52) + math.sin((u * 2.2 - v * 2.9) * tau - phase * 0.40)
+            snap_drop = 0.0
+            if snap_field > 1.45 and interior_factor > 0.28:
+                snap_drop = 2.4 + interior_factor * 1.8
+
+            interior_lift = 16.0 * interior_factor
+            edge_drop = edge_strength * 22.0
+            rim_drop = max(0.0, edge_strength - 0.14) * 28.0
+            pulse = [-1.0, 0.0, 1.0][frame] * (0.25 + interior_factor * 0.75)
+            l = int(136.0 + interior_lift + directional + pooled_surface + pulse - edge_drop - rim_drop - snap_drop)
             px[x, y] = (clamp_channel(l), clamp_channel(l), clamp_channel(l), a)
 
-    d = ImageDraw.Draw(base)
-    # Subtle bubble sheen; low frequency to avoid tile-noise look.
-    shift = [-1, 0, 1][frame]
-    d.ellipse((8 + shift, 8, 14 + shift, 13), fill=(255, 255, 255, 52))
-    d.ellipse((18 - shift, 14, 23 - shift, 19), fill=(255, 255, 255, 44))
-    d.ellipse((12, 18 + shift, 16, 22 + shift), fill=(255, 255, 255, 34))
-
-    # Smooth tiny residual hard transitions.
-    base = base.filter(ImageFilter.GaussianBlur(radius=0.35))
+    # Keep pooled softness but avoid a flat washout.
+    base = base.filter(ImageFilter.GaussianBlur(radius=0.16))
     return base
 
 
-def make_base_slime(mask: int, frame: int) -> Image.Image:
+def make_base_slime(mask: int, frame: int, variant: int) -> Image.Image:
     alpha = build_blob_alpha(mask, frame)
-    return colorize_blob(alpha, frame, mask)
+    return colorize_blob(alpha, frame, mask, variant)
 
 
 def make_overlay(tile_type: str, infused: bool = False) -> Image.Image:
@@ -247,39 +337,46 @@ def make_overlay(tile_type: str, infused: bool = False) -> Image.Image:
     d = ImageDraw.Draw(im)
 
     if tile_type == "basic":
-        d.ellipse((11, 12, 19, 19), fill=(214, 214, 214, 34))
-        d.ellipse((9, 16, 15, 21), fill=(194, 194, 194, 24))
+        d.ellipse((9, 11, 20, 21), fill=(220, 220, 220, 34))
+        d.ellipse((13, 9, 19, 15), fill=(244, 244, 244, 28))
 
     elif tile_type == "gather":
-        d.ellipse((8, 8, 24, 24), fill=(104, 104, 104, 52))
-        d.polygon([(16, 8), (21, 14), (16, 23), (11, 14)], fill=(238, 238, 238, 148), outline=(94, 94, 94, 96))
-        d.polygon([(9, 16), (12, 20), (9, 24), (6, 20)], fill=(224, 224, 224, 128), outline=(90, 90, 90, 88))
-        d.polygon([(23, 13), (26, 16), (23, 20), (20, 16)], fill=(228, 228, 228, 132), outline=(90, 90, 90, 88))
+        d.ellipse((7, 8, 25, 25), fill=(88, 88, 88, 58))
+        d.polygon([(16, 8), (22, 15), (16, 24), (10, 15)], fill=(246, 246, 246, 168))
+        d.polygon([(9, 17), (13, 22), (9, 26), (5, 22)], fill=(232, 232, 232, 146))
+        d.polygon([(23, 15), (27, 19), (23, 23), (19, 19)], fill=(236, 236, 236, 152))
+        d.line((11, 15, 21, 15), fill=(58, 58, 58, 104), width=1)
         if infused:
-            d.ellipse((13, 3, 19, 8), fill=(255, 255, 255, 90))
-            d.ellipse((3, 14, 7, 18), fill=(255, 255, 255, 76))
-            d.ellipse((24, 20, 28, 24), fill=(255, 255, 255, 76))
+            d.ellipse((12, 3, 20, 10), fill=(255, 255, 255, 98))
+            d.ellipse((3, 14, 9, 19), fill=(255, 255, 255, 78))
+            d.ellipse((23, 20, 29, 25), fill=(255, 255, 255, 78))
 
     elif tile_type == "defense":
-        d.ellipse((6, 7, 26, 25), fill=(74, 74, 74, 58))
-        d.rounded_rectangle((8, 9, 24, 23), radius=6, fill=(182, 182, 182, 122), outline=(86, 86, 86, 104), width=1)
-        d.line((10, 13, 22, 13), fill=(238, 238, 238, 84), width=1)
-        d.line((10, 18, 22, 18), fill=(236, 236, 236, 72), width=1)
+        d.ellipse((6, 8, 26, 25), fill=(68, 68, 68, 68))
+        d.rounded_rectangle((7, 9, 25, 24), radius=6, fill=(196, 196, 196, 140))
+        d.rounded_rectangle((9, 11, 23, 22), radius=5, outline=(248, 248, 248, 104), width=1)
+        d.line((10, 14, 22, 14), fill=(244, 244, 244, 96), width=1)
+        d.line((10, 18, 22, 18), fill=(232, 232, 232, 80), width=1)
+        d.rounded_rectangle((7, 9, 25, 24), radius=6, outline=(64, 64, 64, 120), width=1)
 
     elif tile_type == "melee":
-        d.ellipse((8, 12, 24, 25), fill=(74, 74, 74, 52))
-        d.polygon([(10, 23), (13, 10), (16, 22)], fill=(226, 226, 226, 122), outline=(92, 92, 92, 104))
-        d.polygon([(14, 22), (17, 8), (20, 21)], fill=(232, 232, 232, 128), outline=(94, 94, 94, 106))
-        d.polygon([(18, 23), (21, 11), (24, 22)], fill=(218, 218, 218, 118), outline=(88, 88, 88, 98))
+        d.ellipse((7, 11, 25, 26), fill=(70, 70, 70, 60))
+        d.polygon([(9, 24), (13, 10), (16, 23)], fill=(238, 238, 238, 142))
+        d.polygon([(14, 23), (17, 7), (20, 22)], fill=(246, 246, 246, 150))
+        d.polygon([(18, 24), (22, 10), (25, 23)], fill=(230, 230, 230, 136))
+        d.line((12, 20, 22, 12), fill=(66, 66, 66, 98), width=1)
 
     elif tile_type == "ranged":
-        d.ellipse((8, 8, 24, 24), fill=(82, 82, 82, 56))
-        d.ellipse((10, 10, 22, 22), fill=(210, 210, 210, 118), outline=(96, 96, 96, 104), width=1)
-        d.ellipse((13, 13, 19, 19), fill=(244, 244, 244, 116))
-        d.rectangle((22, 14, 27, 18), fill=(190, 190, 190, 96), outline=(88, 88, 88, 90), width=1)
+        d.ellipse((6, 6, 26, 26), fill=(94, 94, 94, 56))
+        d.ellipse((8, 8, 24, 24), fill=(210, 210, 210, 110))
+        d.ellipse((10, 10, 22, 22), fill=(236, 236, 236, 124))
+        d.ellipse((13, 13, 19, 19), fill=(255, 255, 255, 154))
+        d.rectangle((22, 13, 28, 19), fill=(218, 218, 218, 114))
+        d.ellipse((11, 11, 21, 21), outline=(255, 255, 255, 82), width=1)
+        d.ellipse((4, 4, 28, 28), outline=(255, 255, 255, 44), width=1)
 
-    # Soften icon-like edges and keep overlays embedded in slime mass.
-    im = im.filter(ImageFilter.GaussianBlur(radius=0.55))
+    # Keep overlays embedded, but sharper than before for gameplay readability.
+    im = im.filter(ImageFilter.GaussianBlur(radius=0.24))
     return im
 
 
@@ -303,27 +400,90 @@ def tint_image(source: Image.Image, tint: Tuple[int, int, int, int]) -> Image.Im
 
 def make_ui_panel() -> Image.Image:
     im = Image.new("RGBA", (TILE, TILE), (0, 0, 0, 0))
+    px = im.load()
     d = ImageDraw.Draw(im)
+
+    # Darkened cave-derived slab with a clean center for stylebox stretching.
     for y in range(TILE):
-        t = y / 31.0
-        c = (26 + int(10 * t), 38 + int(14 * t), 50 + int(16 * t), 255)
-        d.line((0, y, 31, y), fill=c)
-    d.rectangle((0, 0, 31, 31), outline=(188, 148, 88, 255), width=2)
-    d.rectangle((2, 2, 29, 29), outline=(76, 58, 38, 255), width=1)
-    d.rectangle((4, 4, 27, 27), outline=(36, 52, 66, 255), width=1)
+        for x in range(TILE):
+            t = y / float(TILE - 1)
+            cave = ((x // 7) * 5 + (y // 7) * 7 + ((x + y) // 9) * 3) % 7 - 3
+            edge_dist = min(x, y, TILE - 1 - x, TILE - 1 - y)
+            edge_shade = max(0.0, 1.0 - edge_dist / 8.5)
+            slab_r = 27 + int(8 * t) + cave - int(edge_shade * 2.0)
+            slab_g = 22 + int(6 * t) + cave - int(edge_shade * 2.0)
+            slab_b = 18 + int(5 * t) + cave - int(edge_shade * 2.0)
+            px[x, y] = (clamp_channel(slab_r), clamp_channel(slab_g), clamp_channel(slab_b), 255)
+
+    # Strong carved frame with directional lighting.
+    d.rounded_rectangle((0, 0, 31, 31), radius=4, outline=(188, 152, 98, 255), width=3)
+    d.rounded_rectangle((2, 2, 29, 29), radius=3, outline=(74, 54, 34, 228), width=2)
+    d.rounded_rectangle((4, 4, 27, 27), radius=2, outline=(20, 14, 10, 184), width=1)
+    d.line((4, 4, 27, 4), fill=(198, 164, 112, 118), width=1)
+    d.line((4, 5, 27, 5), fill=(154, 122, 84, 92), width=1)
+    d.line((4, 27, 27, 27), fill=(8, 6, 4, 172), width=1)
+    d.line((5, 26, 26, 26), fill=(14, 10, 7, 122), width=1)
+    d.line((27, 4, 27, 27), fill=(8, 6, 4, 160), width=1)
+
+    # In-panel shadow cue so panels feel layered over world.
+    d.rectangle((6, 22, 29, 29), fill=(0, 0, 0, 26))
+    d.rectangle((22, 6, 29, 29), fill=(0, 0, 0, 20))
+
+    # Minimal slime influence on edges only.
+    d.ellipse((2, 24, 8, 30), fill=(86, 168, 132, 36))
+    d.ellipse((23, 2, 29, 8), fill=(152, 84, 104, 24))
     return im
 
 
-def make_ui_button(base: Tuple[int, int, int, int], accent: Tuple[int, int, int, int]) -> Image.Image:
+def make_ui_button(base: Tuple[int, int, int, int], accent: Tuple[int, int, int, int], state: str = "normal") -> Image.Image:
     im = Image.new("RGBA", (TILE, TILE), (0, 0, 0, 0))
+    px = im.load()
     d = ImageDraw.Draw(im)
+
+    # Stone tile button with controlled tint contribution.
+    lift = 0
+    if state == "hover":
+        lift = 6
+    elif state == "pressed":
+        lift = -8
+
+    tint_mix = 0.22
     for y in range(TILE):
-        delta = int((y / 31.0) * 12)
-        c = shade(base, delta)
-        d.line((0, y, 31, y), fill=c)
-    d.rectangle((0, 0, 31, 31), outline=accent, width=2)
-    d.rectangle((2, 2, 29, 29), outline=shade(base, -34), width=1)
-    d.line((4, 5, 27, 5), fill=shade(base, 26), width=1)
+        for x in range(TILE):
+            t = y / float(TILE - 1)
+            edge_dist = min(x, y, TILE - 1 - x, TILE - 1 - y)
+            edge_shade = max(0.0, 1.0 - edge_dist / 7.0)
+            stone_r = 40 + int(8 * t - edge_shade * 2.0) + lift
+            stone_g = 34 + int(7 * t - edge_shade * 2.0) + lift
+            stone_b = 28 + int(6 * t - edge_shade * 2.0) + lift
+            rr = int(stone_r * (1.0 - tint_mix) + base[0] * tint_mix)
+            gg = int(stone_g * (1.0 - tint_mix) + base[1] * tint_mix)
+            bb = int(stone_b * (1.0 - tint_mix) + base[2] * tint_mix)
+            px[x, y] = (clamp_channel(rr), clamp_channel(gg), clamp_channel(bb), 255)
+
+    # Frame and depth: normal=embedded, hover=raised, pressed=deeper inset.
+    d.rounded_rectangle((0, 0, 31, 31), radius=5, outline=accent, width=2)
+    d.rounded_rectangle((2, 2, 29, 29), radius=4, outline=(68, 50, 32, 228), width=1)
+    d.rounded_rectangle((4, 4, 27, 27), radius=3, outline=(18, 13, 9, 170), width=1)
+    if state == "hover":
+        d.line((5, 5, 26, 5), fill=(206, 172, 122, 126), width=1)
+        d.line((5, 6, 26, 6), fill=(166, 132, 92, 98), width=1)
+        d.line((6, 26, 25, 26), fill=(6, 5, 4, 110), width=1)
+        d.rectangle((7, 9, 24, 23), outline=(18, 12, 8, 62), width=1)
+    elif state == "pressed":
+        d.line((5, 5, 26, 5), fill=(86, 68, 48, 78), width=1)
+        d.line((6, 26, 25, 26), fill=(0, 0, 0, 184), width=1)
+        d.line((6, 25, 25, 25), fill=(4, 3, 3, 152), width=1)
+        d.rectangle((7, 10, 24, 24), outline=(8, 6, 5, 118), width=1)
+    else:
+        d.line((5, 6, 26, 6), fill=(146, 116, 80, 80), width=1)
+        d.line((6, 25, 25, 25), fill=(8, 6, 5, 144), width=1)
+        d.rectangle((7, 9, 24, 23), outline=(14, 10, 8, 84), width=1)
+        d.rectangle((7, 10, 24, 24), fill=(0, 0, 0, 10))
+
+    # Minimal cave/slime character without center-line artifacts.
+    d.ellipse((3, 25, 8, 30), fill=(90, 176, 138, 34))
+    d.ellipse((24, 3, 29, 8), fill=(154, 82, 102, 26))
     return im
 
 
@@ -350,16 +510,23 @@ sprites.append(("resource_consumed_00", make_resource_consumed()))
 
 for frame in range(3):
     for mask in range(16):
-        sprites.append((f"slime_base_neutral_m{mask:02d}_f{frame}", make_base_slime(mask, frame)))
+        for variant in range(BASE_VARIANTS):
+            sprites.append((f"slime_base_neutral_m{mask:02d}_v{variant}_f{frame}", make_base_slime(mask, frame, variant)))
+        # Compatibility key for older renderers/scenes.
+        sprites.append((f"slime_base_neutral_m{mask:02d}_f{frame}", make_base_slime(mask, frame, 0)))
 
 for tile_type in ["basic", "gather", "defense", "melee", "ranged"]:
     sprites.append((f"slime_overlay_{tile_type}", make_overlay(tile_type, infused=False)))
 sprites.append(("slime_overlay_gather_infused", make_overlay("gather", infused=True)))
 
 sprites.append(("ui_panel_tile", make_ui_panel()))
-sprites.append(("ui_button_tile", make_ui_button((34, 88, 112, 255), (206, 174, 98, 255))))
-sprites.append(("ui_button_selected", make_ui_button((46, 126, 102, 255), (220, 210, 118, 255))))
-sprites.append(("ui_button_endturn", make_ui_button((138, 42, 36, 255), (230, 196, 108, 255))))
+sprites.append(("ui_button_tile", make_ui_button((34, 88, 112, 255), (206, 174, 98, 255), "normal")))
+sprites.append(("ui_button_hover_tile", make_ui_button((34, 88, 112, 255), (206, 174, 98, 255), "hover")))
+sprites.append(("ui_button_pressed_tile", make_ui_button((34, 88, 112, 255), (206, 174, 98, 255), "pressed")))
+sprites.append(("ui_button_selected", make_ui_button((46, 126, 102, 255), (220, 210, 118, 255), "hover")))
+sprites.append(("ui_button_endturn", make_ui_button((138, 42, 36, 255), (230, 196, 108, 255), "normal")))
+sprites.append(("ui_button_endturn_hover", make_ui_button((138, 42, 36, 255), (230, 196, 108, 255), "hover")))
+sprites.append(("ui_button_endturn_pressed", make_ui_button((138, 42, 36, 255), (230, 196, 108, 255), "pressed")))
 
 for tile_type in ["basic", "melee", "ranged", "gather", "defense"]:
     sprites.append((f"ui_icon_{tile_type}", make_ui_icon(tile_type)))

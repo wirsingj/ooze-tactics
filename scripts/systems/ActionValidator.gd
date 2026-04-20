@@ -7,6 +7,8 @@ var _combat: Combat = Combat.new()
 
 func build_owner_plan(state: GameState, queued_actions: Array, owner_id: int) -> Dictionary:
 	var planned_tiles: Dictionary = {}
+	var planned_upgrade_counts: Dictionary = {}
+	var planned_upgrade_total: int = 0
 	for block in state.get_owner_blocks(owner_id):
 		planned_tiles[_tile_key(block["pos"])] = true
 
@@ -24,10 +26,18 @@ func build_owner_plan(state: GameState, queued_actions: Array, owner_id: int) ->
 			planned_tiles[_tile_key(action.get("target", Vector2i(-1, -1)))] = true
 		elif kind == "convert_tile":
 			remaining_energy -= int(action.get("energy_delta", 0))
+		elif kind == "upgrade_tile":
+			remaining_energy -= int(action.get("cost", 0))
+			var upgrade_type: String = String(action.get("tile_type", "basic"))
+			if upgrade_type != "basic":
+				planned_upgrade_counts[upgrade_type] = int(planned_upgrade_counts.get(upgrade_type, 0)) + 1
+				planned_upgrade_total += 1
 
 	return {
 		"planned_tiles": planned_tiles,
 		"remaining_energy": remaining_energy,
+		"planned_upgrade_counts": planned_upgrade_counts,
+		"planned_upgrade_total": planned_upgrade_total,
 	}
 
 func validate_place_target(
@@ -45,6 +55,10 @@ func validate_place_target(
 		return {"ok": false, "reason": "out of bounds"}
 	if state.is_blocked(tile):
 		return {"ok": false, "reason": "blocked cave wall"}
+	if state.is_reclaim_blocked(tile):
+		return {"ok": false, "reason": "cell reforming"}
+	if tile == state.entrance_tile:
+		return {"ok": false, "reason": "entrance tile"}
 	if tile == state.door_tile:
 		return {"ok": false, "reason": "exit tile"}
 	if not state.get_block_at(tile).is_empty():
@@ -76,6 +90,8 @@ func validate_convert_target(
 	var from_type: String = String(block.get("tile_type", "basic"))
 	if from_type == to_type:
 		return {"ok": false, "reason": "already %s" % to_type}
+	if from_type != "basic" and to_type != "basic":
+		return {"ok": false, "reason": "requires basic tile"}
 
 	var delta: int = Combat.conversion_energy_delta(from_type, to_type)
 	if delta > 0 and int(plan.get("remaining_energy", 0)) < delta:
@@ -83,12 +99,40 @@ func validate_convert_target(
 
 	return {"ok": true}
 
+func validate_upgrade_target(
+	state: GameState,
+	owner_id: int,
+	block: Dictionary,
+	plan: Dictionary
+) -> Dictionary:
+	if int(block.get("owner", 0)) != owner_id:
+		return {"ok": false, "reason": "not owned"}
+
+	var tile_type: String = String(block.get("tile_type", "basic"))
+	if tile_type == "basic":
+		return {"ok": false, "reason": "basic cannot upgrade"}
+	if not Combat.UPGRADE_BASE_COST.has(tile_type):
+		return {"ok": false, "reason": "tile cannot upgrade"}
+	if int(block.get("upgrade_tier", 0)) >= 1:
+		return {"ok": false, "reason": "already upgraded"}
+
+	var planned_type_count: int = int(plan.get("planned_upgrade_counts", {}).get(tile_type, 0))
+	var planned_total_count: int = int(plan.get("planned_upgrade_total", 0))
+	var cost: int = Combat.upgrade_energy_cost(state, owner_id, tile_type, planned_type_count, planned_total_count)
+	if cost <= 0:
+		return {"ok": false, "reason": "invalid upgrade cost"}
+	if int(plan.get("remaining_energy", 0)) < cost:
+		return {"ok": false, "reason": "insufficient energy"}
+	return {"ok": true, "cost": cost}
+
 func predict_candidate_application(
 	state: GameState,
 	player_actions: Array,
 	enemy_actions: Array,
 	candidate_action: Dictionary
 ) -> Dictionary:
+	# Source of truth for hover/queue promises:
+	# run the same staged-action ordering rules Combat uses at resolution time.
 	var player_preview_actions: Array = player_actions.duplicate(true)
 	player_preview_actions.append(candidate_action)
 

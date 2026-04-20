@@ -2,35 +2,47 @@ extends RefCounted
 class_name LevelDirector
 
 func check_victory_or_loss(state: GameState) -> Dictionary:
-    var player_core = state.get_core(GameState.PLAYER_ID)
-    if player_core.is_empty():
-        return {"status": "loss", "reason": "core_destroyed"}
+    if not state.spectator_mode and state.count_heart_tiles(GameState.PLAYER_ID) <= 0:
+        return {"status": "loss", "reason": "all_player_hearts_destroyed"}
+    if state.spectator_mode and _all_team_hearts_destroyed(state, GameState.TEAM_PLAYER):
+        return {"status": "loss", "reason": "all_player_team_hearts_destroyed"}
 
-    if _player_touches_door(state):
-        return {"status": "victory", "reason": "door_contact"}
+    if state.turn_limit > 0 and state.turn_index >= state.turn_limit:
+        return {"status": "loss", "reason": "turn_limit"}
 
-    if _all_enemies_dead(state):
-        return {"status": "victory", "reason": "all_enemies_dead"}
+    if state.door_hp <= 0:
+        return {"status": "victory", "reason": "door_destroyed"}
 
-    if state.stall_counter >= 3:
+    if _all_hostile_hearts_destroyed(state):
+        return {"status": "victory", "reason": "all_enemy_hearts_destroyed"}
+
+    if not state.spectator_mode and state.stall_counter >= 3:
         return {"status": "loss", "reason": "stall_lock"}
 
     return {"status": "ongoing"}
 
-func _all_enemies_dead(state: GameState) -> bool:
-    for block in state.blocks.values():
-        if int(block["owner"]) != GameState.PLAYER_ID:
+func _all_hostile_hearts_destroyed(state: GameState) -> bool:
+    for owner_id_variant in state.players.keys():
+        var owner_id: int = int(owner_id_variant)
+        if owner_id == GameState.PLAYER_ID:
+            continue
+        if not bool(state.players[owner_id].get("alive", true)):
+            continue
+        if not state.are_hostile(GameState.PLAYER_ID, owner_id):
+            continue
+        if state.count_heart_tiles(owner_id) > 0:
             return false
     return true
 
-func _player_touches_door(state: GameState) -> bool:
-    var d: Vector2i = state.door_tile
-    for block in state.get_owner_blocks(GameState.PLAYER_ID):
-        if _adjacent_or_same(block["pos"], d):
-            return true
-    return false
-
-func _adjacent_or_same(a: Vector2i, b: Vector2i) -> bool:
-    return absi(a.x - b.x) + absi(a.y - b.y) <= 1
+func _all_team_hearts_destroyed(state: GameState, team_id: int) -> bool:
+    var any_team_owner: bool = false
+    for owner_id_variant in state.players.keys():
+        var owner_id: int = int(owner_id_variant)
+        if state.get_owner_team(owner_id) != team_id:
+            continue
+        any_team_owner = true
+        if state.count_heart_tiles(owner_id) > 0:
+            return false
+    return any_team_owner
 
 
