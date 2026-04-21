@@ -1,6 +1,49 @@
 extends RefCounted
 class_name OozeAI
 
+const BASELINE_TUNING_PATH: String = "res://config/ooze_ai_baseline.json"
+const BASELINE_TUNABLE_KEYS: Array[String] = [
+	"engaged_upgrade_energy_threshold",
+	"non_engaged_upgrade_energy_threshold",
+	"max_tile_upgrades_per_turn",
+	"tile_upgrade_min_score",
+	"upgrade_priority_margin",
+	"resource_objective_max_distance",
+	"resource_objective_step_weight",
+	"resource_safe_phase_bonus",
+	"resource_approaching_phase_bonus",
+	"resource_low_threat_bonus",
+	"resource_node_hold_bonus",
+	"resource_gather_focus_bonus",
+	"resource_near_threat_penalty",
+	"ranged_saturation_min_tiles",
+	"ranged_saturation_soft_cap",
+	"ranged_saturation_hard_cap",
+	"ranged_saturation_max_penalty",
+	"specialization_min_tiles",
+	"specialization_soft_cap",
+	"specialization_hard_cap",
+	"specialization_max_penalty",
+	"specialization_local_radius",
+	"specialization_local_soft_limit",
+	"specialization_local_cluster_penalty",
+	"specialization_adjacent_penalty",
+	"specialization_safe_phase_penalty",
+	"specialization_backline_blanket_penalty",
+	"specialization_path_penalty",
+	"defense_nearby_soft_limit",
+	"defense_local_ratio_soft_cap",
+	"defense_local_ratio_hard_cap",
+	"gather_conversion_resource_max_dist",
+	"gather_safe_min_enemy_distance",
+	"objective_upgrade_distance_max",
+	"objective_upgrade_enemy_distance_max",
+	"objective_progress_weight",
+	"objective_backfill_penalty",
+	"ranged_frontline_penalty",
+	"ranged_backline_penalty",
+]
+
 const MAX_ACTIONS: int = 3
 const MAX_CONVERSIONS_PER_TURN: int = 2
 const CONVERSION_COOLDOWN_TURNS: int = 2
@@ -24,7 +67,7 @@ const MID_ECON_ENERGY_LOW_THRESHOLD: int = 6
 const MID_GATHER_TARGET: int = 3
 const THREAT_SPIKE_THRESHOLD: int = 12
 const THREAT_SCAN_RADIUS: int = 2
-const RANGED_SATURATION_SOFT_CAP: float = 0.35
+const RANGED_SATURATION_SOFT_CAP: float = 0.34
 const RANGED_SATURATION_HARD_CAP: float = 0.52
 const RANGED_SATURATION_MIN_TILES: int = 8
 const RANGED_SATURATION_MAX_PENALTY: int = 36
@@ -83,12 +126,57 @@ const SPECIALIZATION_LOCAL_RADIUS: int = 2
 const SPECIALIZATION_LOCAL_SOFT_LIMIT: int = 3
 const SPECIALIZATION_LOCAL_CLUSTER_PENALTY: int = 5
 const SPECIALIZATION_ADJACENT_PENALTY: int = 3
-const SPECIALIZATION_SAFE_PHASE_PENALTY: int = 16
+const SPECIALIZATION_SAFE_PHASE_PENALTY: int = 14
 const SPECIALIZATION_BACKLINE_BLANKET_PENALTY: int = 12
 const SPECIALIZATION_PATH_PENALTY: int = 12
 const UPGRADE_PRIORITY_MARGIN: int = 10
 
-var _tuning: Dictionary = {}
+const TUNING_SCHEMA: Dictionary = {
+	"engaged_upgrade_energy_threshold": {"type": "int", "min": 8, "max": 40, "default": ENGAGED_UPGRADE_ENERGY_THRESHOLD},
+	"non_engaged_upgrade_energy_threshold": {"type": "int", "min": 8, "max": 40, "default": NON_ENGAGED_UPGRADE_ENERGY_THRESHOLD},
+	"max_tile_upgrades_per_turn": {"type": "int", "min": 0, "max": 6, "default": MAX_TILE_UPGRADES_PER_TURN},
+	"tile_upgrade_min_score": {"type": "int", "min": 0, "max": 140, "default": TILE_UPGRADE_MIN_SCORE},
+	"upgrade_priority_margin": {"type": "int", "min": 0, "max": 40, "default": UPGRADE_PRIORITY_MARGIN},
+	"resource_objective_max_distance": {"type": "int", "min": 1, "max": 20, "default": RESOURCE_OBJECTIVE_MAX_DISTANCE},
+	"resource_objective_step_weight": {"type": "int", "min": 0, "max": 12, "default": RESOURCE_OBJECTIVE_STEP_WEIGHT},
+	"resource_safe_phase_bonus": {"type": "int", "min": 0, "max": 30, "default": RESOURCE_SAFE_PHASE_BONUS},
+	"resource_approaching_phase_bonus": {"type": "int", "min": 0, "max": 20, "default": RESOURCE_APPROACHING_PHASE_BONUS},
+	"resource_low_threat_bonus": {"type": "int", "min": 0, "max": 20, "default": RESOURCE_LOW_THREAT_BONUS},
+	"resource_node_hold_bonus": {"type": "int", "min": 0, "max": 30, "default": RESOURCE_NODE_HOLD_BONUS},
+	"resource_gather_focus_bonus": {"type": "int", "min": 0, "max": 30, "default": RESOURCE_GATHER_FOCUS_BONUS},
+	"resource_near_threat_penalty": {"type": "int", "min": 0, "max": 30, "default": RESOURCE_NEAR_THREAT_PENALTY},
+	"ranged_saturation_min_tiles": {"type": "int", "min": 1, "max": 30, "default": RANGED_SATURATION_MIN_TILES},
+	"ranged_saturation_soft_cap": {"type": "float", "min": 0.10, "max": 0.90, "default": RANGED_SATURATION_SOFT_CAP},
+	"ranged_saturation_hard_cap": {"type": "float", "min": 0.10, "max": 0.95, "default": RANGED_SATURATION_HARD_CAP},
+	"ranged_saturation_max_penalty": {"type": "int", "min": 0, "max": 80, "default": RANGED_SATURATION_MAX_PENALTY},
+	"specialization_min_tiles": {"type": "int", "min": 1, "max": 40, "default": SPECIALIZATION_MIN_TILES},
+	"specialization_soft_cap": {"type": "float", "min": 0.10, "max": 0.95, "default": SPECIALIZATION_SOFT_CAP},
+	"specialization_hard_cap": {"type": "float", "min": 0.10, "max": 0.99, "default": SPECIALIZATION_HARD_CAP},
+	"specialization_max_penalty": {"type": "int", "min": 0, "max": 80, "default": SPECIALIZATION_MAX_PENALTY},
+	"specialization_local_radius": {"type": "int", "min": 1, "max": 6, "default": SPECIALIZATION_LOCAL_RADIUS},
+	"specialization_local_soft_limit": {"type": "int", "min": 0, "max": 12, "default": SPECIALIZATION_LOCAL_SOFT_LIMIT},
+	"specialization_local_cluster_penalty": {"type": "int", "min": 0, "max": 20, "default": SPECIALIZATION_LOCAL_CLUSTER_PENALTY},
+	"specialization_adjacent_penalty": {"type": "int", "min": 0, "max": 20, "default": SPECIALIZATION_ADJACENT_PENALTY},
+	"specialization_safe_phase_penalty": {"type": "int", "min": 0, "max": 40, "default": SPECIALIZATION_SAFE_PHASE_PENALTY},
+	"specialization_backline_blanket_penalty": {"type": "int", "min": 0, "max": 40, "default": SPECIALIZATION_BACKLINE_BLANKET_PENALTY},
+	"specialization_path_penalty": {"type": "int", "min": 0, "max": 40, "default": SPECIALIZATION_PATH_PENALTY},
+	"defense_nearby_soft_limit": {"type": "int", "min": 0, "max": 8, "default": DEFENSE_NEARBY_SOFT_LIMIT},
+	"defense_local_ratio_soft_cap": {"type": "float", "min": 0.10, "max": 0.90, "default": DEFENSE_LOCAL_RATIO_SOFT_CAP},
+	"defense_local_ratio_hard_cap": {"type": "float", "min": 0.10, "max": 0.95, "default": DEFENSE_LOCAL_RATIO_HARD_CAP},
+	"gather_conversion_resource_max_dist": {"type": "int", "min": 0, "max": 6, "default": GATHER_CONVERSION_RESOURCE_MAX_DIST},
+	"gather_safe_min_enemy_distance": {"type": "int", "min": 0, "max": 10, "default": GATHER_SAFE_MIN_ENEMY_DISTANCE},
+	"objective_upgrade_distance_max": {"type": "int", "min": 1, "max": 24, "default": OBJECTIVE_UPGRADE_DISTANCE_MAX},
+	"objective_upgrade_enemy_distance_max": {"type": "int", "min": 1, "max": 20, "default": OBJECTIVE_UPGRADE_ENEMY_DISTANCE_MAX},
+	"objective_progress_weight": {"type": "int", "min": 0, "max": 60, "default": OBJECTIVE_PROGRESS_WEIGHT},
+	"objective_backfill_penalty": {"type": "int", "min": 0, "max": 80, "default": OBJECTIVE_BACKFILL_PENALTY},
+	"ranged_frontline_penalty": {"type": "int", "min": 0, "max": 80, "default": RANGED_FRONTLINE_PENALTY},
+	"ranged_backline_penalty": {"type": "int", "min": 0, "max": 60, "default": RANGED_BACKLINE_PENALTY},
+}
+
+var _session_override: Dictionary = {}
+var _runtime_modifier: Dictionary = {}
+static var _baseline_config: Dictionary = {}
+static var _baseline_config_loaded: bool = false
 
 # Enemy uses deterministic, pressure-biased heuristics:
 # 1) secure at least one frontline action when possible
@@ -97,16 +185,153 @@ var _tuning: Dictionary = {}
 # 4) avoid low-impact backline conversion churn
 
 func clear_tuning() -> void:
-	_tuning.clear()
+	_session_override.clear()
+	_runtime_modifier.clear()
 
 func set_tuning(overrides: Dictionary) -> void:
-	_tuning = overrides.duplicate(true)
+	set_session_override(overrides)
+
+func set_session_override(overrides: Dictionary) -> void:
+	_session_override = _sanitize_tuning_layer(overrides, "session_override")
+
+func clear_session_override() -> void:
+	_session_override.clear()
+
+func set_runtime_modifier(modifiers: Dictionary) -> void:
+	_runtime_modifier = _sanitize_tuning_layer(modifiers, "runtime_modifier")
+
+func clear_runtime_modifier() -> void:
+	_runtime_modifier.clear()
+
+func get_effective_tuning_snapshot() -> Dictionary:
+	var out: Dictionary = {}
+	var keys: Array = BASELINE_TUNABLE_KEYS.duplicate()
+	keys.sort()
+	for key_variant in keys:
+		var key: String = String(key_variant)
+		var schema: Dictionary = TUNING_SCHEMA.get(key, {})
+		var fallback_value: Variant = schema.get("default", null)
+		var resolved: Dictionary = _resolve_tuning_value(key, fallback_value)
+		out[key] = {
+			"value": resolved.get("value", fallback_value),
+			"source": String(resolved.get("source", "fallback")),
+		}
+	return out
+
+func get_effective_tuning_lines(only_non_fallback: bool = false) -> Array[String]:
+	var lines: Array[String] = []
+	var snapshot: Dictionary = get_effective_tuning_snapshot()
+	var keys: Array = snapshot.keys()
+	keys.sort()
+	for key_variant in keys:
+		var key: String = String(key_variant)
+		var row: Dictionary = snapshot.get(key, {})
+		var source: String = String(row.get("source", "fallback"))
+		if only_non_fallback and source == "fallback":
+			continue
+		lines.append("%s = %s (%s)" % [key, str(row.get("value", null)), source])
+	return lines
+
+func print_effective_tuning_snapshot(only_non_fallback: bool = true) -> void:
+	for line in get_effective_tuning_lines(only_non_fallback):
+		print(line)
+
+static func reload_baseline_tuning() -> void:
+	_baseline_config_loaded = false
+	_baseline_config.clear()
+
+static func _baseline_config_values() -> Dictionary:
+	if _baseline_config_loaded:
+		return _baseline_config
+	_baseline_config_loaded = true
+	_baseline_config.clear()
+
+	var file: FileAccess = FileAccess.open(BASELINE_TUNING_PATH, FileAccess.READ)
+	if file == null:
+		return _baseline_config
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not (parsed is Dictionary):
+		printerr("OozeAI baseline tuning ignored: malformed JSON at %s" % BASELINE_TUNING_PATH)
+		return _baseline_config
+
+	var flattened: Dictionary = {}
+	_collect_baseline_tunable_values(parsed as Dictionary, flattened)
+	_baseline_config = _sanitize_tuning_layer(flattened, "baseline_config")
+	return _baseline_config
+
+static func _collect_baseline_tunable_values(source: Dictionary, out: Dictionary) -> void:
+	for key_variant in source.keys():
+		var value: Variant = source[key_variant]
+		if value is Dictionary:
+			_collect_baseline_tunable_values(value as Dictionary, out)
+			continue
+		var key: String = String(key_variant)
+		var value_type: int = typeof(value)
+		if value_type == TYPE_INT or value_type == TYPE_FLOAT:
+			out[key] = value
 
 func _tp_int(key: String, fallback: int) -> int:
-	return int(_tuning.get(key, fallback))
+	var resolved: Dictionary = _resolve_tuning_value(key, fallback)
+	return int(resolved.get("value", fallback))
 
 func _tp_float(key: String, fallback: float) -> float:
-	return float(_tuning.get(key, fallback))
+	var resolved: Dictionary = _resolve_tuning_value(key, fallback)
+	return float(resolved.get("value", fallback))
+
+func _resolve_tuning_value(key: String, fallback: Variant) -> Dictionary:
+	var schema: Dictionary = TUNING_SCHEMA.get(key, {})
+	var default_value: Variant = schema.get("default", fallback)
+	var fallback_value: Variant = fallback if fallback != null else default_value
+	var sanitized_fallback: Dictionary = _sanitize_tuning_value(key, fallback_value, "fallback")
+	if bool(sanitized_fallback.get("ok", false)):
+		fallback_value = sanitized_fallback.get("value", fallback_value)
+
+	if _runtime_modifier.has(key):
+		return {"value": _runtime_modifier[key], "source": "runtime_modifier"}
+	if _session_override.has(key):
+		return {"value": _session_override[key], "source": "session_override"}
+	var baseline: Dictionary = _baseline_config_values()
+	if baseline.has(key):
+		return {"value": baseline[key], "source": "baseline_config"}
+	return {"value": fallback_value, "source": "fallback"}
+
+static func _sanitize_tuning_layer(source: Dictionary, layer_name: String) -> Dictionary:
+	var out: Dictionary = {}
+	for key_variant in source.keys():
+		var key: String = String(key_variant)
+		if not TUNING_SCHEMA.has(key):
+			print("OozeAI tuning ignored unknown key `%s` in %s." % [key, layer_name])
+			continue
+		var result: Dictionary = _sanitize_tuning_value(key, source[key_variant], layer_name)
+		if not bool(result.get("ok", false)):
+			continue
+		out[key] = result.get("value", null)
+	return out
+
+static func _sanitize_tuning_value(key: String, value: Variant, layer_name: String) -> Dictionary:
+	if not TUNING_SCHEMA.has(key):
+		return {"ok": false}
+	var schema: Dictionary = TUNING_SCHEMA[key]
+	var expected_type: String = String(schema.get("type", "float"))
+	var value_type: int = typeof(value)
+	if value_type != TYPE_INT and value_type != TYPE_FLOAT:
+		print("OozeAI tuning ignored non-numeric `%s` from %s." % [key, layer_name])
+		return {"ok": false}
+	if expected_type == "int":
+		var parsed_int: int = int(round(float(value)))
+		var min_int: int = int(schema.get("min", parsed_int))
+		var max_int: int = int(schema.get("max", parsed_int))
+		var clamped_int: int = clampi(parsed_int, min_int, max_int)
+		if clamped_int != parsed_int:
+			print("OozeAI tuning clamped `%s` from %s (%d -> %d)." % [key, layer_name, parsed_int, clamped_int])
+		return {"ok": true, "value": clamped_int}
+	var parsed_float: float = float(value)
+	var min_float: float = float(schema.get("min", parsed_float))
+	var max_float: float = float(schema.get("max", parsed_float))
+	var clamped_float: float = clampf(parsed_float, min_float, max_float)
+	if absf(clamped_float - parsed_float) > 0.000001:
+		print("OozeAI tuning clamped `%s` from %s (%.4f -> %.4f)." % [key, layer_name, parsed_float, clamped_float])
+	return {"ok": true, "value": clamped_float}
 
 func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array:
 	var actions: Array = []
@@ -360,6 +585,8 @@ func _best_heart_pressure_conversion_action(
 ) -> Dictionary:
 	var best: Dictionary = {}
 	var best_score: int = -999999
+	var objective_upgrade_distance_max: int = _tp_int("objective_upgrade_distance_max", OBJECTIVE_UPGRADE_DISTANCE_MAX)
+	var objective_upgrade_enemy_distance_max: int = _tp_int("objective_upgrade_enemy_distance_max", OBJECTIVE_UPGRADE_ENEMY_DISTANCE_MAX)
 	for block in state.get_owner_blocks(owner_id):
 		if bool(block.get("core", false)):
 			continue
@@ -372,7 +599,7 @@ func _best_heart_pressure_conversion_action(
 		var pos: Vector2i = block["pos"]
 		var heart_dist: int = _nearest_hostile_heart_distance(state, owner_id, pos)
 		var enemy_dist: int = _nearest_enemy_distance(state, owner_id, pos)
-		if heart_dist > OBJECTIVE_UPGRADE_DISTANCE_MAX or enemy_dist > OBJECTIVE_UPGRADE_ENEMY_DISTANCE_MAX:
+		if heart_dist > objective_upgrade_distance_max or enemy_dist > objective_upgrade_enemy_distance_max:
 			continue
 
 		var to_type: String = "melee"
@@ -471,6 +698,9 @@ func _best_second_line_ranged_upgrade_action(state: GameState, owner_id: int, en
 func _best_objective_upgrade_action(state: GameState, owner_id: int, energy: int, reserved_convert_blocks: Dictionary) -> Dictionary:
 	var best: Dictionary = {}
 	var best_score: int = -999999
+	var objective_upgrade_distance_max: int = _tp_int("objective_upgrade_distance_max", OBJECTIVE_UPGRADE_DISTANCE_MAX)
+	var objective_upgrade_enemy_distance_max: int = _tp_int("objective_upgrade_enemy_distance_max", OBJECTIVE_UPGRADE_ENEMY_DISTANCE_MAX)
+	var gather_conversion_resource_max_dist: int = _tp_int("gather_conversion_resource_max_dist", GATHER_CONVERSION_RESOURCE_MAX_DIST)
 	for block in state.get_owner_blocks(owner_id):
 		if bool(block.get("core", false)):
 			continue
@@ -493,7 +723,7 @@ func _best_objective_upgrade_action(state: GameState, owner_id: int, energy: int
 		var objective_dist: int = heart_dist
 		if door_relevant:
 			objective_dist = mini(objective_dist, door_dist)
-		if objective_dist > OBJECTIVE_UPGRADE_DISTANCE_MAX and nearest_enemy_dist > OBJECTIVE_UPGRADE_ENEMY_DISTANCE_MAX:
+		if objective_dist > objective_upgrade_distance_max and nearest_enemy_dist > objective_upgrade_enemy_distance_max:
 			continue
 
 		var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, pos)
@@ -508,7 +738,7 @@ func _best_objective_upgrade_action(state: GameState, owner_id: int, energy: int
 				to_type = "ranged"
 			elif door_relevant and door_dist <= 4 and objective_dist <= 5 and support >= 3:
 				to_type = "melee"
-			elif support >= 2 and objective_dist <= OBJECTIVE_UPGRADE_DISTANCE_MAX:
+			elif support >= 2 and objective_dist <= objective_upgrade_distance_max:
 				to_type = "melee"
 			else:
 				continue
@@ -541,8 +771,8 @@ func _best_objective_upgrade_action(state: GameState, owner_id: int, energy: int
 		score += _heart_objective_score(state, owner_id, pos)
 		score += _door_objective_score(state, owner_id, pos)
 		score += _resource_objective_score(state, owner_id, pos, phase, to_type)
-		score += maxi(0, OBJECTIVE_UPGRADE_DISTANCE_MAX - objective_dist) * 2
-		score += maxi(0, OBJECTIVE_UPGRADE_ENEMY_DISTANCE_MAX - nearest_enemy_dist)
+		score += maxi(0, objective_upgrade_distance_max - objective_dist) * 2
+		score += maxi(0, objective_upgrade_enemy_distance_max - nearest_enemy_dist)
 		score += _zone_role_score(zone, to_type)
 		match phase:
 			PHASE_SAFE_EXPANSION:
@@ -574,8 +804,8 @@ func _best_objective_upgrade_action(state: GameState, owner_id: int, energy: int
 			var income_gap: int = maxi(0, MID_ECON_INCOME_THRESHOLD - _estimated_owner_income(state, owner_id))
 			var resource_dist: int = _nearest_open_resource_distance(state, pos)
 			score += 16 + income_gap * 4
-			if resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
-				score += (GATHER_CONVERSION_RESOURCE_MAX_DIST - resource_dist + 1) * 6
+			if resource_dist <= gather_conversion_resource_max_dist:
+				score += (gather_conversion_resource_max_dist - resource_dist + 1) * 6
 			if objective_dist <= 5:
 				score -= 10
 		if to_type == "defense":
@@ -599,6 +829,8 @@ func _best_objective_upgrade_action(state: GameState, owner_id: int, energy: int
 func _best_progression_upgrade_action(state: GameState, owner_id: int, energy: int, reserved_convert_blocks: Dictionary) -> Dictionary:
 	var best: Dictionary = {}
 	var best_score: int = -999999
+	var objective_upgrade_distance_max: int = _tp_int("objective_upgrade_distance_max", OBJECTIVE_UPGRADE_DISTANCE_MAX)
+	var gather_conversion_resource_max_dist: int = _tp_int("gather_conversion_resource_max_dist", GATHER_CONVERSION_RESOURCE_MAX_DIST)
 	for block in state.get_owner_blocks(owner_id):
 		if bool(block.get("core", false)):
 			continue
@@ -638,7 +870,7 @@ func _best_progression_upgrade_action(state: GameState, owner_id: int, energy: i
 				to_type = "ranged"
 			elif door_relevant and door_dist <= 4 and support >= 3:
 				to_type = "melee"
-			elif support >= 2 and objective_dist <= OBJECTIVE_UPGRADE_DISTANCE_MAX:
+			elif support >= 2 and objective_dist <= objective_upgrade_distance_max:
 				to_type = "melee"
 			else:
 				continue
@@ -704,8 +936,8 @@ func _best_progression_upgrade_action(state: GameState, owner_id: int, energy: i
 			var income_gap: int = maxi(0, MID_ECON_INCOME_THRESHOLD - _estimated_owner_income(state, owner_id))
 			var resource_dist: int = _nearest_open_resource_distance(state, pos)
 			score += 14 + income_gap * 5
-			if resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
-				score += (GATHER_CONVERSION_RESOURCE_MAX_DIST - resource_dist + 1) * 5
+			if resource_dist <= gather_conversion_resource_max_dist:
+				score += (gather_conversion_resource_max_dist - resource_dist + 1) * 5
 		if to_type == "defense":
 			score -= _defense_density_penalty(state, owner_id, pos, phase)
 		score -= _specialization_spread_penalty(state, owner_id, pos, to_type, phase, zone, nearest_enemy_dist, support)
@@ -1305,6 +1537,7 @@ func _best_tile_upgrade_action(
 	var best: Dictionary = {}
 	var best_score: int = -999999
 	var objective_baseline_dist: int = _owner_objective_frontier_distance(state, owner_id)
+	var gather_conversion_resource_max_dist: int = _tp_int("gather_conversion_resource_max_dist", GATHER_CONVERSION_RESOURCE_MAX_DIST)
 	for block in state.get_owner_blocks(owner_id):
 		var block_id: int = int(block["id"])
 		if reserved_convert_blocks.has(block_id):
@@ -1387,8 +1620,8 @@ func _best_tile_upgrade_action(
 			var income_gap: int = maxi(0, MID_ECON_INCOME_THRESHOLD - _estimated_owner_income(state, owner_id))
 			score += income_gap * 6
 			var resource_dist: int = _nearest_open_resource_distance(state, pos)
-			if resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
-				score += 16 + (GATHER_CONVERSION_RESOURCE_MAX_DIST - resource_dist + 1) * 4
+			if resource_dist <= gather_conversion_resource_max_dist:
+				score += 16 + (gather_conversion_resource_max_dist - resource_dist + 1) * 4
 		if tile_type == "defense":
 			score += choke * 2
 		if tile_type == "ranged":
@@ -1459,6 +1692,7 @@ func _upgrade_focus_bonus(
 	frontline_depth: int
 ) -> int:
 	var bonus: int = 0
+	var gather_conversion_resource_max_dist: int = _tp_int("gather_conversion_resource_max_dist", GATHER_CONVERSION_RESOURCE_MAX_DIST)
 	var objective_dist: int = _primary_objective_distance(state, owner_id, tile)
 	if objective_dist <= 4:
 		bonus += 28
@@ -1468,7 +1702,7 @@ func _upgrade_focus_bonus(
 		bonus += 10
 
 	var resource_dist: int = _nearest_open_resource_distance(state, tile)
-	if resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
+	if resource_dist <= gather_conversion_resource_max_dist:
 		if tile_type == "gather":
 			bonus += 20
 		else:
@@ -1556,6 +1790,7 @@ func _should_prefer_gather_conversion(
 	nearest_enemy_dist: int,
 	engaged: bool
 ) -> bool:
+	var gather_conversion_resource_max_dist: int = _tp_int("gather_conversion_resource_max_dist", GATHER_CONVERSION_RESOURCE_MAX_DIST)
 	if engaged:
 		return false
 	var phase: int = _local_threat_phase(state, owner_id, tile, nearest_enemy_dist, _adjacent_enemy_count(state, owner_id, tile))
@@ -1563,7 +1798,7 @@ func _should_prefer_gather_conversion(
 		return false
 	if _count_gather_tiles(state, owner_id) >= MID_GATHER_TARGET:
 		return false
-	if _nearest_open_resource_distance(state, tile) > GATHER_CONVERSION_RESOURCE_MAX_DIST:
+	if _nearest_open_resource_distance(state, tile) > gather_conversion_resource_max_dist:
 		return false
 	return true
 
@@ -1619,9 +1854,10 @@ func _tile_zone(state: GameState, owner_id: int, tile: Vector2i) -> String:
 	return "backline"
 
 func _is_gather_position_allowed(state: GameState, owner_id: int, tile: Vector2i, nearest_enemy_dist: int, phase: int) -> bool:
+	var gather_safe_min_enemy_distance: int = _tp_int("gather_safe_min_enemy_distance", GATHER_SAFE_MIN_ENEMY_DISTANCE)
 	if phase != PHASE_SAFE_EXPANSION:
 		return false
-	if nearest_enemy_dist < GATHER_SAFE_MIN_ENEMY_DISTANCE:
+	if nearest_enemy_dist < gather_safe_min_enemy_distance:
 		return false
 	if _is_near_front_tile(state, owner_id, tile):
 		return false
@@ -1763,6 +1999,9 @@ func _adjacent_owned_type_count(state: GameState, owner_id: int, tile: Vector2i,
 	return total
 
 func _defense_density_penalty(state: GameState, owner_id: int, tile: Vector2i, phase: int) -> int:
+	var defense_nearby_soft_limit: int = _tp_int("defense_nearby_soft_limit", DEFENSE_NEARBY_SOFT_LIMIT)
+	var defense_local_ratio_hard_cap: float = _tp_float("defense_local_ratio_hard_cap", DEFENSE_LOCAL_RATIO_HARD_CAP)
+	var defense_local_ratio_soft_cap: float = _tp_float("defense_local_ratio_soft_cap", DEFENSE_LOCAL_RATIO_SOFT_CAP)
 	var nearby_defense: int = _owned_type_count_within_manhattan(state, owner_id, tile, DEFENSE_DENSITY_RADIUS, "defense")
 	var adjacent_defense: int = _adjacent_owned_type_count(state, owner_id, tile, "defense")
 	var nearby_owned: int = maxi(1, state.count_owned_within_manhattan(owner_id, tile, DEFENSE_DENSITY_RADIUS))
@@ -1770,10 +2009,10 @@ func _defense_density_penalty(state: GameState, owner_id: int, tile: Vector2i, p
 
 	var penalty: int = 0
 	penalty += adjacent_defense * 9
-	penalty += maxi(0, nearby_defense - DEFENSE_NEARBY_SOFT_LIMIT) * 5
-	if defense_ratio >= DEFENSE_LOCAL_RATIO_HARD_CAP:
+	penalty += maxi(0, nearby_defense - defense_nearby_soft_limit) * 5
+	if defense_ratio >= defense_local_ratio_hard_cap:
 		penalty += 18
-	elif defense_ratio >= DEFENSE_LOCAL_RATIO_SOFT_CAP:
+	elif defense_ratio >= defense_local_ratio_soft_cap:
 		penalty += 8
 
 	match phase:
@@ -1795,6 +2034,7 @@ func _preferred_place_type_for_zone(
 	support: int,
 	energy: int
 ) -> String:
+	var gather_conversion_resource_max_dist: int = _tp_int("gather_conversion_resource_max_dist", GATHER_CONVERSION_RESOURCE_MAX_DIST)
 	var local_threat: int = _local_threat_score(state, owner_id, tile)
 	var phase: int = _local_threat_phase(state, owner_id, tile, nearest_enemy_dist, adjacent_enemy)
 	var gather_cost: int = int(Combat.TILE_RULES["gather"]["cost"])
@@ -1806,12 +2046,12 @@ func _preferred_place_type_for_zone(
 	var ranged_penalty: int = _ranged_position_penalty(state, owner_id, tile, zone, phase)
 
 	if phase == PHASE_SAFE_EXPANSION:
-		if zone == "backline" and gather_ready and resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST and support >= 2 and _is_gather_position_allowed(state, owner_id, tile, nearest_enemy_dist, phase):
+		if zone == "backline" and gather_ready and resource_dist <= gather_conversion_resource_max_dist and support >= 2 and _is_gather_position_allowed(state, owner_id, tile, nearest_enemy_dist, phase):
 			return "gather"
 		return "basic"
 
 	if phase == PHASE_APPROACHING_CONTACT:
-		if zone == "backline" and gather_ready and resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST and local_threat <= LOW_THREAT_MAX_LOCAL_SCORE and _is_gather_position_allowed(state, owner_id, tile, nearest_enemy_dist, phase):
+		if zone == "backline" and gather_ready and resource_dist <= gather_conversion_resource_max_dist and local_threat <= LOW_THREAT_MAX_LOCAL_SCORE and _is_gather_position_allowed(state, owner_id, tile, nearest_enemy_dist, phase):
 			return "gather"
 		if zone == "frontline":
 			if local_threat >= THREAT_SPIKE_THRESHOLD + 2 and defense_penalty < 24 and support <= 2 and energy >= int(Combat.TILE_RULES["defense"]["cost"]):
@@ -1841,7 +2081,7 @@ func _preferred_place_type_for_zone(
 		if local_threat >= THREAT_SPIKE_THRESHOLD + 2 and defense_penalty < 30 and energy >= int(Combat.TILE_RULES["defense"]["cost"]):
 			return "defense"
 	if zone == "backline":
-		if gather_ready and resource_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST and local_threat <= LOW_THREAT_MAX_LOCAL_SCORE and _is_gather_position_allowed(state, owner_id, tile, nearest_enemy_dist, phase):
+		if gather_ready and resource_dist <= gather_conversion_resource_max_dist and local_threat <= LOW_THREAT_MAX_LOCAL_SCORE and _is_gather_position_allowed(state, owner_id, tile, nearest_enemy_dist, phase):
 			return "gather"
 		if nearest_enemy_dist <= 3 and support >= 3 and not _is_ranged_hard_capped(state, owner_id) and energy >= int(Combat.TILE_RULES["ranged"]["cost"]) and _is_ranged_position_allowed(state, owner_id, tile) and ranged_penalty < 34:
 			return "ranged"
@@ -1898,6 +2138,7 @@ func _hostile_near_door_count(state: GameState, owner_id: int, radius: int) -> i
 	return count
 
 func _resource_objective_score(state: GameState, owner_id: int, tile: Vector2i, phase: int, tile_type: String = "basic") -> int:
+	var gather_conversion_resource_max_dist: int = _tp_int("gather_conversion_resource_max_dist", GATHER_CONVERSION_RESOURCE_MAX_DIST)
 	var best_dist: int = 999999
 	var on_open_resource: bool = false
 	for node in state.resource_nodes:
@@ -1927,7 +2168,7 @@ func _resource_objective_score(state: GameState, owner_id: int, tile: Vector2i, 
 		score += _tp_int("resource_low_threat_bonus", RESOURCE_LOW_THREAT_BONUS)
 	if on_open_resource:
 		score += _tp_int("resource_node_hold_bonus", RESOURCE_NODE_HOLD_BONUS)
-	if tile_type == "gather" and best_dist <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
+	if tile_type == "gather" and best_dist <= gather_conversion_resource_max_dist:
 		score += _tp_int("resource_gather_focus_bonus", RESOURCE_GATHER_FOCUS_BONUS)
 
 	var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, tile)
@@ -1970,6 +2211,9 @@ func _local_threat_score(state: GameState, owner_id: int, tile: Vector2i) -> int
 
 # Penalize low-impact backline role churn, reward pressure-positive role shifts.
 func _conversion_score(state: GameState, owner_id: int, block: Dictionary, from_type: String, to_type: String, is_frontline_target: bool) -> int:
+	var ranged_frontline_penalty: int = _tp_int("ranged_frontline_penalty", RANGED_FRONTLINE_PENALTY)
+	var ranged_backline_penalty: int = _tp_int("ranged_backline_penalty", RANGED_BACKLINE_PENALTY)
+	var gather_conversion_resource_max_dist: int = _tp_int("gather_conversion_resource_max_dist", GATHER_CONVERSION_RESOURCE_MAX_DIST)
 	var pos: Vector2i = block["pos"]
 	var support: int = state.count_owned_within_manhattan(owner_id, pos, 2)
 	var pressure: int = _enemy_pressure_score(state, owner_id, pos)
@@ -2020,16 +2264,16 @@ func _conversion_score(state: GameState, owner_id: int, block: Dictionary, from_
 		if zone == "second_line" and choke >= 2:
 			score += 10
 		if is_frontline_target or nearest_enemy_dist <= 1:
-			score -= RANGED_FRONTLINE_PENALTY
+			score -= ranged_frontline_penalty
 		elif zone == "backline":
-			score -= RANGED_BACKLINE_PENALTY
+			score -= ranged_backline_penalty
 	elif to_type == "gather":
 		if not _is_gather_position_allowed(state, owner_id, pos, nearest_enemy_dist, phase):
 			return ROLE_POSITION_BLOCK_SCORE
 		score -= 12
 		if phase == PHASE_SAFE_EXPANSION:
 			score += 24
-		if _nearest_open_resource_distance(state, pos) <= GATHER_CONVERSION_RESOURCE_MAX_DIST:
+		if _nearest_open_resource_distance(state, pos) <= gather_conversion_resource_max_dist:
 			score += 12
 
 	if from_type in ["defense", "melee"] and to_type in ["defense", "melee"] and not is_frontline_target:
@@ -2158,7 +2402,8 @@ func _specialization_spread_penalty(
 		penalty -= 18
 	elif objective_dist <= 8:
 		penalty -= 10
-	if _nearest_open_resource_distance(state, tile) <= GATHER_CONVERSION_RESOURCE_MAX_DIST and tile_type == "gather":
+	var gather_conversion_resource_max_dist: int = _tp_int("gather_conversion_resource_max_dist", GATHER_CONVERSION_RESOURCE_MAX_DIST)
+	if _nearest_open_resource_distance(state, tile) <= gather_conversion_resource_max_dist and tile_type == "gather":
 		penalty -= 14
 	if zone == "frontline" or phase == PHASE_ACTIVE_FRONTLINE:
 		penalty -= 12
@@ -2305,15 +2550,17 @@ func _heart_objective_score(state: GameState, owner_id: int, tile: Vector2i) -> 
 	return score
 
 func _objective_progress_delta_score(state: GameState, owner_id: int, tile: Vector2i, baseline_dist: int, stricter_backfill_penalty: bool) -> int:
+	var objective_progress_weight: int = _tp_int("objective_progress_weight", OBJECTIVE_PROGRESS_WEIGHT)
+	var objective_backfill_penalty: int = _tp_int("objective_backfill_penalty", OBJECTIVE_BACKFILL_PENALTY)
 	if baseline_dist >= 99:
 		return 0
 	var candidate_dist: int = _primary_objective_distance(state, owner_id, tile)
 	if candidate_dist >= 99:
 		return 0
 	var delta: int = baseline_dist - candidate_dist
-	var score: int = delta * OBJECTIVE_PROGRESS_WEIGHT
+	var score: int = delta * objective_progress_weight
 	if delta <= 0:
-		score -= OBJECTIVE_BACKFILL_PENALTY
+		score -= objective_backfill_penalty
 		if stricter_backfill_penalty:
 			score -= 10
 	return score

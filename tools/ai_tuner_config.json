@@ -1,41 +1,119 @@
 {
-	"checkpoints": [15, 50, 100],
+	"checkpoints": [12, 32, 60, 90],
+	"checkpoint_weights": {
+		"12": 0.90,
+		"32": 1.25,
+		"60": 1.15,
+		"90": 0.90
+	},
 	"runs_per_seed": 1,
 	"top_n": 5,
 	"output_dir": "user://ai_tuner_output",
 	"fixed_overrides": {},
 	"scenarios": [
 		{
-			"name": "spectator_2v2_all_rooms",
+			"name": "spectator_2v2_wide_chamber",
 			"level_index": 3,
 			"player_team_size": 2,
 			"enemy_team_size": 2,
-			"turn_limit": 100,
+			"turn_limit": 96,
 			"door_hp": 32,
 			"enemies_allied": true,
-			"seeds": [1337],
+			"seeds": [1337, 2024],
+			"template_ids": ["room_wide_chamber"],
+			"scenario_type": "fast",
 			"stop_at_last_checkpoint": true,
-			"outcome_check_interval": 8
+			"outcome_check_interval": 6
+		},
+		{
+			"name": "spectator_2v2_twist_forks",
+			"level_index": 3,
+			"player_team_size": 2,
+			"enemy_team_size": 2,
+			"turn_limit": 96,
+			"door_hp": 32,
+			"enemies_allied": true,
+			"seeds": [1777, 2999],
+			"template_ids": ["room_twist_forks"],
+			"scenario_type": "fast",
+			"stop_at_last_checkpoint": true,
+			"outcome_check_interval": 6
+		},
+		{
+			"name": "spectator_2v2_broken_spine",
+			"level_index": 3,
+			"player_team_size": 2,
+			"enemy_team_size": 2,
+			"turn_limit": 96,
+			"door_hp": 32,
+			"enemies_allied": true,
+			"seeds": [3001, 4001],
+			"template_ids": ["room_broken_spine"],
+			"scenario_type": "fast",
+			"stop_at_last_checkpoint": true,
+			"outcome_check_interval": 6
 		}
 	],
 	"search": {
-		"max_total_candidates": 4,
+		"max_total_candidates": 7,
 		"max_grid_candidates": 2,
-		"random_iterations": 1,
+		"random_iterations": 4,
 		"random_seed": 1337,
 		"grid_parameters": {
-			"ranged_saturation_soft_cap": [0.30, 0.34],
-			"ranged_saturation_max_penalty": [36, 46],
-			"specialization_safe_phase_penalty": [14, 20],
-			"resource_safe_phase_bonus": [10, 16]
+			"ranged_saturation_soft_cap": [0.32, 0.34, 0.36],
+			"specialization_safe_phase_penalty": [12, 14, 16],
+			"resource_safe_phase_bonus": [8, 10, 12],
+			"tile_upgrade_min_score": [64, 66, 68]
 		},
 		"random_parameters": {
-			"specialization_backline_blanket_penalty": {"min": 8, "max": 20, "step": 2},
-			"specialization_path_penalty": {"min": 8, "max": 20, "step": 2},
-			"resource_gather_focus_bonus": {"min": 8, "max": 18, "step": 2},
-			"resource_near_threat_penalty": {"min": 8, "max": 16, "step": 2},
-			"upgrade_priority_margin": {"min": 6, "max": 14, "step": 2},
-			"tile_upgrade_min_score": {"min": 58, "max": 74, "step": 2}
+			"ranged_saturation_max_penalty": {"min": 32, "max": 40, "step": 2},
+			"specialization_backline_blanket_penalty": {"min": 10, "max": 16, "step": 2},
+			"specialization_path_penalty": {"min": 10, "max": 16, "step": 2},
+			"resource_objective_step_weight": {"min": 3, "max": 5, "step": 1},
+			"resource_gather_focus_bonus": {"min": 10, "max": 14, "step": 1},
+			"resource_near_threat_penalty": {"min": 8, "max": 12, "step": 1},
+			"objective_progress_weight": {"min": 20, "max": 24, "step": 1},
+			"objective_backfill_penalty": {"min": 28, "max": 36, "step": 2},
+			"upgrade_priority_margin": {"min": 8, "max": 12, "step": 1},
+			"defense_local_ratio_soft_cap": {"min": 0.38, "max": 0.44, "step": 0.02, "float": true},
+			"gather_safe_min_enemy_distance": {"choices": [4, 5]}
+		}
+	},
+	"training": {
+		"enabled": false,
+		"time_budget_minutes": 45,
+		"max_effective_passes": 4,
+		"min_pass_minutes": 3,
+		"min_candidates_per_pass": 1,
+		"pass_count_conservatism": 1.5,
+		"overrun_tolerance_seconds": 60,
+		"initial_seconds_per_actor_turn": 0.22,
+		"initial_seconds_per_simulation": 4.0,
+		"max_passes": 10,
+		"plateau_passes": 3,
+		"min_accept_score_delta": 0.20,
+		"baseline_config_path": "res://config/ooze_ai_baseline.json",
+		"scenario_mix": {
+			"fast_scenario_ratio": 0.75,
+			"min_outcome_scenarios": 1
+		},
+		"acceptance": {
+			"max_economy_drop": 2.5,
+			"max_objective_drop": 2.0,
+			"max_role_balance_drop": 2.0,
+			"max_specialization_drop": 2.0,
+			"small_accept_score_delta": 0.10,
+			"consistency_required_passes": 2,
+			"exploratory_max_score_drop": 0.06,
+			"exploratory_key_gain": 0.30,
+			"exploratory_plateau_passes": 2
+		},
+		"pass_profiles": {
+			"pass1_grid_scale": 1.6,
+			"pass1_random_scale": 2.0,
+			"refine_grid_scale": 1.0,
+			"refine_random_scale": 0.75,
+			"min_random_iterations": 2
 		}
 	}
 }

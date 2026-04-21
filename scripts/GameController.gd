@@ -16,6 +16,8 @@ const TURN_PULSE_MAX_TOTAL: float = 2.0
 const TURN_PULSE_MAX_TILES: int = 40
 const SPECTATOR_STEP_DELAY: float = 0.26
 const MIN_EXPAND_ADJACENT: int = 1
+const PLAY_REGION_PANEL_GAP: float = 8.0
+const PLAY_REGION_VISUAL_INSET: float = 8.0
 const ACTION_VALIDATOR_SCRIPT: GDScript = preload("res://scripts/systems/ActionValidator.gd")
 const TURN_RESOLVER_SCRIPT: GDScript = preload("res://scripts/systems/TurnResolver.gd")
 const OOZE_AI_SCRIPT: GDScript = preload("res://scripts/systems/OozeAI.gd")
@@ -1946,14 +1948,22 @@ func _update_board_layout(force: bool = false) -> void:
 
 func _play_region_rect() -> Rect2:
 	var region: Rect2 = board_region.get_global_rect()
-	var pad: float = 2.0
+	var pad: float = PLAY_REGION_VISUAL_INSET
 
 	var left: float = region.position.x + pad
 	var top: float = region.position.y + pad
 	var right: float = region.end.x - pad
 	var bottom: float = region.end.y - pad
 
-	# BoardRegion already reserves space for top/right/bottom UI panels.
+	# Hard-clamp against actual panel bounds so render bleed never intrudes.
+	if top_panel != null:
+		top = maxf(top, top_panel.get_global_rect().end.y + PLAY_REGION_PANEL_GAP)
+	if right_panel != null:
+		right = minf(right, right_panel.get_global_rect().position.x - PLAY_REGION_PANEL_GAP)
+	if bottom_panel != null:
+		bottom = minf(bottom, bottom_panel.get_global_rect().position.y - PLAY_REGION_PANEL_GAP)
+
+	# BoardRegion already reserves UI space, but keep a robust minimum draw area.
 	# Keep a valid minimum draw area even on very small windows.
 	right = maxf(right, left + 64.0)
 	bottom = maxf(bottom, top + 64.0)
