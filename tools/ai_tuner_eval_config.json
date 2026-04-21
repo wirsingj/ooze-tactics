@@ -1,0 +1,79 @@
+{
+  "checkpoints": [12, 32, 60, 90],
+  "checkpoint_weights": {
+    "12": 0.90,
+    "32": 1.25,
+    "60": 1.15,
+    "90": 0.90
+  },
+  "runs_per_seed": 1,
+  "top_n": 5,
+  "output_dir": "res://tools/ai_tuner_output_eval",
+  "fixed_overrides": {},
+  "scenarios": [
+    {
+      "name": "wide_chamber",
+      "level_index": 3,
+      "player_team_size": 2,
+      "enemy_team_size": 2,
+      "turn_limit": 100,
+      "door_hp": 32,
+      "enemies_allied": true,
+      "template_ids": ["room_wide_chamber"],
+      "seeds": [1337, 2024],
+      "stop_at_last_checkpoint": true,
+      "outcome_check_interval": 6
+    },
+    {
+      "name": "twist_forks",
+      "level_index": 3,
+      "player_team_size": 2,
+      "enemy_team_size": 2,
+      "turn_limit": 100,
+      "door_hp": 32,
+      "enemies_allied": true,
+      "template_ids": ["room_twist_forks"],
+      "seeds": [1777, 2999],
+      "stop_at_last_checkpoint": true,
+      "outcome_check_interval": 6
+    },
+    {
+      "name": "broken_spine",
+      "level_index": 3,
+      "player_team_size": 2,
+      "enemy_team_size": 2,
+      "turn_limit": 100,
+      "door_hp": 32,
+      "enemies_allied": true,
+      "template_ids": ["room_broken_spine"],
+      "seeds": [3001, 4001],
+      "stop_at_last_checkpoint": true,
+      "outcome_check_interval": 6
+    }
+  ],
+  "search": {
+    "max_total_candidates": 6,
+    "max_grid_candidates": 2,
+    "random_iterations": 3,
+    "random_seed": 1337,
+    "grid_parameters": {
+      "ranged_saturation_soft_cap": [0.32, 0.34, 0.36],
+      "specialization_safe_phase_penalty": [12, 14, 16],
+      "resource_safe_phase_bonus": [8, 10, 12]
+    },
+    "random_parameters": {
+      "ranged_saturation_max_penalty": {"min": 32, "max": 40, "step": 2},
+      "specialization_backline_blanket_penalty": {"min": 10, "max": 16, "step": 2},
+      "specialization_path_penalty": {"min": 10, "max": 16, "step": 2},
+      "resource_gather_focus_bonus": {"min": 10, "max": 14, "step": 1},
+      "resource_near_threat_penalty": {"min": 8, "max": 12, "step": 1},
+      "objective_progress_weight": {"min": 20, "max": 24, "step": 1},
+      "flank_pressure_bonus": {"min": 8, "max": 20, "step": 2},
+      "flank_stalemate_break_bonus": {"min": 6, "max": 18, "step": 2},
+      "basic_claim_opening_bonus": {"min": 6, "max": 18, "step": 2},
+      "basic_claim_goal_bonus": {"min": 6, "max": 18, "step": 2},
+      "basic_claim_frontline_bonus": {"min": 8, "max": 24, "step": 2},
+      "upgrade_priority_margin": {"min": 8, "max": 12, "step": 1}
+    }
+  }
+}

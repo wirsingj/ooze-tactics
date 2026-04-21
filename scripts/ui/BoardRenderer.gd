@@ -27,8 +27,12 @@ const EMISSIVE_DOOR_STRENGTH: float = 0.30
 const EMISSIVE_RESOURCE_STRENGTH: float = 0.28
 const PLAYER_TINT: Color = Color(0.30, 0.93, 0.78, 1.0)
 const ALLY_TINTS: Array[Color] = [
-	Color(0.24, 0.79, 0.95, 1.0),
-	Color(0.36, 0.98, 0.70, 1.0),
+	Color(0.06, 0.44, 0.99, 1.0), # deep azure
+	Color(0.03, 0.67, 1.00, 1.0), # electric blue
+	Color(0.00, 0.86, 0.95, 1.0), # bright cyan
+	Color(0.00, 0.98, 0.74, 1.0), # seafoam
+	Color(0.20, 1.00, 0.52, 1.0), # spring green
+	Color(0.36, 0.97, 0.34, 1.0), # vivid green
 ]
 const ENEMY_TINTS: Array[Color] = [
 	Color(0.95, 0.34, 0.48, 1.0),

@@ -25,6 +25,8 @@ func _init() -> void:
 	_test_ooze_ai_no_duplicate_actions()
 	_test_ooze_ai_safe_phase_reduces_melee_spread()
 	_test_ooze_ai_safe_phase_uses_gather_on_rear_resources()
+	_test_ooze_ai_engaged_safe_backline_gather_conversion_allowed()
+	_test_ooze_ai_approaching_phase_allows_safe_backline_gather()
 	_test_ooze_ai_frontline_defense_density_brake()
 	_test_ooze_ai_safe_backline_downgrade()
 	_test_enemy_alignment_no_friendly_fire()
@@ -611,6 +613,73 @@ func _test_ooze_ai_safe_phase_uses_gather_on_rear_resources() -> void:
 			has_gather = true
 			break
 	_assert(has_gather, "Safe rear resource zones should produce at least one gather-focused AI action")
+
+func _test_ooze_ai_engaged_safe_backline_gather_conversion_allowed() -> void:
+	var state: GameState = GameState.new()
+	state.width = 24
+	state.height = 10
+	state.players[2] = {"name": "Enemy", "nutrients": 20, "alive": true, "ai_controlled": true, "is_player": false}
+	state.players[2]["team"] = GameState.TEAM_ENEMY
+	state.players[1]["nutrients"] = 20
+
+	# Enemy (owner 2) is engaged on the frontline near x=13/12...
+	state.spawn_block(2, Vector2i(16, 5), true, 9, "basic")
+	state.spawn_block(2, Vector2i(15, 5), false, 9, "basic")
+	state.spawn_block(2, Vector2i(14, 5), false, 9, "basic")
+	state.spawn_block(2, Vector2i(13, 5), false, 9, "basic")
+
+	# ...while also owning a safe backline basic tile on an open resource.
+	var backline_resource_tile: Vector2i = Vector2i(18, 5)
+	var backline_basic: int = state.spawn_block(2, backline_resource_tile, false, 9, "basic")
+	state.spawn_block(2, Vector2i(18, 4), false, 9, "basic")
+	state.spawn_block(2, Vector2i(17, 5), false, 9, "basic")
+
+	state.spawn_block(1, Vector2i(12, 5), true, 9, "basic")
+	state.spawn_block(1, Vector2i(11, 5), false, 9, "basic")
+	state.spawn_block(1, Vector2i(11, 4), false, 9, "basic")
+
+	state.resource_nodes = [
+		{"pos": backline_resource_tile, "kind": "gem", "consumed": false}
+	]
+
+	var ai = OOZE_AI_SCRIPT.new()
+	var nearest_enemy_dist: int = ai._nearest_enemy_distance(state, 2, backline_resource_tile)
+	var prefers_conversion: bool = ai._should_prefer_gather_conversion(
+		state,
+		2,
+		backline_resource_tile,
+		nearest_enemy_dist,
+		true
+	)
+	_assert(
+		prefers_conversion,
+		"Engaged AI should still allow safe backline gather conversion on open resources when local tile is low-threat"
+	)
+	_assert(int(state.blocks[backline_basic]["owner"]) == 2, "Sanity check: backline resource tile should be owned by AI under test")
+
+func _test_ooze_ai_approaching_phase_allows_safe_backline_gather() -> void:
+	var state: GameState = GameState.new()
+	state.width = 24
+	state.height = 10
+	state.players[1]["nutrients"] = 20
+	state.players[2] = {"name": "Enemy", "nutrients": 20, "alive": true, "ai_controlled": true, "is_player": false, "team": GameState.TEAM_ENEMY}
+
+	# Build a lane with contact at x=10/9 so owner 2 is engaged, but keep a deep backline tile at x=13.
+	state.spawn_block(2, Vector2i(10, 5), true, 9, "basic")
+	state.spawn_block(2, Vector2i(11, 5), false, 9, "basic")
+	state.spawn_block(2, Vector2i(12, 5), false, 9, "basic")
+	state.spawn_block(1, Vector2i(9, 5), true, 9, "basic")
+	state.spawn_block(1, Vector2i(8, 5), false, 9, "basic")
+
+	var ai = OOZE_AI_SCRIPT.new()
+	var candidate_tile: Vector2i = Vector2i(13, 5)
+	var nearest_enemy_dist: int = ai._nearest_enemy_distance(state, 2, candidate_tile)
+	var phase: int = ai._local_threat_phase(state, 2, candidate_tile, nearest_enemy_dist, ai._adjacent_enemy_count(state, 2, candidate_tile))
+	_assert(phase == ai.PHASE_APPROACHING_CONTACT, "Backline tile in this setup should be classified as APPROACHING_CONTACT")
+	_assert(
+		ai._is_gather_position_allowed(state, 2, candidate_tile, nearest_enemy_dist, phase),
+		"APPROACHING_CONTACT should allow gather on safe deep-backline tiles"
+	)
 
 func _test_ooze_ai_frontline_defense_density_brake() -> void:
 	var state: GameState = GameState.new()

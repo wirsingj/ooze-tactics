@@ -39,6 +39,42 @@ func step(state: GameState, queued_actions: Array) -> GameState:
 	next.last_log = log
 	return next
 
+func step_fast_for_trainer(state: GameState, queued_actions: Array) -> GameState:
+	# Trainer-only deterministic fast path:
+	# keeps all gameplay resolution identical while skipping per-turn log string work.
+	var next: GameState = state.copy_state()
+	next.turn_index += 1
+
+	var resolution: Dictionary = combat.resolve_with_report(queued_actions, next, false, true)
+	next.last_resolution_report = resolution
+
+	var bursts: Dictionary = economy.claim_resource_bursts(next)
+	var eco_report: Dictionary = economy.compute_income_and_upkeep(next)
+	economy.apply_income_and_upkeep(next, eco_report, bursts)
+	_advance_tile_ages(next)
+	next.tick_reclaim_blocks()
+
+	_update_stall_counter(next)
+	next.last_log = []
+	return next
+
+func step_in_place_fast_for_trainer(state: GameState, queued_actions: Array) -> GameState:
+	# Trainer-only deterministic fast path without per-turn state cloning.
+	state.turn_index += 1
+
+	var resolution: Dictionary = combat.resolve_with_report(queued_actions, state, false, true)
+	state.last_resolution_report = resolution
+
+	var bursts: Dictionary = economy.claim_resource_bursts(state)
+	var eco_report: Dictionary = economy.compute_income_and_upkeep(state)
+	economy.apply_income_and_upkeep(state, eco_report, bursts)
+	_advance_tile_ages(state)
+	state.tick_reclaim_blocks()
+
+	_update_stall_counter(state)
+	state.last_log = []
+	return state
+
 func _update_stall_counter(state: GameState) -> void:
 	if bool(state.spectator_mode):
 		state.stall_counter = 0

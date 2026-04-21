@@ -16,6 +16,8 @@ const TURN_PULSE_MAX_TOTAL: float = 2.0
 const TURN_PULSE_MAX_TILES: int = 40
 const SPECTATOR_STEP_DELAY: float = 0.26
 const MIN_EXPAND_ADJACENT: int = 1
+const PLAY_REGION_PANEL_GAP: float = 8.0
+const PLAY_REGION_VISUAL_INSET: float = 8.0
 const ACTION_VALIDATOR_SCRIPT: GDScript = preload("res://scripts/systems/ActionValidator.gd")
 const TURN_RESOLVER_SCRIPT: GDScript = preload("res://scripts/systems/TurnResolver.gd")
 const OOZE_AI_SCRIPT: GDScript = preload("res://scripts/systems/OozeAI.gd")
@@ -114,6 +116,8 @@ var upgrade_choices: Array = []
 @onready var player_label: Label = $CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow/PlayerLabel
 @onready var turn_label: Label = $CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow/TurnLabel
 @onready var enemy_label: Label = $CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow/EnemyLabel
+@onready var left_team_status_label: RichTextLabel = $CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TeamStatusRow/LeftTeamStatus
+@onready var right_team_status_label: RichTextLabel = $CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TeamStatusRow/RightTeamStatus
 @onready var pause_button: Button = $CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow/TopRightControls/PauseButton
 @onready var speed_1_button: Button = $CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow/TopRightControls/Speed1Button
 @onready var speed_4_button: Button = $CanvasLayer/UI/TopPanel/TopMargin/TopVBox/TopRow/TopRightControls/Speed4Button
@@ -561,6 +565,10 @@ func _apply_ui_theme() -> void:
 	mode_label.add_theme_color_override("font_color", Color(0.78, 0.8, 0.74, 1.0))
 	debug_label.add_theme_font_size_override("font_size", 10)
 	debug_label.add_theme_color_override("font_color", Color(0.7, 0.73, 0.7, 1.0))
+	left_team_status_label.add_theme_font_size_override("normal_font_size", 9)
+	right_team_status_label.add_theme_font_size_override("normal_font_size", 9)
+	left_team_status_label.add_theme_constant_override("line_separation", 1)
+	right_team_status_label.add_theme_constant_override("line_separation", 1)
 
 func _set_mode(tile_type: String) -> void:
 	selected_tile_type = tile_type
@@ -904,7 +912,7 @@ func _try_dev_heart_defeat(tile: Vector2i) -> bool:
 
 func _dev_eliminate_owner(owner_id: int) -> void:
 	for block in state.get_owner_blocks(owner_id):
-		state.blocks.erase(int(block["id"]))
+		state.remove_block(int(block["id"]))
 	if state.players.has(owner_id):
 		state.players[owner_id]["alive"] = false
 		state.players[owner_id]["nutrients"] = 0
@@ -1399,11 +1407,13 @@ func _refresh_ui() -> void:
 	var player_energy: int = int(state.players[GameState.PLAYER_ID]["nutrients"])
 	if _is_spectator_mode():
 		player_label.text = "SPECTATOR MODE"
+		enemy_label.text = ""
 	else:
 		player_label.text = "PLAYER HP %d  HEART %d" % [player_hp, player_hearts]
+		enemy_label.text = _enemy_header_text()
 	var door_text: String = "DOOR %d/%d" % [maxi(0, state.door_hp), maxi(1, state.door_max_hp)]
 	turn_label.text = "TURN %d/%d  |  LEVEL %d  |  %s" % [state.turn_index, state.turn_limit, state.level_index, door_text]
-	enemy_label.text = _enemy_header_text()
+	_refresh_team_status_panels()
 	_refresh_actor_bar()
 
 	energy_label.text = "ENERGY %d   STALL %d/3   SUPPORT R2   STABILITY 0/1/2+" % [player_energy, state.stall_counter]
@@ -1460,6 +1470,77 @@ func _enemy_header_text() -> String:
 		enemy_hp += state.get_total_hp(owner_int)
 		enemy_hearts += state.count_heart_tiles(owner_int)
 	return "ENEMY HP %d  HEART %d  ENERGY %d" % [enemy_hp, enemy_hearts, enemy_energy]
+
+func _refresh_team_status_panels() -> void:
+	if state == null:
+		return
+	var left_entries: Array = _team_status_entries(false)
+	var right_entries: Array = _team_status_entries(true)
+	left_team_status_label.text = _team_status_text(left_entries, false)
+	right_team_status_label.text = _team_status_text(right_entries, true)
+
+func _team_status_entries(hostile_to_player: bool) -> Array:
+	var owners: Array = []
+	for owner_id_variant in state.players.keys():
+		var owner_id: int = int(owner_id_variant)
+		if not bool(state.players[owner_id].get("alive", true)):
+			continue
+		if state.get_owner_blocks(owner_id).is_empty():
+			continue
+		var hostile: bool = state.are_hostile(GameState.PLAYER_ID, owner_id)
+		if hostile != hostile_to_player:
+			continue
+		owners.append(owner_id)
+	owners.sort_custom(func(a, b) -> bool:
+		var oa: int = int(a)
+		var ob: int = int(b)
+		var ta: int = state.get_owner_team(oa)
+		var tb: int = state.get_owner_team(ob)
+		if ta != tb:
+			return ta < tb
+		return _owner_display_number(oa) < _owner_display_number(ob)
+	)
+
+	var entries: Array = []
+	for owner_id_variant in owners:
+		var owner_id: int = int(owner_id_variant)
+		var owner_color: Color = renderer.owner_tint_for_ui(state, owner_id)
+		var owner_label: String = "Slime %d" % _owner_display_number(owner_id)
+		if owner_id == GameState.PLAYER_ID and not _is_spectator_mode():
+			owner_label = "Player"
+		entries.append({
+			"label": owner_label,
+			"color_hex": owner_color.to_html(false),
+			"hp": state.get_total_hp(owner_id),
+			"hearts": state.count_heart_tiles(owner_id),
+			"energy": int(state.players[owner_id].get("nutrients", 0)),
+			"active": _is_spectator_mode() and owner_id == active_owner_id,
+		})
+	return entries
+
+func _team_status_text(entries: Array, right_aligned: bool) -> String:
+	var lines: Array[String] = []
+	if entries.is_empty():
+		var empty_line: String = "[color=#787567]no teams[/color]"
+		if right_aligned:
+			return "[right]%s[/right]" % empty_line
+		return empty_line
+
+	for entry_variant in entries:
+		var entry: Dictionary = entry_variant
+		var line: String = "[color=#%s]■[/color] %s HP %d  H %d  E %d" % [
+			String(entry.get("color_hex", "ffffff")),
+			String(entry.get("label", "Team")),
+			int(entry.get("hp", 0)),
+			int(entry.get("hearts", 0)),
+			int(entry.get("energy", 0)),
+		]
+		if bool(entry.get("active", false)):
+			line = "[b]> %s <[/b]" % line
+		if right_aligned:
+			line = "[right]%s[/right]" % line
+		lines.append(line)
+	return "\n".join(lines)
 
 func _refresh_actor_bar() -> void:
 	if actor_bar == null:
@@ -1946,14 +2027,22 @@ func _update_board_layout(force: bool = false) -> void:
 
 func _play_region_rect() -> Rect2:
 	var region: Rect2 = board_region.get_global_rect()
-	var pad: float = 2.0
+	var pad: float = PLAY_REGION_VISUAL_INSET
 
 	var left: float = region.position.x + pad
 	var top: float = region.position.y + pad
 	var right: float = region.end.x - pad
 	var bottom: float = region.end.y - pad
 
-	# BoardRegion already reserves space for top/right/bottom UI panels.
+	# Hard-clamp against actual panel bounds so render bleed never intrudes.
+	if top_panel != null:
+		top = maxf(top, top_panel.get_global_rect().end.y + PLAY_REGION_PANEL_GAP)
+	if right_panel != null:
+		right = minf(right, right_panel.get_global_rect().position.x - PLAY_REGION_PANEL_GAP)
+	if bottom_panel != null:
+		bottom = minf(bottom, bottom_panel.get_global_rect().position.y - PLAY_REGION_PANEL_GAP)
+
+	# BoardRegion already reserves UI space, but keep a robust minimum draw area.
 	# Keep a valid minimum draw area even on very small windows.
 	right = maxf(right, left + 64.0)
 	bottom = maxf(bottom, top + 64.0)

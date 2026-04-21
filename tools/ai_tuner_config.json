@@ -1,0 +1,230 @@
+{
+	"checkpoints": [12, 32, 60, 90],
+	"checkpoint_weights": {
+		"12": 0.90,
+		"32": 1.25,
+		"60": 1.15,
+		"90": 0.90
+	},
+	"runs_per_seed": 1,
+	"top_n": 5,
+	"output_dir": "user://ai_tuner_output",
+	"fixed_overrides": {},
+	"scenarios": [
+		{
+			"name": "spectator_2v2_wide_chamber",
+			"level_index": 3,
+			"player_team_size": 2,
+			"enemy_team_size": 2,
+			"turn_limit": 96,
+			"door_hp": 32,
+			"enemies_allied": true,
+			"seeds": [1337, 2024],
+			"template_ids": ["room_wide_chamber"],
+			"scenario_type": "fast",
+			"stop_at_last_checkpoint": true,
+			"outcome_check_interval": 6
+		},
+		{
+			"name": "spectator_2v2_twist_forks",
+			"level_index": 3,
+			"player_team_size": 2,
+			"enemy_team_size": 2,
+			"turn_limit": 96,
+			"door_hp": 32,
+			"enemies_allied": true,
+			"seeds": [1777, 2999],
+			"template_ids": ["room_twist_forks"],
+			"scenario_type": "fast",
+			"stop_at_last_checkpoint": true,
+			"outcome_check_interval": 6
+		},
+		{
+			"name": "spectator_2v2_broken_spine_outcome",
+			"level_index": 3,
+			"player_team_size": 2,
+			"enemy_team_size": 2,
+			"turn_limit": 160,
+			"door_hp": 32,
+			"enemies_allied": true,
+			"seeds": [3001],
+			"template_ids": ["room_broken_spine"],
+			"scenario_type": "outcome",
+			"stop_at_last_checkpoint": false,
+			"outcome_check_interval": 6
+		}
+	],
+	"search": {
+		"max_total_candidates": 12,
+		"max_grid_candidates": 3,
+		"random_iterations": 8,
+		"random_seed": 1337,
+		"random_mutation": {
+			"min_keys_per_candidate": 2,
+			"max_keys_per_candidate": 6,
+			"all_keys_probability": 0.08
+		},
+		"preset_candidates": [
+			{
+				"id": "preset_forward_ranged_pressure",
+				"label": "Preset Forward Ranged Pressure",
+				"overrides": {
+					"ranged_frontline_penalty": 22,
+					"ranged_backline_penalty": 10,
+					"ranged_saturation_soft_cap": 0.38,
+					"ranged_saturation_hard_cap": 0.58,
+					"ranged_saturation_max_penalty": 32,
+					"objective_progress_weight": 24,
+					"basic_claim_frontline_bonus": 20
+				}
+			},
+			{
+				"id": "preset_upgrade_vertical_investment",
+				"label": "Preset Upgrade Vertical Investment",
+				"overrides": {
+					"tile_upgrade_min_score": 60,
+					"upgrade_priority_margin": 7,
+					"engaged_upgrade_energy_threshold": 14,
+					"non_engaged_upgrade_energy_threshold": 16,
+					"max_tile_upgrades_per_turn": 3,
+					"specialization_backline_blanket_penalty": 16,
+					"specialization_path_penalty": 14
+				}
+			},
+			{
+				"id": "preset_melee_defense_breach",
+				"label": "Preset Melee Defense Breach",
+				"overrides": {
+					"ranged_frontline_penalty": 32,
+					"ranged_backline_penalty": 16,
+					"defense_local_ratio_soft_cap": 0.42,
+					"defense_local_ratio_hard_cap": 0.58,
+					"objective_progress_weight": 26,
+					"basic_claim_frontline_bonus": 24,
+					"flank_stalemate_break_bonus": 16
+				}
+			},
+			{
+				"id": "preset_breakout_claim",
+				"label": "Preset Breakout Claim",
+				"overrides": {
+					"flank_pressure_bonus": 18,
+					"flank_stalemate_break_bonus": 14,
+					"basic_claim_opening_bonus": 16,
+					"basic_claim_frontline_bonus": 24,
+					"objective_backfill_penalty": 24,
+					"specialization_path_penalty": 14
+				}
+			},
+			{
+				"id": "preset_goal_rush",
+				"label": "Preset Goal Rush",
+				"overrides": {
+					"objective_progress_weight": 28,
+					"objective_backfill_penalty": 36,
+					"resource_objective_max_distance": 7,
+					"resource_objective_step_weight": 3,
+					"basic_claim_goal_bonus": 18,
+					"basic_claim_frontline_bonus": 22,
+					"upgrade_priority_margin": 8
+				}
+			},
+			{
+				"id": "preset_wall_aware_pathing",
+				"label": "Preset Wall Aware Pathing",
+				"overrides": {
+					"flank_pressure_bonus": 18,
+					"flank_stalemate_break_bonus": 18,
+					"basic_claim_opening_bonus": 18,
+					"basic_claim_frontline_bonus": 26,
+					"objective_backfill_penalty": 34,
+					"specialization_path_penalty": 16,
+					"specialization_backline_blanket_penalty": 16
+				}
+			},
+			{
+				"id": "preset_resource_contest",
+				"label": "Preset Resource Contest",
+				"overrides": {
+					"resource_safe_phase_bonus": 12,
+					"resource_objective_step_weight": 5,
+					"resource_gather_focus_bonus": 16,
+					"resource_near_threat_penalty": 9,
+					"gather_safe_min_enemy_distance": 5,
+					"specialization_safe_phase_penalty": 16
+				}
+			}
+		],
+		"grid_parameters": {
+			"ranged_saturation_soft_cap": [0.32, 0.34, 0.36, 0.38],
+			"specialization_safe_phase_penalty": [12, 14, 16],
+			"resource_safe_phase_bonus": [8, 10, 12],
+			"tile_upgrade_min_score": [64, 66, 68]
+		},
+		"random_parameters": {
+			"ranged_saturation_soft_cap": {"min": 0.30, "max": 0.42, "step": 0.02, "float": true},
+			"ranged_saturation_hard_cap": {"min": 0.48, "max": 0.62, "step": 0.02, "float": true},
+			"ranged_saturation_max_penalty": {"min": 28, "max": 42, "step": 2},
+			"ranged_frontline_penalty": {"min": 18, "max": 34, "step": 2},
+			"ranged_backline_penalty": {"min": 8, "max": 18, "step": 2},
+			"specialization_backline_blanket_penalty": {"min": 10, "max": 16, "step": 2},
+			"specialization_path_penalty": {"min": 10, "max": 16, "step": 2},
+			"resource_objective_step_weight": {"min": 3, "max": 5, "step": 1},
+			"resource_objective_max_distance": {"min": 7, "max": 12, "step": 1},
+			"resource_gather_focus_bonus": {"min": 10, "max": 14, "step": 1},
+			"resource_near_threat_penalty": {"min": 8, "max": 12, "step": 1},
+			"objective_progress_weight": {"min": 20, "max": 26, "step": 1},
+			"objective_backfill_penalty": {"min": 28, "max": 36, "step": 2},
+			"flank_pressure_bonus": {"min": 8, "max": 20, "step": 2},
+			"flank_stalemate_break_bonus": {"min": 6, "max": 18, "step": 2},
+			"basic_claim_opening_bonus": {"min": 6, "max": 18, "step": 2},
+			"basic_claim_goal_bonus": {"min": 6, "max": 18, "step": 2},
+			"basic_claim_frontline_bonus": {"min": 8, "max": 24, "step": 2},
+			"upgrade_priority_margin": {"min": 8, "max": 12, "step": 1},
+			"tile_upgrade_min_score": {"min": 58, "max": 72, "step": 2},
+			"engaged_upgrade_energy_threshold": {"min": 12, "max": 20, "step": 1},
+			"non_engaged_upgrade_energy_threshold": {"min": 14, "max": 22, "step": 1},
+			"max_tile_upgrades_per_turn": {"choices": [1, 2, 3]},
+			"defense_local_ratio_soft_cap": {"min": 0.38, "max": 0.44, "step": 0.02, "float": true},
+			"defense_local_ratio_hard_cap": {"min": 0.52, "max": 0.62, "step": 0.02, "float": true},
+			"gather_safe_min_enemy_distance": {"choices": [4, 5]}
+		}
+	},
+	"training": {
+		"enabled": false,
+		"time_budget_minutes": 60,
+		"max_effective_passes": 4,
+		"min_pass_minutes": 3,
+		"min_candidates_per_pass": 1,
+		"pass_count_conservatism": 1.5,
+		"overrun_tolerance_seconds": 60,
+		"initial_seconds_per_actor_turn": 0.22,
+		"initial_seconds_per_simulation": 4.0,
+		"max_passes": 10,
+		"plateau_passes": 4,
+		"min_accept_score_delta": 0.20,
+		"baseline_config_path": "res://config/ooze_ai_baseline.json",
+		"scenario_mix": {
+			"fast_scenario_ratio": 0.75,
+			"min_outcome_scenarios": 1
+		},
+		"acceptance": {
+			"max_economy_drop": 2.5,
+			"max_objective_drop": 2.0,
+			"max_role_balance_drop": 2.0,
+			"max_specialization_drop": 2.0,
+			"small_accept_score_delta": 0.10,
+			"consistency_required_passes": 2,
+			"exploratory_max_score_drop": 0.06,
+			"exploratory_key_gain": 0.30,
+			"exploratory_plateau_passes": 2
+		},
+		"pass_profiles": {
+			"pass1_grid_scale": 2.0,
+			"pass1_random_scale": 2.8,
+			"refine_grid_scale": 0.9,
+			"refine_random_scale": 0.55,
+			"min_random_iterations": 1
+		}
+	}
+}
