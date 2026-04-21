@@ -1,44 +1,49 @@
 {
 	"defense": {
 		"defense_local_ratio_hard_cap": 0.55,
-		"defense_local_ratio_soft_cap": 0.4,
+		"defense_local_ratio_soft_cap": 0.38,
 		"defense_nearby_soft_limit": 2.0
 	},
 	"gather_economy": {
 		"gather_conversion_resource_max_dist": 2.0,
-		"gather_safe_min_enemy_distance": 4.0
+		"gather_safe_min_enemy_distance": 5
 	},
 	"objectives": {
-		"objective_backfill_penalty": 32.0,
+		"basic_claim_frontline_bonus": 22.0,
+		"basic_claim_goal_bonus": 8.0,
+		"basic_claim_opening_bonus": 12.0,
+		"flank_pressure_bonus": 14.0,
+		"flank_stalemate_break_bonus": 8.0,
+		"objective_backfill_penalty": 28.0,
 		"objective_progress_weight": 22.0,
 		"resource_approaching_phase_bonus": 4.0,
-		"resource_gather_focus_bonus": 12.0,
+		"resource_gather_focus_bonus": 16,
 		"resource_low_threat_bonus": 6.0,
-		"resource_near_threat_penalty": 10.0,
+		"resource_near_threat_penalty": 9,
 		"resource_node_hold_bonus": 14.0,
 		"resource_objective_max_distance": 9.0,
-		"resource_objective_step_weight": 4.0,
-		"resource_safe_phase_bonus": 8
+		"resource_objective_step_weight": 5,
+		"resource_safe_phase_bonus": 12
 	},
 	"ranged": {
 		"ranged_backline_penalty": 14.0,
 		"ranged_frontline_penalty": 28.0,
 		"ranged_saturation_hard_cap": 0.52,
-		"ranged_saturation_max_penalty": 36.0,
+		"ranged_saturation_max_penalty": 38.0,
 		"ranged_saturation_min_tiles": 8.0,
 		"ranged_saturation_soft_cap": 0.32
 	},
 	"specialization": {
 		"specialization_adjacent_penalty": 3.0,
-		"specialization_backline_blanket_penalty": 12.0,
+		"specialization_backline_blanket_penalty": 14.0,
 		"specialization_hard_cap": 0.62,
 		"specialization_local_cluster_penalty": 5.0,
 		"specialization_local_radius": 2.0,
 		"specialization_local_soft_limit": 3.0,
 		"specialization_max_penalty": 30.0,
 		"specialization_min_tiles": 9.0,
-		"specialization_path_penalty": 12.0,
-		"specialization_safe_phase_penalty": 12,
+		"specialization_path_penalty": 10.0,
+		"specialization_safe_phase_penalty": 16,
 		"specialization_soft_cap": 0.45
 	},
 	"upgrades": {
@@ -47,7 +52,7 @@
 		"non_engaged_upgrade_energy_threshold": 18.0,
 		"objective_upgrade_distance_max": 14.0,
 		"objective_upgrade_enemy_distance_max": 10.0,
-		"tile_upgrade_min_score": 64,
-		"upgrade_priority_margin": 10.0
+		"tile_upgrade_min_score": 64.0,
+		"upgrade_priority_margin": 9.0
 	}
 }

@@ -68,6 +68,11 @@
       "resource_gather_focus_bonus": {"min": 10, "max": 14, "step": 1},
       "resource_near_threat_penalty": {"min": 8, "max": 12, "step": 1},
       "objective_progress_weight": {"min": 20, "max": 24, "step": 1},
+      "flank_pressure_bonus": {"min": 8, "max": 20, "step": 2},
+      "flank_stalemate_break_bonus": {"min": 6, "max": 18, "step": 2},
+      "basic_claim_opening_bonus": {"min": 6, "max": 18, "step": 2},
+      "basic_claim_goal_bonus": {"min": 6, "max": 18, "step": 2},
+      "basic_claim_frontline_bonus": {"min": 8, "max": 24, "step": 2},
       "upgrade_priority_margin": {"min": 8, "max": 12, "step": 1}
     }
   }

@@ -89,12 +89,12 @@ func resolve(actions: Array, state: GameState) -> Array[String]:
 	var report: Dictionary = resolve_with_report(actions, state)
 	return report.get("log", [])
 
-func resolve_with_report(actions: Array, state: GameState) -> Dictionary:
-	var report: Dictionary = _apply_staged_actions(actions, state, true)
+func resolve_with_report(actions: Array, state: GameState, include_log: bool = true, compact_report: bool = false) -> Dictionary:
+	var report: Dictionary = _apply_staged_actions(actions, state, include_log, compact_report)
 	var resolution_log: Array[String] = report.get("log", [])
 
-	_resolve_melee_damage(state, resolution_log)
-	_resolve_ranged_damage(state, resolution_log)
+	_resolve_melee_damage(state, resolution_log, include_log)
+	_resolve_ranged_damage(state, resolution_log, include_log)
 
 	var removed_positions: Array[Vector2i] = []
 	for block_id_variant in state.blocks.keys():
@@ -106,11 +106,12 @@ func resolve_with_report(actions: Array, state: GameState) -> Dictionary:
 
 	var removed: Array[int] = state.remove_dead_blocks()
 	for block_id in removed:
-		resolution_log.append("Block %d dissolved" % block_id)
+		if include_log:
+			resolution_log.append("Block %d dissolved" % block_id)
 	for tile in removed_positions:
 		state.mark_reclaim_block(tile, 1)
 
-	var defeat_report: Dictionary = _resolve_heart_defeats(state, resolution_log)
+	var defeat_report: Dictionary = _resolve_heart_defeats(state, resolution_log, include_log)
 	report["defeated_owners"] = defeat_report.get("defeated_owners", [])
 	report["player_heart_burst"] = int(defeat_report.get("player_heart_burst", 0))
 
@@ -121,47 +122,60 @@ func preview_resolution(state: GameState, actions: Array) -> Dictionary:
 	var preview_state: GameState = state.copy_state()
 	return _apply_staged_actions(actions, preview_state, false)
 
-func _apply_staged_actions(actions: Array, state: GameState, log_failures: bool) -> Dictionary:
+func _apply_staged_actions(actions: Array, state: GameState, include_log: bool, compact_report: bool = false) -> Dictionary:
 	var ordered: Array = _order_actions(actions)
 	var action_log: Array[String] = []
 	var applied_actions: Array = []
 	var failed_actions: Array = []
 	var results_by_preview_id: Dictionary = {}
+	var applied_count: int = 0
+	var failed_count: int = 0
+	var pass_applied_count: int = 0
 
 	for action in ordered:
 		var kind: String = String(action.get("type", "pass"))
 		var result: Dictionary = {"applied": false, "reason": "unsupported action"}
 		match kind:
 			"place_tile":
-				result = _apply_place_tile(action, state, action_log, log_failures)
+				result = _apply_place_tile(action, state, action_log, include_log)
 			"convert_tile":
-				result = _apply_convert_tile(action, state, action_log, log_failures)
+				result = _apply_convert_tile(action, state, action_log, include_log)
 			"upgrade_tile":
-				result = _apply_upgrade_tile(action, state, action_log, log_failures)
+				result = _apply_upgrade_tile(action, state, action_log, include_log)
 			"pass":
 				result = {"applied": true}
 			_:
 				result = {"applied": false, "reason": "unsupported action"}
 
-		var public_action: Dictionary = _public_action_copy(action)
 		if bool(result.get("applied", false)):
-			applied_actions.append(public_action)
+			applied_count += 1
+			if String(action.get("type", "")) == "pass":
+				pass_applied_count += 1
+			if not compact_report:
+				var public_action: Dictionary = _public_action_copy(action)
+				applied_actions.append(public_action)
 		else:
-			var failed: Dictionary = public_action.duplicate(true)
-			failed["reason"] = String(result.get("reason", "failed"))
-			failed_actions.append(failed)
+			failed_count += 1
+			if not compact_report:
+				var failed: Dictionary = _public_action_copy(action)
+				failed["reason"] = String(result.get("reason", "failed"))
+				failed_actions.append(failed)
 
-		var preview_id: String = String(action.get("_preview_id", ""))
-		if not preview_id.is_empty():
-			results_by_preview_id[preview_id] = {
-				"applied": bool(result.get("applied", false)),
-				"reason": String(result.get("reason", "")),
-			}
+		if not compact_report:
+			var preview_id: String = String(action.get("_preview_id", ""))
+			if not preview_id.is_empty():
+				results_by_preview_id[preview_id] = {
+					"applied": bool(result.get("applied", false)),
+					"reason": String(result.get("reason", "")),
+				}
 
 	return {
 		"ordered_actions": _strip_internal_keys_from_actions(ordered),
 		"applied_actions": applied_actions,
 		"failed_actions": failed_actions,
+		"applied_count": applied_count,
+		"failed_count": failed_count,
+		"pass_applied_count": pass_applied_count,
 		"results_by_preview_id": results_by_preview_id,
 		"log": action_log,
 	}
@@ -229,11 +243,11 @@ func validate_place_action(action: Dictionary, state: GameState) -> Dictionary:
 
 	return {"ok": true}
 
-func _apply_place_tile(action: Dictionary, state: GameState, event_log: Array[String], log_failures: bool) -> Dictionary:
+func _apply_place_tile(action: Dictionary, state: GameState, event_log: Array[String], include_log: bool) -> Dictionary:
 	var check: Dictionary = validate_place_action(action, state)
 	if not bool(check.get("ok", false)):
 		var reason: String = String(check.get("reason", "invalid placement"))
-		if log_failures:
+		if include_log:
 			event_log.append("Action failed (place): %s" % reason)
 		return {"applied": false, "reason": reason}
 
@@ -252,7 +266,8 @@ func _apply_place_tile(action: Dictionary, state: GameState, event_log: Array[St
 	_refresh_gather_bonus(state, block)
 	state.blocks[block_id] = block
 
-	event_log.append("Owner %d placed %s at (%d,%d)" % [owner, tile_type, pos.x, pos.y])
+	if include_log:
+		event_log.append("Owner %d placed %s at (%d,%d)" % [owner, tile_type, pos.x, pos.y])
 	return {"applied": true}
 
 func validate_convert_action(action: Dictionary, state: GameState) -> Dictionary:
@@ -313,11 +328,11 @@ func validate_upgrade_action(action: Dictionary, state: GameState) -> Dictionary
 		return {"ok": false, "reason": "insufficient energy"}
 	return {"ok": true}
 
-func _apply_convert_tile(action: Dictionary, state: GameState, event_log: Array[String], log_failures: bool) -> Dictionary:
+func _apply_convert_tile(action: Dictionary, state: GameState, event_log: Array[String], include_log: bool) -> Dictionary:
 	var check: Dictionary = validate_convert_action(action, state)
 	if not bool(check.get("ok", false)):
 		var reason: String = String(check.get("reason", "invalid conversion"))
-		if log_failures:
+		if include_log:
 			event_log.append("Action failed (convert): %s" % reason)
 		return {"applied": false, "reason": reason}
 
@@ -343,14 +358,15 @@ func _apply_convert_tile(action: Dictionary, state: GameState, event_log: Array[
 
 	_refresh_gather_bonus(state, block)
 	state.blocks[block_id] = block
-	event_log.append("Owner %d converted block %d: %s -> %s" % [owner, block_id, from_type, to_type])
+	if include_log:
+		event_log.append("Owner %d converted block %d: %s -> %s" % [owner, block_id, from_type, to_type])
 	return {"applied": true}
 
-func _apply_upgrade_tile(action: Dictionary, state: GameState, event_log: Array[String], log_failures: bool) -> Dictionary:
+func _apply_upgrade_tile(action: Dictionary, state: GameState, event_log: Array[String], include_log: bool) -> Dictionary:
 	var check: Dictionary = validate_upgrade_action(action, state)
 	if not bool(check.get("ok", false)):
 		var reason: String = String(check.get("reason", "invalid upgrade"))
-		if log_failures:
+		if include_log:
 			event_log.append("Action failed (upgrade): %s" % reason)
 		return {"applied": false, "reason": reason}
 
@@ -376,7 +392,8 @@ func _apply_upgrade_tile(action: Dictionary, state: GameState, event_log: Array[
 	_refresh_gather_bonus(state, block)
 	state.blocks[block_id] = block
 	state.register_tile_upgrade(owner, tile_type)
-	event_log.append("Owner %d upgraded block %d (%s) to tier %d for %d energy" % [owner, block_id, tile_type, int(block["upgrade_tier"]), cost])
+	if include_log:
+		event_log.append("Owner %d upgraded block %d (%s) to tier %d for %d energy" % [owner, block_id, tile_type, int(block["upgrade_tier"]), cost])
 	return {"applied": true}
 
 func _apply_tile_stats(block: Dictionary, tile_type: String) -> void:
@@ -445,7 +462,7 @@ func _refresh_gather_bonus(state: GameState, block: Dictionary) -> void:
 	if bool(node.get("consumed", false)):
 		block["gather_bonus"] = Economy.GATHER_RESOURCE_BONUS
 
-func _resolve_melee_damage(state: GameState, event_log: Array[String]) -> void:
+func _resolve_melee_damage(state: GameState, event_log: Array[String], include_log: bool = true) -> void:
 	var pending_damage: Dictionary = {}
 
 	for block in state.blocks.values():
@@ -463,7 +480,8 @@ func _resolve_melee_damage(state: GameState, event_log: Array[String]) -> void:
 			if target_pos == state.door_tile and _can_damage_door(state, owner) and state.door_hp > 0:
 				var door_hit: int = _modified_damage(state, owner, melee_base)
 				state.door_hp = maxi(0, state.door_hp - door_hit)
-				event_log.append("Melee block %d hit door for %d" % [block_id, door_hit])
+				if include_log:
+					event_log.append("Melee block %d hit door for %d" % [block_id, door_hit])
 				continue
 
 			var target: Dictionary = state.get_block_at(target_pos)
@@ -475,11 +493,12 @@ func _resolve_melee_damage(state: GameState, event_log: Array[String]) -> void:
 			var base_damage: int = _modified_damage(state, owner, melee_base)
 			var melee_damage: int = base_damage + _melee_breaker_bonus(state, target) + int(block.get("melee_break_bonus", 0))
 			pending_damage[target_id] = int(pending_damage.get(target_id, 0)) + melee_damage
-			event_log.append("Melee block %d struck %d" % [block_id, target_id])
+			if include_log:
+				event_log.append("Melee block %d struck %d" % [block_id, target_id])
 
 	_apply_damage_batch(state, pending_damage)
 
-func _resolve_ranged_damage(state: GameState, event_log: Array[String]) -> void:
+func _resolve_ranged_damage(state: GameState, event_log: Array[String], include_log: bool = true) -> void:
 	var pending_damage: Dictionary = {}
 
 	for block in state.blocks.values():
@@ -497,14 +516,16 @@ func _resolve_ranged_damage(state: GameState, event_log: Array[String]) -> void:
 			ranged_damage = maxi(1, ranged_damage - RANGED_CONTACT_DAMAGE_PENALTY)
 		if String(target_info.get("kind", "")) == "door":
 			state.door_hp = maxi(0, state.door_hp - ranged_damage)
-			event_log.append("Ranged block %d shot door for %d" % [block_id, ranged_damage])
+			if include_log:
+				event_log.append("Ranged block %d shot door for %d" % [block_id, ranged_damage])
 			continue
 
 		var target_id: int = int(target_info.get("id", -1))
 		if target_id <= 0:
 			continue
 		pending_damage[target_id] = int(pending_damage.get(target_id, 0)) + ranged_damage
-		event_log.append("Ranged block %d shot %d" % [block_id, target_id])
+		if include_log:
+			event_log.append("Ranged block %d shot %d" % [block_id, target_id])
 		if not in_direct_contact:
 			_apply_ranged_splash(
 				state,
@@ -514,7 +535,8 @@ func _resolve_ranged_damage(state: GameState, event_log: Array[String]) -> void:
 				pending_damage,
 				event_log,
 				block_id,
-				int(block.get("ranged_splash_bonus", 0))
+				int(block.get("ranged_splash_bonus", 0)),
+				include_log
 			)
 
 	_apply_damage_batch(state, pending_damage)
@@ -584,7 +606,8 @@ func _apply_ranged_splash(
 	pending_damage: Dictionary,
 	event_log: Array[String],
 	source_id: int,
-	splash_radius_bonus: int
+	splash_radius_bonus: int,
+	include_log: bool = true
 ) -> void:
 	if not state.blocks.has(primary_target_id):
 		return
@@ -617,7 +640,8 @@ func _apply_ranged_splash(
 				continue
 			seen_targets[splash_id] = true
 			pending_damage[splash_id] = int(pending_damage.get(splash_id, 0)) + splash_damage
-			event_log.append("Ranged block %d splashed %d" % [source_id, splash_id])
+			if include_log:
+				event_log.append("Ranged block %d splashed %d" % [source_id, splash_id])
 
 func _has_adjacent_hostile(state: GameState, owner_id: int, pos: Vector2i) -> bool:
 	for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
@@ -628,7 +652,7 @@ func _has_adjacent_hostile(state: GameState, owner_id: int, pos: Vector2i) -> bo
 			return true
 	return false
 
-func _resolve_heart_defeats(state: GameState, event_log: Array[String]) -> Dictionary:
+func _resolve_heart_defeats(state: GameState, event_log: Array[String], include_log: bool = true) -> Dictionary:
 	var defeated_owners: Array = []
 
 	for owner_id_variant in state.players.keys():
@@ -645,17 +669,18 @@ func _resolve_heart_defeats(state: GameState, event_log: Array[String]) -> Dicti
 		var owner_blocks: Array = state.get_owner_blocks(owner_id)
 		for block in owner_blocks:
 			state.mark_reclaim_block(block["pos"], 1)
-			state.blocks.erase(int(block["id"]))
+			state.remove_block(int(block["id"]))
 
 		state.players[owner_id]["alive"] = false
 		state.players[owner_id]["nutrients"] = 0
-		event_log.append("Owner %d defeated (all heart tiles destroyed)" % owner_id)
+		if include_log:
+			event_log.append("Owner %d defeated (all heart tiles destroyed)" % owner_id)
 
 		if owner_id != GameState.PLAYER_ID and state.players.has(GameState.PLAYER_ID):
 			state.players[GameState.PLAYER_ID]["nutrients"] = int(state.players[GameState.PLAYER_ID]["nutrients"]) + HEART_DEFEAT_BURST_ENERGY
 			player_burst_total += HEART_DEFEAT_BURST_ENERGY
 
-	if player_burst_total > 0:
+	if include_log and player_burst_total > 0:
 		event_log.append("Player gained %d energy from heart collapse" % player_burst_total)
 
 	return {

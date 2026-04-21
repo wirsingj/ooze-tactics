@@ -19,6 +19,8 @@ var turn_index: int = 0
 
 var players: Dictionary = {}
 var blocks: Dictionary = {}
+var _tile_to_block_id: Dictionary = {}
+var _owner_to_block_ids: Dictionary = {}
 var resource_nodes: Array = []
 var wall_tiles: Dictionary = {}
 var reclaim_timers: Dictionary = {}
@@ -51,6 +53,7 @@ func _init() -> void:
 		},
 	}
 	_ensure_owner_upgrade_bucket(PLAYER_ID)
+	_ensure_owner_block_bucket(PLAYER_ID)
 
 func copy_state() -> GameState:
 	var cloned: GameState = GameState.new()
@@ -61,6 +64,8 @@ func copy_state() -> GameState:
 	cloned.turn_index = turn_index
 	cloned.players = players.duplicate(true)
 	cloned.blocks = blocks.duplicate(true)
+	cloned._tile_to_block_id = _tile_to_block_id.duplicate(true)
+	cloned._owner_to_block_ids = _owner_to_block_ids.duplicate(true)
 	cloned.resource_nodes = resource_nodes.duplicate(true)
 	cloned.wall_tiles = wall_tiles.duplicate(true)
 	cloned.reclaim_timers = reclaim_timers.duplicate(true)
@@ -89,6 +94,7 @@ func add_owner(owner_id: int, name: String, nutrients: int, team: int = TEAM_ENE
 		"ai_controlled": ai_controlled,
 	}
 	_ensure_owner_upgrade_bucket(owner_id)
+	_ensure_owner_block_bucket(owner_id)
 
 func get_owner_team(owner_id: int) -> int:
 	if not players.has(owner_id):
@@ -98,7 +104,7 @@ func get_owner_team(owner_id: int) -> int:
 func spawn_block(owner_id: int, pos: Vector2i, is_core: bool, base_hp: int = 10, tile_type: String = "basic") -> int:
 	var id: int = next_block_id
 	next_block_id += 1
-	blocks[id] = {
+	var block: Dictionary = {
 		"id": id,
 		"owner": owner_id,
 		"pos": pos,
@@ -119,6 +125,8 @@ func spawn_block(owner_id: int, pos: Vector2i, is_core: bool, base_hp: int = 10,
 		"defense_guard_bonus": 0,
 		"gather_upgrade_bonus": 0,
 	}
+	blocks[id] = block
+	_index_block(id, block)
 	return id
 
 func get_upgrade_count(owner_id: int, tile_type: String) -> int:
@@ -142,16 +150,39 @@ func register_tile_upgrade(owner_id: int, tile_type: String) -> void:
 	upgrade_counts[owner_id] = bucket
 
 func get_block_at(tile: Vector2i) -> Dictionary:
-	for block in blocks.values():
-		if block["pos"] == tile:
-			return block
-	return {}
+	var key: String = _tile_key(tile)
+	var block_id: int = int(_tile_to_block_id.get(key, -1))
+	if block_id <= 0:
+		return {}
+	if not blocks.has(block_id):
+		_sync_indexes_from_blocks()
+		block_id = int(_tile_to_block_id.get(key, -1))
+		if block_id <= 0 or not blocks.has(block_id):
+			return {}
+	var block: Dictionary = blocks[block_id]
+	if block.get("pos", Vector2i(-1, -1)) != tile:
+		_sync_indexes_from_blocks()
+		block_id = int(_tile_to_block_id.get(key, -1))
+		if block_id <= 0 or not blocks.has(block_id):
+			return {}
+		block = blocks[block_id]
+	return block
 
 func get_owner_blocks(owner_id: int) -> Array:
+	var ids: Array = _owner_to_block_ids.get(owner_id, [])
+	if ids.is_empty():
+		return []
 	var out: Array = []
-	for block in blocks.values():
-		if int(block["owner"]) == owner_id:
-			out.append(block)
+	for id_variant in ids:
+		var block_id: int = int(id_variant)
+		if not blocks.has(block_id):
+			_sync_indexes_from_blocks()
+			return get_owner_blocks(owner_id)
+		var block: Dictionary = blocks[block_id]
+		if int(block.get("owner", -1)) != owner_id:
+			_sync_indexes_from_blocks()
+			return get_owner_blocks(owner_id)
+		out.append(block)
 	return out
 
 func get_core(owner_id: int) -> Dictionary:
@@ -173,8 +204,21 @@ func remove_dead_blocks() -> Array[int]:
 		if int(b["hp"]) <= 0:
 			removed.append(int(block_id))
 	for block_id in removed:
-		blocks.erase(block_id)
+		remove_block(int(block_id))
 	return removed
+
+func remove_block(block_id: int) -> bool:
+	if not blocks.has(block_id):
+		return false
+	var block: Dictionary = blocks[block_id]
+	var owner_id: int = int(block.get("owner", 0))
+	var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
+	var key: String = _tile_key(tile)
+	if int(_tile_to_block_id.get(key, -1)) == block_id:
+		_tile_to_block_id.erase(key)
+	blocks.erase(block_id)
+	_remove_owner_block_id(owner_id, block_id)
+	return true
 
 func is_inside(tile: Vector2i) -> bool:
 	return tile.x >= 0 and tile.y >= 0 and tile.x < width and tile.y < height
@@ -375,3 +419,36 @@ func _ensure_owner_upgrade_bucket(owner_id: int) -> void:
 		"defense": 0,
 		"gather": 0,
 	}
+
+func _ensure_owner_block_bucket(owner_id: int) -> void:
+	if _owner_to_block_ids.has(owner_id):
+		return
+	_owner_to_block_ids[owner_id] = []
+
+func _index_block(block_id: int, block: Dictionary) -> void:
+	var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
+	_tile_to_block_id[_tile_key(tile)] = block_id
+	var owner_id: int = int(block.get("owner", 0))
+	_ensure_owner_block_bucket(owner_id)
+	var owner_ids: Array = _owner_to_block_ids.get(owner_id, [])
+	owner_ids.append(block_id)
+	_owner_to_block_ids[owner_id] = owner_ids
+
+func _remove_owner_block_id(owner_id: int, block_id: int) -> void:
+	if not _owner_to_block_ids.has(owner_id):
+		return
+	var owner_ids: Array = _owner_to_block_ids.get(owner_id, [])
+	var idx: int = owner_ids.find(block_id)
+	if idx >= 0:
+		owner_ids.remove_at(idx)
+	_owner_to_block_ids[owner_id] = owner_ids
+
+func _sync_indexes_from_blocks() -> void:
+	_tile_to_block_id.clear()
+	_owner_to_block_ids.clear()
+	for owner_id_variant in players.keys():
+		_ensure_owner_block_bucket(int(owner_id_variant))
+	for block_id_variant in blocks.keys():
+		var block_id: int = int(block_id_variant)
+		var block: Dictionary = blocks[block_id]
+		_index_block(block_id, block)

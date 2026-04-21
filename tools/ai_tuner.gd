@@ -12,6 +12,19 @@ const CATEGORY_ORDER: Array[String] = [
 	"board_shape",
 	"anti_pathology",
 ]
+const TACTICAL_METRIC_ORDER: Array[String] = [
+	"ally_obstruction_penalty",
+	"opening_claim_latency_penalty",
+	"flank_productivity",
+]
+const PERF_CATEGORY_ORDER: Array[String] = [
+	"scenario_setup",
+	"candidate_setup",
+	"ai_decision",
+	"turn_resolution",
+	"metric_scoring",
+	"reporting_artifacts",
+]
 const PHASE_CHECKPOINT_DEFAULTS: Array = [12, 32, 60, 90]
 const MIN_EXPAND_ADJACENT: int = 1
 const MAX_DISTANCE_SENTINEL: int = 999999
@@ -24,9 +37,23 @@ const OUTCOME_DEFEAT_PENALTY: float = -8.0
 const OUTCOME_UNRESOLVED_PENALTY: float = -2.0
 const OUTCOME_FAST_SAMPLE_WEIGHT: float = 0.65
 const OUTCOME_SCENARIO_SAMPLE_WEIGHT: float = 1.75
-const TRAINING_DEFAULT_TIME_BUDGET_MINUTES: float = 45.0
+const STALEMATE_MIN_WINDOW_TURNS: int = 16
+const STALEMATE_MIN_FRONTLINE_RATIO: float = 0.16
+const STALEMATE_MAX_FRONTLINE_SWING: float = 0.13
+const STALEMATE_MAX_OBJECTIVE_DELTA: float = 0.10
+const STALEMATE_BASE_PENALTY: float = 0.70
+const STALEMATE_PENALTY_PER_20_TURNS: float = 0.85
+const STALEMATE_UNRESOLVED_EXTRA_PENALTY: float = 1.10
+const RESOLUTION_EVENT_BONUS: float = 1.25
+const RESOLUTION_PROGRESS_WEIGHT: float = 2.20
+const ADVANTAGE_CONVERSION_BASE_PENALTY: float = 0.55
+const ADVANTAGE_CONVERSION_SCALE: float = 1.30
+const ADVANTAGE_RESOURCE_CONTROL_THRESHOLD: float = 0.34
+const ADVANTAGE_ENERGY_THRESHOLD: float = 12.0
+const CONVERSION_MIN_PROGRESS: float = 0.10
+const TRAINING_DEFAULT_TIME_BUDGET_MINUTES: float = 60.0
 const TRAINING_DEFAULT_MAX_PASSES: int = 9
-const TRAINING_DEFAULT_PLATEAU_PASSES: int = 2
+const TRAINING_DEFAULT_PLATEAU_PASSES: int = 3
 const TRAINING_DEFAULT_MIN_ACCEPT_DELTA: float = 0.20
 const TRAINING_DEFAULT_SMALL_ACCEPT_DELTA: float = 0.10
 const TRAINING_DEFAULT_CONSISTENT_REQUIRED_PASSES: int = 2
@@ -37,11 +64,11 @@ const TRAINING_DEFAULT_MAX_ECONOMY_DROP: float = 2.5
 const TRAINING_DEFAULT_MAX_OBJECTIVE_DROP: float = 2.0
 const TRAINING_DEFAULT_MAX_ROLE_DROP: float = 2.0
 const TRAINING_DEFAULT_MAX_SPECIALIZATION_DROP: float = 2.0
-const TRAINING_DEFAULT_PASS1_GRID_SCALE: float = 1.6
-const TRAINING_DEFAULT_PASS1_RANDOM_SCALE: float = 2.0
-const TRAINING_DEFAULT_REFINE_GRID_SCALE: float = 1.0
-const TRAINING_DEFAULT_REFINE_RANDOM_SCALE: float = 0.75
-const TRAINING_DEFAULT_MIN_RANDOM_ITERS: int = 2
+const TRAINING_DEFAULT_PASS1_GRID_SCALE: float = 1.8
+const TRAINING_DEFAULT_PASS1_RANDOM_SCALE: float = 2.3
+const TRAINING_DEFAULT_REFINE_GRID_SCALE: float = 0.9
+const TRAINING_DEFAULT_REFINE_RANDOM_SCALE: float = 0.6
+const TRAINING_DEFAULT_MIN_RANDOM_ITERS: int = 1
 const TRAINING_DEFAULT_MAX_EFFECTIVE_PASSES: int = 4
 const TRAINING_DEFAULT_MIN_PASS_MINUTES: float = 3.0
 const TRAINING_DEFAULT_MIN_CANDIDATES_PER_PASS: float = 1.0
@@ -51,6 +78,16 @@ const TRAINING_DEFAULT_INITIAL_SECONDS_PER_ACTOR_TURN: float = 0.22
 const TRAINING_DEFAULT_INITIAL_SECONDS_PER_SIMULATION: float = 4.0
 const TRAINING_DEFAULT_FAST_SCENARIO_RATIO: float = 0.75
 const TRAINING_DEFAULT_MIN_OUTCOME_SCENARIOS: int = 1
+const TRAINER_CULL_DEFAULT_ENABLED: bool = true
+const TRAINER_CULL_DEFAULT_MIN_CANDIDATES: int = 16
+const TRAINER_CULL_DEFAULT_KEEP_RATIO: float = 0.22
+const TRAINER_CULL_DEFAULT_MIN_KEEP: int = 10
+const TRAINER_CULL_DEFAULT_MAX_KEEP: int = 48
+const TRAINER_CULL_DEFAULT_CHECKPOINT_COUNT: int = 2
+const TRAINER_CULL_DEFAULT_FAST_ONLY: bool = true
+const TRAINER_CULL_DEFAULT_MAX_SCENARIOS: int = 2
+const TRAINER_CULL_DEFAULT_MAX_SEEDS_PER_SCENARIO: int = 1
+const TRAINER_CULL_DEFAULT_MAX_RUNS_PER_SEED: int = 1
 
 var _args: Dictionary = {}
 
@@ -101,6 +138,7 @@ func _print_usage() -> void:
 	print("  --max-passes=<int>           Max training passes")
 	print("  --plateau-passes=<int>       Stop after this many non-improving passes")
 	print("  --baseline-path=<res://...>  Baseline config path to mutate")
+	print("  --trainer-fast-sim=<bool>    Enable trainer-only fast simulation path (default true)")
 	print("  --help")
 
 func _parse_cli_args() -> Dictionary:
@@ -162,6 +200,11 @@ func _apply_cli_overrides(config: Dictionary) -> void:
 	if _args.has("baseline-path"):
 		training["baseline_config_path"] = String(_args["baseline-path"])
 	config["training"] = training
+	if _args.has("trainer-fast-sim"):
+		config["trainer_fast_sim_mode"] = _arg_bool("trainer-fast-sim", true)
+
+func _trainer_fast_sim_mode(config: Dictionary) -> bool:
+	return bool(config.get("trainer_fast_sim_mode", true))
 
 func _arg_bool(key: String, default_value: bool) -> bool:
 	if not _args.has(key):
@@ -358,6 +401,23 @@ func _run_training(config: Dictionary) -> Dictionary:
 				float(pass_plan.get("estimated_seconds", 0.0)) / 60.0,
 				float(plan_breakdown.get("fast_seconds", 0.0)) / 60.0,
 				float(plan_breakdown.get("outcome_seconds", 0.0)) / 60.0,
+			]
+		)
+		var pass_search: Dictionary = pass_config.get("search", {})
+		var pass_mix_settings: Dictionary = _scenario_mix_settings_from_config(pass_config)
+		var pass_scenarios: Array = _normalized_scenarios(pass_config)
+		pass_scenarios = _ensure_outcome_scenario(pass_scenarios)
+		pass_scenarios = _apply_scenario_mix_for_candidate(pass_scenarios, pass_mix_settings)
+		var pass_scenario_runs: Dictionary = _scenario_runs_per_candidate(pass_scenarios)
+		print(
+			"Pass %d plan detail: total=%d (grid=%d random=%d), scenarios=%d (fast runs=%d, outcome runs=%d)." % [
+				pass_index,
+				int(pass_search.get("max_total_candidates", 0)),
+				int(pass_search.get("max_grid_candidates", 0)),
+				int(pass_search.get("random_iterations", 0)),
+				pass_scenarios.size(),
+				int(pass_scenario_runs.get("fast_runs", 0)),
+				int(pass_scenario_runs.get("outcome_runs", 0)),
 			]
 		)
 		if not bool(pass_plan.get("allow_start", true)):
@@ -830,6 +890,204 @@ func _estimated_candidate_seconds(workload: Dictionary, budget_context: Dictiona
 		"outcome_actor_turns": int(round(float(workload.get("outcome_actor_turns", 0)) / float(candidate_count))),
 	}
 	return _estimate_runtime_seconds_for_workload(per_candidate_workload, budget_context)
+
+func _new_performance_audit() -> Dictionary:
+	var totals: Dictionary = {}
+	for key in PERF_CATEGORY_ORDER:
+		totals[key] = 0.0
+	return {"totals": totals}
+
+func _perf_add(audit: Dictionary, category: String, seconds: float) -> void:
+	if audit.is_empty():
+		return
+	if not audit.has("totals"):
+		audit["totals"] = {}
+	var totals: Dictionary = audit.get("totals", {})
+	totals[category] = float(totals.get(category, 0.0)) + maxf(0.0, seconds)
+	audit["totals"] = totals
+
+func _build_performance_summary(audit: Dictionary, total_runtime_seconds: float, evaluated_candidates: int, evaluated_simulations: int) -> Dictionary:
+	var totals: Dictionary = audit.get("totals", {})
+	var entries: Array = []
+	var aggregate_measured: float = 0.0
+	for key in PERF_CATEGORY_ORDER:
+		var total_seconds: float = float(totals.get(key, 0.0))
+		aggregate_measured += total_seconds
+		var pct_of_runtime: float = 0.0
+		if total_runtime_seconds > 0.0:
+			pct_of_runtime = (total_seconds / total_runtime_seconds) * 100.0
+		entries.append({
+			"category": key,
+			"total_seconds": total_seconds,
+			"pct_of_runtime": pct_of_runtime,
+			"avg_per_candidate_seconds": total_seconds / maxf(1.0, float(evaluated_candidates)),
+			"avg_per_simulation_seconds": total_seconds / maxf(1.0, float(evaluated_simulations)),
+		})
+	entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return float(a.get("total_seconds", 0.0)) > float(b.get("total_seconds", 0.0))
+	)
+	var top_bottlenecks: Array = entries.slice(0, mini(3, entries.size()))
+	return {
+		"categories": entries,
+		"top_bottlenecks": top_bottlenecks,
+		"total_runtime_seconds": total_runtime_seconds,
+		"measured_seconds": aggregate_measured,
+		"evaluated_candidates": evaluated_candidates,
+		"evaluated_simulations": evaluated_simulations,
+	}
+
+func _compact_candidate_eval(eval: Dictionary) -> Dictionary:
+	return {
+		"id": String(eval.get("id", "")),
+		"label": String(eval.get("label", "")),
+		"overrides": (eval.get("overrides", {}) as Dictionary).duplicate(true),
+		"score": float(eval.get("score", 0.0)),
+		"score_by_category": (eval.get("score_by_category", {}) as Dictionary).duplicate(true),
+		"score_by_checkpoint": (eval.get("score_by_checkpoint", {}) as Dictionary).duplicate(true),
+		"pathology_counts": (eval.get("pathology_counts", {}) as Dictionary).duplicate(true),
+		"tactical_metrics": (eval.get("tactical_metrics", {}) as Dictionary).duplicate(true),
+		"ai_profile": (eval.get("ai_profile", {}) as Dictionary).duplicate(true),
+		"runtime_breakdown": (eval.get("runtime_breakdown", {}) as Dictionary).duplicate(true),
+	}
+
+func _evaluate_candidate_batch(
+	stage_name: String,
+	candidates: Array,
+	scenarios: Array,
+	checkpoints: Array,
+	checkpoint_weights: Dictionary,
+	room_templates: Array,
+	trainer_fast_sim_mode: bool,
+	budget_context: Dictionary,
+	compact_results: bool = false,
+	perf_audit: Dictionary = {}
+) -> Dictionary:
+	var planned_candidate_count: int = candidates.size()
+	var workload: Dictionary = _estimate_workload(candidates, scenarios, checkpoints)
+	var estimated_breakdown: Dictionary = _estimate_runtime_breakdown_for_workload(workload, budget_context)
+	var estimated_stage_seconds: float = float(estimated_breakdown.get("total_seconds", 0.0))
+	var scenario_counts: Dictionary = _scenario_runs_per_candidate(scenarios)
+	print(
+		"[%s] workload: %d candidates, %d simulations (fast %d / outcome %d), est %.2f min." % [
+			stage_name,
+			int(workload.get("candidate_count", 0)),
+			int(workload.get("simulation_count", 0)),
+			int(workload.get("fast_simulation_count", 0)),
+			int(workload.get("outcome_simulation_count", 0)),
+			estimated_stage_seconds / 60.0,
+		]
+	)
+
+	var candidate_results: Array = []
+	var local_elapsed_seconds: float = 0.0
+	var local_fast_elapsed_seconds: float = 0.0
+	var local_outcome_elapsed_seconds: float = 0.0
+	var local_fast_simulations: int = 0
+	var local_outcome_simulations: int = 0
+	var local_fast_actor_turns: float = 0.0
+	var local_outcome_actor_turns: float = 0.0
+	var budget_stop: bool = false
+	var budget_stop_reason: String = ""
+	var candidate_workload_seconds: float = _estimated_candidate_seconds(workload, budget_context)
+	for candidate_index in range(candidates.size()):
+		if bool(budget_context.get("enabled", false)) and candidate_index > 0:
+			var remaining_seconds: float = maxf(
+				0.0,
+				float(int(budget_context.get("deadline_ms", Time.get_ticks_msec())) - Time.get_ticks_msec()) / 1000.0
+			)
+			var projected_candidate_seconds: float = candidate_workload_seconds
+			if candidate_results.size() > 0 and local_elapsed_seconds > 0.0:
+				projected_candidate_seconds = local_elapsed_seconds / float(candidate_results.size())
+			var overrun_tolerance: float = float(
+				budget_context.get("overrun_tolerance_seconds", TRAINING_DEFAULT_OVERRUN_TOLERANCE_SECONDS)
+			)
+			if remaining_seconds + overrun_tolerance < projected_candidate_seconds:
+				budget_stop = true
+				budget_stop_reason = "Projected %.2f min for next candidate exceeds remaining %.2f min (tolerance %.2f min)." % [
+					projected_candidate_seconds / 60.0,
+					remaining_seconds / 60.0,
+					overrun_tolerance / 60.0,
+				]
+				print("[%s] budget stop before candidate %d/%d: %s" % [stage_name, candidate_index + 1, candidates.size(), budget_stop_reason])
+				break
+
+		var candidate: Dictionary = candidates[candidate_index]
+		print(
+			"[%s] evaluating %s: %d fast runs, %d outcome runs." % [
+				stage_name,
+				String(candidate.get("id", "?")),
+				int(scenario_counts.get("fast_runs", 0)),
+				int(scenario_counts.get("outcome_runs", 0)),
+			]
+		)
+		var candidate_start_ms: int = Time.get_ticks_msec()
+		var eval: Dictionary = _evaluate_candidate(candidate, scenarios, checkpoints, checkpoint_weights, room_templates, trainer_fast_sim_mode, perf_audit)
+		var eval_to_store: Dictionary = _compact_candidate_eval(eval) if compact_results else eval
+		candidate_results.append(eval_to_store)
+		var candidate_elapsed_seconds: float = maxf(0.0, float(Time.get_ticks_msec() - candidate_start_ms) / 1000.0)
+		local_elapsed_seconds += candidate_elapsed_seconds
+		var candidate_runtime: Dictionary = eval.get("runtime_breakdown", {})
+		var fast_runtime: Dictionary = candidate_runtime.get("fast", {})
+		var outcome_runtime: Dictionary = candidate_runtime.get("outcome", {})
+		local_fast_elapsed_seconds += float(fast_runtime.get("elapsed_seconds", 0.0))
+		local_outcome_elapsed_seconds += float(outcome_runtime.get("elapsed_seconds", 0.0))
+		local_fast_simulations += int(fast_runtime.get("simulations", 0))
+		local_outcome_simulations += int(outcome_runtime.get("simulations", 0))
+		local_fast_actor_turns += float(fast_runtime.get("actor_turns", 0.0))
+		local_outcome_actor_turns += float(outcome_runtime.get("actor_turns", 0.0))
+		print("[%s] %s -> score %.2f" % [stage_name, String(eval.get("id", "?")), float(eval.get("score", 0.0))])
+
+	return {
+		"results": candidate_results,
+		"workload": workload,
+		"scenario_counts": scenario_counts,
+		"estimated_stage_seconds": estimated_stage_seconds,
+		"planned_candidate_count": planned_candidate_count,
+		"evaluated_candidate_count": candidate_results.size(),
+		"elapsed_seconds": local_elapsed_seconds,
+		"fast_elapsed_seconds": local_fast_elapsed_seconds,
+		"outcome_elapsed_seconds": local_outcome_elapsed_seconds,
+		"evaluated_fast_simulation_count": local_fast_simulations,
+		"evaluated_outcome_simulation_count": local_outcome_simulations,
+		"evaluated_simulation_count": local_fast_simulations + local_outcome_simulations,
+		"evaluated_fast_actor_turns": local_fast_actor_turns,
+		"evaluated_outcome_actor_turns": local_outcome_actor_turns,
+		"evaluated_actor_turns": local_fast_actor_turns + local_outcome_actor_turns,
+		"budget_stop": budget_stop,
+		"budget_stop_reason": budget_stop_reason,
+	}
+
+func _select_finalists_from_cull(candidates: Array, cull_results: Array, settings: Dictionary) -> Array:
+	if cull_results.is_empty():
+		return candidates
+	var total_candidates: int = candidates.size()
+	var keep_ratio: float = float(settings.get("keep_ratio", TRAINER_CULL_DEFAULT_KEEP_RATIO))
+	var min_keep: int = maxi(1, int(settings.get("min_keep", TRAINER_CULL_DEFAULT_MIN_KEEP)))
+	var max_keep: int = maxi(1, int(settings.get("max_keep", TRAINER_CULL_DEFAULT_MAX_KEEP)))
+	var keep_count: int = maxi(min_keep, int(ceili(float(total_candidates) * keep_ratio)))
+	keep_count = mini(max_keep, keep_count)
+	keep_count = clampi(keep_count, 1, total_candidates)
+
+	var sorted_results: Array = cull_results.duplicate(true)
+	sorted_results.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return float(a.get("score", -999999.0)) > float(b.get("score", -999999.0))
+	)
+	var selected_ids: Dictionary = {}
+	var baseline_id: String = "baseline"
+	selected_ids[baseline_id] = true
+	for i in range(mini(keep_count, sorted_results.size())):
+		var row: Dictionary = sorted_results[i]
+		selected_ids[String(row.get("id", ""))] = true
+
+	var finalists: Array = []
+	for candidate_variant in candidates:
+		var candidate: Dictionary = candidate_variant
+		var candidate_id: String = String(candidate.get("id", ""))
+		if selected_ids.has(candidate_id):
+			finalists.append(candidate)
+	if finalists.is_empty():
+		return [candidates[0]]
+	return finalists
 
 func _accumulate_runtime_metrics(perf: Dictionary, runtime_stats: Dictionary) -> void:
 	perf["elapsed_seconds"] = float(perf.get("elapsed_seconds", 0.0)) + float(runtime_stats.get("elapsed_seconds", 0.0))
@@ -1393,107 +1651,104 @@ func _run_tuning(config: Dictionary, budget_context: Dictionary = {}) -> Diction
 	var candidates: Array = _build_candidates(config)
 	if candidates.is_empty():
 		return {"ok": false, "error": "no candidates generated"}
-	var planned_candidate_count: int = candidates.size()
-	var workload: Dictionary = _estimate_workload(candidates, scenarios, checkpoints)
-	var estimated_breakdown: Dictionary = _estimate_runtime_breakdown_for_workload(workload, budget_context)
-	var estimated_pass_seconds: float = float(estimated_breakdown.get("total_seconds", 0.0))
-	print(
-		"Planned workload: %d candidates, %d simulations (fast %d / outcome %d), estimated %d actor-turns (runtime %.2f min)." % [
-			int(workload.get("candidate_count", 0)),
-			int(workload.get("simulation_count", 0)),
-			int(workload.get("fast_simulation_count", 0)),
-			int(workload.get("outcome_simulation_count", 0)),
-			int(workload.get("estimated_actor_turns", 0)),
-			estimated_pass_seconds / 60.0,
-		]
-	)
-	print(
-		"Estimated runtime split: fast %.2f min + outcome %.2f min." % [
-			float(estimated_breakdown.get("fast_seconds", 0.0)) / 60.0,
-			float(estimated_breakdown.get("outcome_seconds", 0.0)) / 60.0,
-		]
-	)
+	var trainer_fast_sim_mode: bool = _trainer_fast_sim_mode(config)
+	print("Trainer fast simulation mode: %s" % ("enabled" if trainer_fast_sim_mode else "disabled"))
+	var perf_audit: Dictionary = _new_performance_audit()
 
-	var candidate_results: Array = []
-	var local_elapsed_seconds: float = 0.0
-	var local_fast_elapsed_seconds: float = 0.0
-	var local_outcome_elapsed_seconds: float = 0.0
-	var local_fast_simulations: int = 0
-	var local_outcome_simulations: int = 0
-	var local_fast_actor_turns: float = 0.0
-	var local_outcome_actor_turns: float = 0.0
-	var budget_stop: bool = false
-	var budget_stop_reason: String = ""
-	var candidate_workload_seconds: float = _estimated_candidate_seconds(workload, budget_context)
-	for candidate_index in range(candidates.size()):
-		if bool(budget_context.get("enabled", false)) and candidate_index > 0:
-			var remaining_seconds: float = maxf(
-				0.0,
-				float(int(budget_context.get("deadline_ms", Time.get_ticks_msec())) - Time.get_ticks_msec()) / 1000.0
-			)
-			var projected_candidate_seconds: float = candidate_workload_seconds
-			if candidate_results.size() > 0 and local_elapsed_seconds > 0.0:
-				projected_candidate_seconds = local_elapsed_seconds / float(candidate_results.size())
-			var overrun_tolerance: float = float(
-				budget_context.get("overrun_tolerance_seconds", TRAINING_DEFAULT_OVERRUN_TOLERANCE_SECONDS)
-			)
-			if remaining_seconds + overrun_tolerance < projected_candidate_seconds:
-				budget_stop = true
-				budget_stop_reason = "Projected %.2f min for next candidate exceeds remaining %.2f min (tolerance %.2f min)." % [
-					projected_candidate_seconds / 60.0,
-					remaining_seconds / 60.0,
-					overrun_tolerance / 60.0,
-				]
-				print("AI tuner budget stop before candidate %d/%d: %s" % [candidate_index + 1, candidates.size(), budget_stop_reason])
-				break
+	var cull_settings: Dictionary = _candidate_cull_settings_from_config(config)
+	var cull_enabled: bool = bool(cull_settings.get("enabled", TRAINER_CULL_DEFAULT_ENABLED)) and candidates.size() >= int(cull_settings.get("min_candidates", TRAINER_CULL_DEFAULT_MIN_CANDIDATES))
+	var cull_stage: Dictionary = {
+		"enabled": false,
+		"settings": cull_settings,
+		"planned_candidate_count": 0,
+		"evaluated_candidate_count": 0,
+		"kept_candidate_count": candidates.size(),
+		"elapsed_seconds": 0.0,
+		"budget_stop": false,
+		"budget_stop_reason": "",
+		"workload": {},
+	}
 
-		var candidate: Dictionary = candidates[candidate_index]
+	var cull_results: Array = []
+	var finalists: Array = candidates
+	if cull_enabled:
+		var coarse: Dictionary = _build_coarse_stage_inputs(scenarios, checkpoints, checkpoint_weights, cull_settings)
 		print(
-			"Evaluating candidate %s: %d fast scenarios, %d outcome scenario(s)." % [
-				String(candidate.get("id", "?")),
-				int(scenario_counts.get("fast_runs", 0)),
-				int(scenario_counts.get("outcome_runs", 0)),
+			"Coarse cull enabled: %d candidates -> checkpoint_count=%d, scenarios=%d (fast_only=%s)." % [
+				candidates.size(),
+				(coarse.get("checkpoints", []) as Array).size(),
+				(coarse.get("scenarios", []) as Array).size(),
+				"true" if bool(cull_settings.get("fast_only", true)) else "false",
 			]
 		)
-		var candidate_start_ms: int = Time.get_ticks_msec()
-		var eval: Dictionary = _evaluate_candidate(candidate, scenarios, checkpoints, checkpoint_weights, room_templates)
-		candidate_results.append(eval)
-		var candidate_elapsed_seconds: float = maxf(0.0, float(Time.get_ticks_msec() - candidate_start_ms) / 1000.0)
-		local_elapsed_seconds += candidate_elapsed_seconds
-		var candidate_runtime: Dictionary = eval.get("runtime_breakdown", {})
-		var fast_runtime: Dictionary = candidate_runtime.get("fast", {})
-		var outcome_runtime: Dictionary = candidate_runtime.get("outcome", {})
-		local_fast_elapsed_seconds += float(fast_runtime.get("elapsed_seconds", 0.0))
-		local_outcome_elapsed_seconds += float(outcome_runtime.get("elapsed_seconds", 0.0))
-		local_fast_simulations += int(fast_runtime.get("simulations", 0))
-		local_outcome_simulations += int(outcome_runtime.get("simulations", 0))
-		local_fast_actor_turns += float(fast_runtime.get("actor_turns", 0.0))
-		local_outcome_actor_turns += float(outcome_runtime.get("actor_turns", 0.0))
-		print("Candidate %s -> score %.2f" % [String(eval.get("id", "?")), float(eval.get("score", 0.0))])
-		if bool(budget_context.get("enabled", false)):
-			var observed_seconds_per_candidate: float = local_elapsed_seconds / maxf(1.0, float(candidate_results.size()))
-			var remaining_candidates: int = maxi(0, planned_candidate_count - candidate_results.size())
-			var projected_remaining_seconds: float = observed_seconds_per_candidate * float(remaining_candidates)
-			var remaining_seconds_after: float = maxf(
-				0.0,
-				float(int(budget_context.get("deadline_ms", Time.get_ticks_msec())) - Time.get_ticks_msec()) / 1000.0
-			)
-			print(
-				"Timing: elapsed %.2f min | observed %.2fs/candidate | projected remaining %.2f min | budget remaining %.2f min" % [
-					local_elapsed_seconds / 60.0,
-					observed_seconds_per_candidate,
-					projected_remaining_seconds / 60.0,
-					remaining_seconds_after / 60.0,
-				]
-			)
+		cull_stage = _evaluate_candidate_batch(
+			"coarse",
+			candidates,
+			coarse.get("scenarios", []),
+			coarse.get("checkpoints", []),
+			coarse.get("checkpoint_weights", {}),
+			room_templates,
+			trainer_fast_sim_mode,
+			budget_context,
+			true,
+			perf_audit
+		)
+		cull_stage["enabled"] = true
+		cull_stage["settings"] = cull_settings
+		cull_results = cull_stage.get("results", [])
+		if cull_results.is_empty():
+			return {"ok": false, "error": "coarse cull evaluated zero candidates"}
+		finalists = _select_finalists_from_cull(candidates, cull_results, cull_settings)
+		cull_stage["kept_candidate_count"] = finalists.size()
+		print("Coarse cull kept %d/%d candidates for full evaluation." % [finalists.size(), candidates.size()])
 
+	var full_stage: Dictionary = _evaluate_candidate_batch(
+		"full",
+		finalists,
+		scenarios,
+		checkpoints,
+		checkpoint_weights,
+		room_templates,
+		trainer_fast_sim_mode,
+		budget_context,
+		false,
+		perf_audit
+	)
+	var candidate_results: Array = full_stage.get("results", [])
+	if candidate_results.is_empty() and not cull_results.is_empty():
+		print("Full stage returned zero candidates; falling back to coarse ranking output.")
+		candidate_results = cull_results.duplicate(true)
 	if candidate_results.is_empty():
 		return {"ok": false, "error": "no candidates evaluated (budget too restrictive)"}
+
+	var workload: Dictionary = full_stage.get("workload", {})
+	var estimated_pass_seconds: float = float(full_stage.get("estimated_stage_seconds", 0.0))
+	var planned_candidate_count: int = int(full_stage.get("planned_candidate_count", finalists.size()))
+	var budget_stop: bool = bool(full_stage.get("budget_stop", false)) or bool(cull_stage.get("budget_stop", false))
+	var budget_stop_reason: String = String(full_stage.get("budget_stop_reason", ""))
+	if budget_stop_reason.is_empty():
+		budget_stop_reason = String(cull_stage.get("budget_stop_reason", ""))
+
+	var local_elapsed_seconds: float = float(full_stage.get("elapsed_seconds", 0.0)) + float(cull_stage.get("elapsed_seconds", 0.0))
+	var local_fast_elapsed_seconds: float = float(full_stage.get("fast_elapsed_seconds", 0.0)) + float(cull_stage.get("fast_elapsed_seconds", 0.0))
+	var local_outcome_elapsed_seconds: float = float(full_stage.get("outcome_elapsed_seconds", 0.0)) + float(cull_stage.get("outcome_elapsed_seconds", 0.0))
+	var local_fast_simulations: int = int(full_stage.get("evaluated_fast_simulation_count", 0)) + int(cull_stage.get("evaluated_fast_simulation_count", 0))
+	var local_outcome_simulations: int = int(full_stage.get("evaluated_outcome_simulation_count", 0)) + int(cull_stage.get("evaluated_outcome_simulation_count", 0))
+	var local_fast_actor_turns: float = float(full_stage.get("evaluated_fast_actor_turns", 0.0)) + float(cull_stage.get("evaluated_fast_actor_turns", 0.0))
+	var local_outcome_actor_turns: float = float(full_stage.get("evaluated_outcome_actor_turns", 0.0)) + float(cull_stage.get("evaluated_outcome_actor_turns", 0.0))
+	var cull_workload: Dictionary = cull_stage.get("workload", {})
+	var planned_total_simulations: int = int(workload.get("simulation_count", 0)) + int(cull_workload.get("simulation_count", 0))
+	var planned_total_actor_turns: float = float(workload.get("estimated_actor_turns", 0)) + float(cull_workload.get("estimated_actor_turns", 0))
+	var planned_total_fast_simulations: int = int(workload.get("fast_simulation_count", 0)) + int(cull_workload.get("fast_simulation_count", 0))
+	var planned_total_outcome_simulations: int = int(workload.get("outcome_simulation_count", 0)) + int(cull_workload.get("outcome_simulation_count", 0))
+	var planned_total_fast_actor_turns: float = float(workload.get("fast_actor_turns", 0)) + float(cull_workload.get("fast_actor_turns", 0))
+	var planned_total_outcome_actor_turns: float = float(workload.get("outcome_actor_turns", 0)) + float(cull_workload.get("outcome_actor_turns", 0))
 
 	candidate_results.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return float(a.get("score", -999999.0)) > float(b.get("score", -999999.0))
 	)
 
+	var reporting_start_ms: int = Time.get_ticks_msec()
 	var baseline_defaults: Dictionary = _load_baseline_tuning_defaults()
 	var parameter_keys: Array = _report_parameter_keys(config, baseline_defaults, candidate_results)
 	candidate_results = _annotate_candidates_with_params(candidate_results, baseline_defaults, parameter_keys)
@@ -1504,6 +1759,7 @@ func _run_tuning(config: Dictionary, budget_context: Dictionary = {}) -> Diction
 	if top_candidates.is_empty():
 		top_candidates = candidate_results.slice(0, mini(top_n, candidate_results.size()))
 	var recommendations: Array = _build_recommendations(baseline, top_candidates)
+	_perf_add(perf_audit, "reporting_artifacts", float(Time.get_ticks_msec() - reporting_start_ms) / 1000.0)
 
 	var report: Dictionary = {
 		"ok": true,
@@ -1519,7 +1775,10 @@ func _run_tuning(config: Dictionary, budget_context: Dictionary = {}) -> Diction
 		"template_ids": _template_id_list(room_templates),
 		"scenario_count": scenarios.size(),
 		"candidate_count": candidate_results.size(),
+		"candidate_pool_count": candidates.size(),
+		"finalist_count": finalists.size(),
 		"planned_candidate_count": planned_candidate_count,
+		"cull_stage": cull_stage,
 		"baseline": baseline,
 		"top_candidates": top_candidates,
 		"all_candidates": candidate_results,
@@ -1527,18 +1786,18 @@ func _run_tuning(config: Dictionary, budget_context: Dictionary = {}) -> Diction
 	}
 	var runtime_stats: Dictionary = {
 		"elapsed_seconds": maxf(0.0, float(Time.get_ticks_msec() - pass_start_ms) / 1000.0),
-		"planned_candidate_count": planned_candidate_count,
-		"evaluated_candidate_count": candidate_results.size(),
-		"planned_simulation_count": int(workload.get("simulation_count", 0)),
+		"planned_candidate_count": candidates.size() + finalists.size(),
+		"evaluated_candidate_count": int(full_stage.get("evaluated_candidate_count", 0)) + int(cull_stage.get("evaluated_candidate_count", 0)),
+		"planned_simulation_count": planned_total_simulations,
 		"evaluated_simulation_count": local_fast_simulations + local_outcome_simulations,
-		"planned_actor_turns": float(workload.get("estimated_actor_turns", 0)),
+		"planned_actor_turns": planned_total_actor_turns,
 		"evaluated_actor_turns": local_fast_actor_turns + local_outcome_actor_turns,
-		"planned_fast_simulation_count": int(workload.get("fast_simulation_count", 0)),
-		"planned_outcome_simulation_count": int(workload.get("outcome_simulation_count", 0)),
+		"planned_fast_simulation_count": planned_total_fast_simulations,
+		"planned_outcome_simulation_count": planned_total_outcome_simulations,
 		"evaluated_fast_simulation_count": local_fast_simulations,
 		"evaluated_outcome_simulation_count": local_outcome_simulations,
-		"planned_fast_actor_turns": float(workload.get("fast_actor_turns", 0)),
-		"planned_outcome_actor_turns": float(workload.get("outcome_actor_turns", 0)),
+		"planned_fast_actor_turns": planned_total_fast_actor_turns,
+		"planned_outcome_actor_turns": planned_total_outcome_actor_turns,
 		"evaluated_fast_actor_turns": local_fast_actor_turns,
 		"evaluated_outcome_actor_turns": local_outcome_actor_turns,
 		"fast_elapsed_seconds": local_fast_elapsed_seconds,
@@ -1547,8 +1806,16 @@ func _run_tuning(config: Dictionary, budget_context: Dictionary = {}) -> Diction
 		"budget_stop_reason": budget_stop_reason,
 		"estimated_pass_seconds": estimated_pass_seconds,
 	}
+	var perf_summary: Dictionary = _build_performance_summary(
+		perf_audit,
+		float(runtime_stats.get("elapsed_seconds", 0.0)),
+		int(runtime_stats.get("evaluated_candidate_count", 0)),
+		int(runtime_stats.get("evaluated_simulation_count", 0))
+	)
+	runtime_stats["performance"] = perf_summary
 	report["runtime_stats"] = runtime_stats
-	workload["planned_candidate_count"] = planned_candidate_count
+	report["performance"] = perf_summary
+	workload["planned_candidate_count"] = int(runtime_stats.get("planned_candidate_count", planned_candidate_count))
 	workload["evaluated_candidate_count"] = candidate_results.size()
 	workload["evaluated_simulation_count"] = int(runtime_stats.get("evaluated_simulation_count", 0))
 	workload["evaluated_actor_turns"] = float(runtime_stats.get("evaluated_actor_turns", 0.0))
@@ -1558,9 +1825,19 @@ func _run_tuning(config: Dictionary, budget_context: Dictionary = {}) -> Diction
 	workload["evaluated_outcome_actor_turns"] = float(runtime_stats.get("evaluated_outcome_actor_turns", 0.0))
 	report["workload"] = workload
 
+	var write_start_ms: int = Time.get_ticks_msec()
 	var output_dir: String = String(config.get("output_dir", DEFAULT_OUTPUT_DIR))
 	var saved_paths: Dictionary = _write_reports(output_dir, report)
+	_perf_add(perf_audit, "reporting_artifacts", float(Time.get_ticks_msec() - write_start_ms) / 1000.0)
 	report["output"] = saved_paths
+	var final_perf_summary: Dictionary = _build_performance_summary(
+		perf_audit,
+		float(runtime_stats.get("elapsed_seconds", 0.0)),
+		int(runtime_stats.get("evaluated_candidate_count", 0)),
+		int(runtime_stats.get("evaluated_simulation_count", 0))
+	)
+	report["performance"] = final_perf_summary
+	runtime_stats["performance"] = final_perf_summary
 	return report
 
 func _load_room_templates() -> Array:
@@ -1661,6 +1938,91 @@ func _scenario_mix_settings_from_config(config: Dictionary) -> Dictionary:
 			1,
 			int(scenario_mix.get("min_outcome_scenarios", TRAINING_DEFAULT_MIN_OUTCOME_SCENARIOS))
 		),
+	}
+
+func _candidate_cull_settings_from_config(config: Dictionary) -> Dictionary:
+	var training: Dictionary = config.get("training", {})
+	var cull: Dictionary = {}
+	if training.has("candidate_cull") and training.get("candidate_cull") is Dictionary:
+		cull = (training.get("candidate_cull", {}) as Dictionary).duplicate(true)
+	if config.has("candidate_cull") and config.get("candidate_cull") is Dictionary:
+		cull.merge((config.get("candidate_cull", {}) as Dictionary), true)
+	return {
+		"enabled": bool(cull.get("enabled", TRAINER_CULL_DEFAULT_ENABLED)),
+		"min_candidates": maxi(2, int(cull.get("min_candidates", TRAINER_CULL_DEFAULT_MIN_CANDIDATES))),
+		"keep_ratio": clampf(float(cull.get("keep_ratio", TRAINER_CULL_DEFAULT_KEEP_RATIO)), 0.05, 1.0),
+		"min_keep": maxi(2, int(cull.get("min_keep", TRAINER_CULL_DEFAULT_MIN_KEEP))),
+		"max_keep": maxi(2, int(cull.get("max_keep", TRAINER_CULL_DEFAULT_MAX_KEEP))),
+		"checkpoint_count": maxi(1, int(cull.get("checkpoint_count", TRAINER_CULL_DEFAULT_CHECKPOINT_COUNT))),
+		"fast_only": bool(cull.get("fast_only", TRAINER_CULL_DEFAULT_FAST_ONLY)),
+		"max_scenarios": maxi(1, int(cull.get("max_scenarios", TRAINER_CULL_DEFAULT_MAX_SCENARIOS))),
+		"max_seeds_per_scenario": maxi(1, int(cull.get("max_seeds_per_scenario", TRAINER_CULL_DEFAULT_MAX_SEEDS_PER_SCENARIO))),
+		"max_runs_per_seed": maxi(1, int(cull.get("max_runs_per_seed", TRAINER_CULL_DEFAULT_MAX_RUNS_PER_SEED))),
+	}
+
+func _subset_checkpoint_weights(checkpoints: Array, source_weights: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	var total: float = 0.0
+	for checkpoint_variant in checkpoints:
+		var key: String = str(int(checkpoint_variant))
+		var w: float = maxf(0.01, float(source_weights.get(key, 1.0)))
+		out[key] = w
+		total += w
+	if total <= 0.0:
+		total = float(maxi(1, checkpoints.size()))
+	for key_variant in out.keys():
+		var key: String = String(key_variant)
+		out[key] = float(out[key]) / total
+	return out
+
+func _build_coarse_stage_inputs(
+	scenarios: Array,
+	checkpoints: Array,
+	checkpoint_weights: Dictionary,
+	settings: Dictionary
+) -> Dictionary:
+	var coarse_checkpoint_count: int = clampi(
+		int(settings.get("checkpoint_count", TRAINER_CULL_DEFAULT_CHECKPOINT_COUNT)),
+		1,
+		maxi(1, checkpoints.size())
+	)
+	var coarse_checkpoints: Array = checkpoints.slice(0, coarse_checkpoint_count)
+	var coarse_weights: Dictionary = _subset_checkpoint_weights(coarse_checkpoints, checkpoint_weights)
+
+	var fast_only: bool = bool(settings.get("fast_only", TRAINER_CULL_DEFAULT_FAST_ONLY))
+	var max_scenarios: int = maxi(1, int(settings.get("max_scenarios", TRAINER_CULL_DEFAULT_MAX_SCENARIOS)))
+	var max_seeds_per_scenario: int = maxi(1, int(settings.get("max_seeds_per_scenario", TRAINER_CULL_DEFAULT_MAX_SEEDS_PER_SCENARIO)))
+	var max_runs_per_seed: int = maxi(1, int(settings.get("max_runs_per_seed", TRAINER_CULL_DEFAULT_MAX_RUNS_PER_SEED)))
+	var coarse_scenarios: Array = []
+	for scenario_variant in scenarios:
+		var scenario: Dictionary = scenario_variant
+		if fast_only and _scenario_type(scenario) != "fast":
+			continue
+		var coarse: Dictionary = scenario.duplicate(true)
+		coarse["stop_at_last_checkpoint"] = true
+		coarse["scenario_type"] = "fast"
+		coarse["runs_per_seed"] = mini(max_runs_per_seed, maxi(1, int(coarse.get("runs_per_seed", 1))))
+		var seeds: Array = coarse.get("seeds", [1337])
+		if seeds.size() > max_seeds_per_scenario:
+			seeds = seeds.slice(0, max_seeds_per_scenario)
+		coarse["seeds"] = seeds
+		coarse_scenarios.append(coarse)
+		if coarse_scenarios.size() >= max_scenarios:
+			break
+	if coarse_scenarios.is_empty():
+		var fallback: Dictionary = (scenarios[0] as Dictionary).duplicate(true)
+		fallback["stop_at_last_checkpoint"] = true
+		fallback["scenario_type"] = "fast"
+		fallback["runs_per_seed"] = mini(max_runs_per_seed, maxi(1, int(fallback.get("runs_per_seed", 1))))
+		var fallback_seeds: Array = fallback.get("seeds", [1337])
+		if fallback_seeds.size() > max_seeds_per_scenario:
+			fallback_seeds = fallback_seeds.slice(0, max_seeds_per_scenario)
+		fallback["seeds"] = fallback_seeds
+		coarse_scenarios.append(fallback)
+	return {
+		"checkpoints": coarse_checkpoints,
+		"checkpoint_weights": coarse_weights,
+		"scenarios": coarse_scenarios,
 	}
 
 func _scenario_type(scenario: Dictionary) -> String:
@@ -1812,6 +2174,24 @@ func _build_candidates(config: Dictionary) -> Array:
 	}
 	candidates.append(baseline)
 
+	var preset_specs: Array = search.get("preset_candidates", [])
+	var preset_candidates: Array = _build_preset_candidates(preset_specs)
+	for p in preset_candidates:
+		if candidates.size() >= max_total:
+			return candidates
+		var preset: Dictionary = p
+		var merged_preset: Dictionary = fixed.duplicate(true)
+		merged_preset.merge((preset.get("overrides", {}) as Dictionary), true)
+		var preset_label: String = String(preset.get("label", "Preset %d" % candidates.size()))
+		var preset_id: String = String(preset.get("id", ""))
+		if preset_id.is_empty():
+			preset_id = "preset_%d" % candidates.size()
+		candidates.append({
+			"id": preset_id,
+			"label": preset_label,
+			"overrides": merged_preset,
+		})
+
 	var grid_parameters: Dictionary = search.get("grid_parameters", {})
 	var grid_candidates: Array = _build_grid_candidates(grid_parameters, int(search.get("max_grid_candidates", 24)))
 	for c in grid_candidates:
@@ -1828,7 +2208,8 @@ func _build_candidates(config: Dictionary) -> Array:
 	var random_parameters: Dictionary = search.get("random_parameters", {})
 	var random_seed: int = int(search.get("random_seed", 1337))
 	var random_iterations: int = maxi(0, int(search.get("random_iterations", 16)))
-	var random_candidates: Array = _build_random_candidates(random_parameters, random_iterations, random_seed)
+	var random_mutation: Dictionary = search.get("random_mutation", {})
+	var random_candidates: Array = _build_random_candidates(random_parameters, random_iterations, random_seed, random_mutation)
 	for c in random_candidates:
 		if candidates.size() >= max_total:
 			return candidates
@@ -1884,17 +2265,50 @@ func _build_grid_candidates(grid_parameters: Dictionary, max_grid_candidates: in
 			break
 	return out
 
-func _build_random_candidates(random_parameters: Dictionary, iterations: int, random_seed: int) -> Array:
+func _build_preset_candidates(preset_specs: Array) -> Array:
+	var out: Array = []
+	for spec_variant in preset_specs:
+		if not (spec_variant is Dictionary):
+			continue
+		var spec: Dictionary = spec_variant
+		var overrides_variant: Variant = spec.get("overrides", {})
+		if not (overrides_variant is Dictionary):
+			continue
+		var overrides: Dictionary = (overrides_variant as Dictionary).duplicate(true)
+		if overrides.is_empty():
+			continue
+		out.append({
+			"id": String(spec.get("id", "")),
+			"label": String(spec.get("label", "Preset")),
+			"overrides": overrides,
+		})
+	return out
+
+func _build_random_candidates(random_parameters: Dictionary, iterations: int, random_seed: int, mutation_config: Dictionary = {}) -> Array:
 	if random_parameters.is_empty() or iterations <= 0:
 		return []
 	var keys: Array = random_parameters.keys()
 	keys.sort()
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = random_seed
+	var min_keys_per_candidate: int = clampi(
+		int(mutation_config.get("min_keys_per_candidate", keys.size())),
+		1,
+		keys.size()
+	)
+	var max_keys_per_candidate: int = clampi(
+		int(mutation_config.get("max_keys_per_candidate", keys.size())),
+		min_keys_per_candidate,
+		keys.size()
+	)
+	var all_keys_probability: float = clampf(float(mutation_config.get("all_keys_probability", 0.0)), 0.0, 1.0)
 	var out: Array = []
 	for _i in range(iterations):
 		var candidate: Dictionary = {}
-		for key_variant in keys:
+		var selected_keys: Array = keys
+		if keys.size() > 1 and rng.randf() > all_keys_probability:
+			selected_keys = _pick_random_subset_keys(keys, rng, min_keys_per_candidate, max_keys_per_candidate)
+		for key_variant in selected_keys:
 			var key: String = String(key_variant)
 			var spec: Dictionary = random_parameters.get(key, {})
 			if spec.has("choices"):
@@ -1920,6 +2334,19 @@ func _build_random_candidates(random_parameters: Dictionary, iterations: int, ra
 		out.append(candidate)
 	return out
 
+func _pick_random_subset_keys(keys: Array, rng: RandomNumberGenerator, min_count: int, max_count: int) -> Array:
+	var shuffled: Array = keys.duplicate()
+	for i in range(shuffled.size() - 1, 0, -1):
+		var j: int = rng.randi_range(0, i)
+		var temp: Variant = shuffled[i]
+		shuffled[i] = shuffled[j]
+		shuffled[j] = temp
+	var take_count: int = rng.randi_range(min_count, max_count)
+	var selected: Array = []
+	for idx in range(mini(take_count, shuffled.size())):
+		selected.append(shuffled[idx])
+	return selected
+
 func _dedupe_candidates(candidates: Array) -> Array:
 	var seen: Dictionary = {}
 	var out: Array = []
@@ -1941,12 +2368,16 @@ func _candidate_signature(overrides: Dictionary) -> String:
 		parts.append("%s=%s" % [key, str(overrides[key])])
 	return "|".join(parts)
 
-func _evaluate_candidate(candidate: Dictionary, scenarios: Array, checkpoints: Array, checkpoint_weights: Dictionary, room_templates: Array) -> Dictionary:
+func _evaluate_candidate(candidate: Dictionary, scenarios: Array, checkpoints: Array, checkpoint_weights: Dictionary, room_templates: Array, trainer_fast_sim_mode: bool, perf_audit: Dictionary = {}) -> Dictionary:
 	var per_run: Array = []
 	var runtime_breakdown: Dictionary = {
 		"fast": {"simulations": 0, "elapsed_seconds": 0.0, "actor_turns": 0.0},
 		"outcome": {"simulations": 0, "elapsed_seconds": 0.0, "actor_turns": 0.0},
 	}
+	var candidate_setup_start_ms: int = Time.get_ticks_msec()
+	var _candidate_id: String = String(candidate.get("id", "candidate"))
+	var _candidate_label: String = String(candidate.get("label", "candidate"))
+	_perf_add(perf_audit, "candidate_setup", float(Time.get_ticks_msec() - candidate_setup_start_ms) / 1000.0)
 	for scenario_variant in scenarios:
 		var scenario: Dictionary = scenario_variant
 		var scenario_type: String = _scenario_type(scenario)
@@ -1966,7 +2397,7 @@ func _evaluate_candidate(candidate: Dictionary, scenarios: Array, checkpoints: A
 			for run_offset in range(runs_per_seed):
 				var run_seed: int = base_seed + run_offset * 1013
 				var run_start_ms: int = Time.get_ticks_msec()
-				var run_result: Dictionary = _run_single_simulation(candidate, scenario, run_seed, checkpoints, scenario_templates)
+				var run_result: Dictionary = _run_single_simulation(candidate, scenario, run_seed, checkpoints, scenario_templates, trainer_fast_sim_mode, perf_audit)
 				var run_elapsed_seconds: float = maxf(0.0, float(Time.get_ticks_msec() - run_start_ms) / 1000.0)
 				run_result["runtime_seconds"] = run_elapsed_seconds
 				run_result["scenario_type"] = scenario_type
@@ -1976,7 +2407,9 @@ func _evaluate_candidate(candidate: Dictionary, scenarios: Array, checkpoints: A
 				bucket["elapsed_seconds"] = float(bucket.get("elapsed_seconds", 0.0)) + run_elapsed_seconds
 				bucket["actor_turns"] = float(bucket.get("actor_turns", 0.0)) + float(run_result.get("final_turn", 0))
 				runtime_breakdown[scenario_type] = bucket
+	var aggregate_start_ms: int = Time.get_ticks_msec()
 	var aggregate: Dictionary = _aggregate_candidate_runs(per_run, checkpoints, checkpoint_weights)
+	_perf_add(perf_audit, "metric_scoring", float(Time.get_ticks_msec() - aggregate_start_ms) / 1000.0)
 	return {
 		"id": String(candidate.get("id", "candidate")),
 		"label": String(candidate.get("label", "candidate")),
@@ -1985,11 +2418,14 @@ func _evaluate_candidate(candidate: Dictionary, scenarios: Array, checkpoints: A
 		"score_by_category": aggregate.get("score_by_category", {}),
 		"score_by_checkpoint": aggregate.get("score_by_checkpoint", {}),
 		"pathology_counts": aggregate.get("pathology_counts", {}),
+		"tactical_metrics": aggregate.get("tactical_metrics", {}),
+		"ai_profile": aggregate.get("ai_profile", {}),
 		"runs": per_run,
 		"runtime_breakdown": runtime_breakdown,
 	}
 
-func _run_single_simulation(candidate: Dictionary, scenario: Dictionary, run_seed: int, checkpoints: Array, templates: Array) -> Dictionary:
+func _run_single_simulation(candidate: Dictionary, scenario: Dictionary, run_seed: int, checkpoints: Array, templates: Array, trainer_fast_sim_mode: bool, perf_audit: Dictionary = {}) -> Dictionary:
+	var setup_start_ms: int = Time.get_ticks_msec()
 	var generator: LevelGenerator = LevelGenerator.new()
 	var level_options: Dictionary = {
 		"player_cluster_count": 0,
@@ -2016,6 +2452,7 @@ func _run_single_simulation(candidate: Dictionary, scenario: Dictionary, run_see
 	var ai: OozeAI = OozeAI.new()
 	ai.clear_tuning()
 	ai.set_tuning(candidate.get("overrides", {}))
+	ai.set_profiling_enabled(true)
 
 	var tick: TickSystem = TickSystem.new()
 	var director: LevelDirector = LevelDirector.new()
@@ -2024,6 +2461,7 @@ func _run_single_simulation(candidate: Dictionary, scenario: Dictionary, run_see
 	var checkpoint_scores: Dictionary = {}
 	var checkpoint_cursor: int = 0
 	var checkpoint_list: Array = checkpoints.duplicate()
+	_perf_add(perf_audit, "scenario_setup", float(Time.get_ticks_msec() - setup_start_ms) / 1000.0)
 
 	var outcome: Dictionary = {"status": "ongoing"}
 	var stop_at_last_checkpoint: bool = bool(scenario.get("stop_at_last_checkpoint", true))
@@ -2035,11 +2473,15 @@ func _run_single_simulation(candidate: Dictionary, scenario: Dictionary, run_see
 		var owner: int = _next_actor_owner(state, cycle)
 		if owner <= 0:
 			break
+		var ai_start_ms: int = Time.get_ticks_msec()
 		var actions: Array = ai.choose_actions(state, owner, MIN_EXPAND_ADJACENT)
+		_perf_add(perf_audit, "ai_decision", float(Time.get_ticks_msec() - ai_start_ms) / 1000.0)
 		if actions.is_empty():
 			actions = [{"type": "pass", "owner": owner}]
 
-		var next_state: GameState = tick.step(state, actions)
+		var resolution_start_ms: int = Time.get_ticks_msec()
+		var next_state: GameState = tick.step_in_place_fast_for_trainer(state, actions) if trainer_fast_sim_mode else tick.step(state, actions)
+		_perf_add(perf_audit, "turn_resolution", float(Time.get_ticks_msec() - resolution_start_ms) / 1000.0)
 		var report: Dictionary = next_state.last_resolution_report
 		_track_turn(tracker, state, next_state, report, owner)
 		state = next_state
@@ -2049,7 +2491,9 @@ func _run_single_simulation(candidate: Dictionary, scenario: Dictionary, run_see
 		var captured_checkpoint: bool = false
 		while checkpoint_cursor < checkpoint_list.size() and state.turn_index >= int(checkpoint_list[checkpoint_cursor]):
 			var turn_key: String = str(int(checkpoint_list[checkpoint_cursor]))
+			var score_start_ms: int = Time.get_ticks_msec()
 			checkpoint_scores[turn_key] = _score_state(state, tracker, int(checkpoint_list[checkpoint_cursor]))
+			_perf_add(perf_audit, "metric_scoring", float(Time.get_ticks_msec() - score_start_ms) / 1000.0)
 			checkpoint_cursor += 1
 			captured_checkpoint = true
 
@@ -2067,7 +2511,9 @@ func _run_single_simulation(candidate: Dictionary, scenario: Dictionary, run_see
 
 	while checkpoint_cursor < checkpoint_list.size():
 		var missing_turn: int = int(checkpoint_list[checkpoint_cursor])
+		var missing_score_start_ms: int = Time.get_ticks_msec()
 		checkpoint_scores[str(missing_turn)] = _score_state(state, tracker, missing_turn)
+		_perf_add(perf_audit, "metric_scoring", float(Time.get_ticks_msec() - missing_score_start_ms) / 1000.0)
 		checkpoint_cursor += 1
 
 	return {
@@ -2079,6 +2525,7 @@ func _run_single_simulation(candidate: Dictionary, scenario: Dictionary, run_see
 		"final_objective": _objective_metrics(state, tracker.get("initial_state", state)),
 		"ran_to_outcome_window": not bool(scenario.get("stop_at_last_checkpoint", true)),
 		"checkpoints": checkpoint_scores,
+		"ai_profile": ai.get_profiling_snapshot(),
 	}
 
 func _select_templates_for_scenario(room_templates: Array, scenario: Dictionary) -> Array:
@@ -2204,7 +2651,13 @@ func _template_has_path(width: int, height: int, blocked: Dictionary, start: Vec
 
 func _aggregate_candidate_runs(per_run: Array, checkpoints: Array, checkpoint_weights: Dictionary) -> Dictionary:
 	if per_run.is_empty():
-		return {"score": 0.0, "score_by_category": {}, "score_by_checkpoint": {}, "pathology_counts": {}}
+		return {
+			"score": 0.0,
+			"score_by_category": {},
+			"score_by_checkpoint": {},
+			"pathology_counts": {},
+			"tactical_metrics": {},
+		}
 
 	var total_weighted_score: float = 0.0
 	var total_weight: float = 0.0
@@ -2213,6 +2666,7 @@ func _aggregate_candidate_runs(per_run: Array, checkpoints: Array, checkpoint_we
 	var checkpoint_sums: Dictionary = {}
 	var checkpoint_counts: Dictionary = {}
 	var pathology_sums: Dictionary = {}
+	var tactical_metric_sums: Dictionary = {}
 	var outcome_bonus_sum: float = 0.0
 	var outcome_samples: float = 0.0
 
@@ -2247,6 +2701,10 @@ func _aggregate_candidate_runs(per_run: Array, checkpoints: Array, checkpoint_we
 				var pathology: String = String(pathology_key)
 				pathology_sums[pathology] = float(pathology_sums.get(pathology, 0.0)) + float(pathologies[pathology]) * sample_weight
 
+			var metrics: Dictionary = snapshot.get("metrics", {})
+			for tactical_key in TACTICAL_METRIC_ORDER:
+				tactical_metric_sums[tactical_key] = float(tactical_metric_sums.get(tactical_key, 0.0)) + float(metrics.get(tactical_key, 0.0)) * sample_weight
+
 	var score_by_category: Dictionary = {}
 	for category_key in category_sums.keys():
 		score_by_category[String(category_key)] = float(category_sums[category_key]) / maxf(1.0, total_weight)
@@ -2260,9 +2718,14 @@ func _aggregate_candidate_runs(per_run: Array, checkpoints: Array, checkpoint_we
 	for pathology_key in pathology_sums.keys():
 		pathology_counts[String(pathology_key)] = float(pathology_sums[pathology_key]) / maxf(1.0, total_weight)
 
+	var tactical_metrics: Dictionary = {}
+	for tactical_key in TACTICAL_METRIC_ORDER:
+		tactical_metrics[tactical_key] = float(tactical_metric_sums.get(tactical_key, 0.0)) / maxf(1.0, total_weight)
+
 	var base_score: float = total_weighted_score / maxf(1.0, total_weight)
 	var outcome_bonus: float = outcome_bonus_sum / maxf(1.0, outcome_samples)
 	var final_score: float = clampf(base_score + outcome_bonus, 0.0, 100.0)
+	var ai_profile: Dictionary = _aggregate_ai_profile(per_run)
 
 	return {
 		"score": final_score,
@@ -2270,6 +2733,66 @@ func _aggregate_candidate_runs(per_run: Array, checkpoints: Array, checkpoint_we
 		"score_by_category": score_by_category,
 		"score_by_checkpoint": score_by_checkpoint,
 		"pathology_counts": pathology_counts,
+		"tactical_metrics": tactical_metrics,
+		"ai_profile": ai_profile,
+	}
+
+func _aggregate_ai_profile(per_run: Array) -> Dictionary:
+	var totals_usec: Dictionary = {}
+	var counts: Dictionary = {}
+	var strategy_counts: Dictionary = {}
+	var turns: int = 0
+	var simulation_count: int = 0
+	for run_variant in per_run:
+		var run: Dictionary = run_variant
+		var profile: Dictionary = run.get("ai_profile", {})
+		if profile.is_empty():
+			continue
+		simulation_count += 1
+		turns += int(profile.get("turns", 0))
+		var profile_totals: Dictionary = profile.get("totals_usec", {})
+		for key_variant in profile_totals.keys():
+			var key: String = String(key_variant)
+			totals_usec[key] = float(totals_usec.get(key, 0.0)) + float(profile_totals[key])
+		var profile_counts: Dictionary = profile.get("counts", {})
+		for key_variant in profile_counts.keys():
+			var key: String = String(key_variant)
+			counts[key] = int(counts.get(key, 0)) + int(profile_counts[key])
+	var choose_total_usec: float = float(totals_usec.get("choose_total", 0.0))
+	var totals_seconds: Dictionary = {}
+	var pct_of_choose: Dictionary = {}
+	var avg_usec_per_turn: Dictionary = {}
+	for key_variant in totals_usec.keys():
+		var key: String = String(key_variant)
+		var usec: float = float(totals_usec[key])
+		totals_seconds[key] = usec / 1000000.0
+		pct_of_choose[key] = 0.0 if choose_total_usec <= 0.0 else (usec / choose_total_usec) * 100.0
+		avg_usec_per_turn[key] = usec / maxf(1.0, float(turns))
+	for key_variant in counts.keys():
+		var key: String = String(key_variant)
+		if not key.begins_with("strategy_intent_"):
+			continue
+		var intent: String = key.trim_prefix("strategy_intent_")
+		strategy_counts[intent] = int(counts.get(key, 0))
+	var dominant_strategy_intent: String = ""
+	var dominant_strategy_turns: int = -1
+	for intent_variant in strategy_counts.keys():
+		var intent: String = String(intent_variant)
+		var intent_turns: int = int(strategy_counts.get(intent, 0))
+		if intent_turns > dominant_strategy_turns:
+			dominant_strategy_turns = intent_turns
+			dominant_strategy_intent = intent
+	return {
+		"turns": turns,
+		"simulation_count": simulation_count,
+		"choose_total_usec": choose_total_usec,
+		"totals_usec": totals_usec,
+		"totals_seconds": totals_seconds,
+		"percent_of_choose_total": pct_of_choose,
+		"avg_usec_per_turn": avg_usec_per_turn,
+		"counts": counts,
+		"strategy_intent_counts": strategy_counts,
+		"dominant_strategy_intent": dominant_strategy_intent,
 	}
 
 func _run_outcome_bonus(run: Dictionary) -> float:
@@ -2284,10 +2807,207 @@ func _run_outcome_bonus(run: Dictionary) -> float:
 		_:
 			if bool(run.get("ran_to_outcome_window", false)):
 				bonus += OUTCOME_UNRESOLVED_PENALTY
+
+	if status != "ongoing":
+		bonus += RESOLUTION_EVENT_BONUS
+		_log_scoring_signal(
+			"Resolution reward applied: %+0.2f (scenario=%s seed=%d status=%s)" % [
+				RESOLUTION_EVENT_BONUS,
+				String(run.get("scenario", "unknown")),
+				int(run.get("seed", 0)),
+				status,
+			]
+		)
+
 	var objective: Dictionary = run.get("final_objective", {})
-	bonus += float(objective.get("heart_destroy_progress", 0.0)) * 5.0
-	bonus += float(objective.get("door_progress", 0.0)) * 3.0
+	var heart_progress: float = float(objective.get("heart_destroy_progress", 0.0))
+	var door_progress: float = float(objective.get("door_progress", 0.0))
+	var resolution_progress: float = heart_progress + door_progress
+	bonus += heart_progress * 5.0
+	bonus += door_progress * 3.0
+	if resolution_progress > 0.0:
+		var progress_reward: float = resolution_progress * RESOLUTION_PROGRESS_WEIGHT
+		bonus += progress_reward
+		_log_scoring_signal(
+			"Resolution progress reward applied: %+0.2f (scenario=%s seed=%d heart=%0.2f door=%0.2f)" % [
+				progress_reward,
+				String(run.get("scenario", "unknown")),
+				int(run.get("seed", 0)),
+				heart_progress,
+				door_progress,
+			]
+		)
+
+	var stalemate: Dictionary = _run_stalemate_analysis(run)
+	if bool(stalemate.get("detected", false)):
+		var stalemate_penalty: float = float(stalemate.get("penalty", 0.0))
+		bonus -= stalemate_penalty
+		_log_scoring_signal(
+			"Stalemate detected: low progress over %d turns (frontline avg=%0.2f swing=%0.2f objective_delta=%0.3f)." % [
+				int(stalemate.get("duration_turns", 0)),
+				float(stalemate.get("frontline_avg", 0.0)),
+				float(stalemate.get("frontline_swing", 0.0)),
+				float(stalemate.get("objective_delta", 0.0)),
+			]
+		)
+		_log_scoring_signal(
+			"Applying stalemate penalty: -%0.2f (scenario=%s seed=%d status=%s)." % [
+				stalemate_penalty,
+				String(run.get("scenario", "unknown")),
+				int(run.get("seed", 0)),
+				status,
+			]
+		)
+
+	var advantage_penalty: float = _run_advantage_non_conversion_penalty(run, status)
+	if advantage_penalty > 0.0:
+		bonus -= advantage_penalty
+		_log_scoring_signal(
+			"Applying advantage conversion penalty: -%0.2f (scenario=%s seed=%d)." % [
+				advantage_penalty,
+				String(run.get("scenario", "unknown")),
+				int(run.get("seed", 0)),
+			]
+		)
+
 	return bonus
+
+func _run_stalemate_analysis(run: Dictionary) -> Dictionary:
+	var checkpoints: Dictionary = run.get("checkpoints", {})
+	var turns: Array = []
+	for key_variant in checkpoints.keys():
+		turns.append(int(String(key_variant)))
+	turns.sort()
+	if turns.size() < 2:
+		return {
+			"detected": false,
+			"penalty": 0.0,
+			"duration_turns": 0,
+			"frontline_avg": 0.0,
+			"frontline_swing": 0.0,
+			"objective_delta": 0.0,
+		}
+
+	var last_turn: int = int(turns[turns.size() - 1])
+	var window_start_index: int = 0
+	for i in range(turns.size() - 1, -1, -1):
+		var candidate_turn: int = int(turns[i])
+		if last_turn - candidate_turn >= STALEMATE_MIN_WINDOW_TURNS:
+			window_start_index = i
+			break
+	var window_turns: Array = turns.slice(window_start_index, turns.size())
+	if window_turns.size() < 2:
+		window_turns = turns
+
+	var first_turn: int = int(window_turns[0])
+	var duration_turns: int = max(0, last_turn - first_turn)
+	if duration_turns < STALEMATE_MIN_WINDOW_TURNS:
+		return {
+			"detected": false,
+			"penalty": 0.0,
+			"duration_turns": duration_turns,
+			"frontline_avg": 0.0,
+			"frontline_swing": 0.0,
+			"objective_delta": 0.0,
+		}
+
+	var frontline_sum: float = 0.0
+	var frontline_min: float = 9999.0
+	var frontline_max: float = -9999.0
+	var samples: int = 0
+	for turn_variant in window_turns:
+		var turn_key: String = str(int(turn_variant))
+		var snapshot: Dictionary = checkpoints.get(turn_key, {})
+		var metrics: Dictionary = snapshot.get("metrics", {})
+		var total_tiles: float = maxf(1.0, float(metrics.get("total_tiles", 0)))
+		var frontline_counts: Dictionary = metrics.get("frontline_counts", {})
+		var frontline_total: float = 0.0
+		for role in ROLE_TYPES:
+			frontline_total += float(frontline_counts.get(role, 0))
+		var frontline_ratio: float = frontline_total / total_tiles
+		frontline_sum += frontline_ratio
+		frontline_min = minf(frontline_min, frontline_ratio)
+		frontline_max = maxf(frontline_max, frontline_ratio)
+		samples += 1
+
+	var first_snapshot: Dictionary = checkpoints.get(str(first_turn), {})
+	var last_snapshot: Dictionary = checkpoints.get(str(last_turn), {})
+	var first_objective: Dictionary = (first_snapshot.get("metrics", {}) as Dictionary).get("objective", {})
+	var last_objective: Dictionary = (last_snapshot.get("metrics", {}) as Dictionary).get("objective", {})
+
+	var first_resolve: float = float(first_objective.get("heart_destroy_progress", 0.0)) + float(first_objective.get("door_progress", 0.0))
+	var last_resolve: float = float(last_objective.get("heart_destroy_progress", 0.0)) + float(last_objective.get("door_progress", 0.0))
+	var first_resource_control: float = float(first_objective.get("resource_control", 0.0))
+	var last_resource_control: float = float(last_objective.get("resource_control", 0.0))
+	var objective_delta: float = absf(last_resolve - first_resolve) + absf(last_resource_control - first_resource_control) * 0.6
+
+	var frontline_avg: float = frontline_sum / maxf(1.0, float(samples))
+	var frontline_swing: float = maxf(0.0, frontline_max - frontline_min)
+	var status: String = String((run.get("outcome", {}) as Dictionary).get("status", "ongoing"))
+
+	var is_frontline_significant: bool = frontline_avg >= STALEMATE_MIN_FRONTLINE_RATIO
+	var is_frontline_stable: bool = frontline_swing <= STALEMATE_MAX_FRONTLINE_SWING
+	var is_progress_stalled: bool = objective_delta <= STALEMATE_MAX_OBJECTIVE_DELTA
+	var detected: bool = is_frontline_significant and is_frontline_stable and is_progress_stalled
+
+	var penalty: float = 0.0
+	if detected:
+		var duration_scale: float = float(max(0, duration_turns - STALEMATE_MIN_WINDOW_TURNS)) / 20.0
+		penalty = STALEMATE_BASE_PENALTY + duration_scale * STALEMATE_PENALTY_PER_20_TURNS
+		if bool(run.get("ran_to_outcome_window", false)) and status == "ongoing":
+			penalty += STALEMATE_UNRESOLVED_EXTRA_PENALTY
+		if status != "ongoing":
+			penalty *= 0.65
+
+	return {
+		"detected": detected,
+		"penalty": penalty,
+		"duration_turns": duration_turns,
+		"frontline_avg": frontline_avg,
+		"frontline_swing": frontline_swing,
+		"objective_delta": objective_delta,
+	}
+
+func _run_advantage_non_conversion_penalty(run: Dictionary, status: String) -> float:
+	var checkpoints: Dictionary = run.get("checkpoints", {})
+	if checkpoints.is_empty():
+		return 0.0
+	var turns: Array = []
+	for key_variant in checkpoints.keys():
+		turns.append(int(String(key_variant)))
+	turns.sort()
+	if turns.is_empty():
+		return 0.0
+	var latest_turn: int = int(turns[turns.size() - 1])
+	var latest_snapshot: Dictionary = checkpoints.get(str(latest_turn), {})
+	var metrics: Dictionary = latest_snapshot.get("metrics", {})
+	var objective: Dictionary = metrics.get("objective", {})
+
+	var resource_control: float = float(objective.get("resource_control", 0.0))
+	var avg_energy: float = float(metrics.get("avg_energy", 0.0))
+	var military_progress: float = float(objective.get("military_progress", 0.0))
+	var conversion_progress: float = float(objective.get("heart_destroy_progress", 0.0)) + float(objective.get("door_progress", 0.0))
+
+	var advantage_signal: float = 0.0
+	if resource_control > ADVANTAGE_RESOURCE_CONTROL_THRESHOLD:
+		advantage_signal += (resource_control - ADVANTAGE_RESOURCE_CONTROL_THRESHOLD) * 2.4
+	if avg_energy > ADVANTAGE_ENERGY_THRESHOLD:
+		advantage_signal += (avg_energy - ADVANTAGE_ENERGY_THRESHOLD) / 12.0
+	advantage_signal += maxf(0.0, float(metrics.get("supported_ratio", 0.0)) - 0.58)
+	if advantage_signal <= 0.0:
+		return 0.0
+	if conversion_progress >= CONVERSION_MIN_PROGRESS or military_progress >= CONVERSION_MIN_PROGRESS:
+		return 0.0
+	if latest_turn < 45:
+		return 0.0
+
+	var penalty: float = ADVANTAGE_CONVERSION_BASE_PENALTY + advantage_signal * ADVANTAGE_CONVERSION_SCALE
+	if status != "ongoing":
+		penalty *= 0.55
+	return clampf(penalty, 0.0, 2.6)
+
+func _log_scoring_signal(message: String) -> void:
+	print("AI tuner scoring: %s" % message)
 
 func _new_actor_cycle(state: GameState) -> Dictionary:
 	return {
@@ -2390,17 +3110,28 @@ func _new_tracker(state: GameState) -> Dictionary:
 		"pass_actions": 0,
 		"avg_energy_accum": 0.0,
 		"energy_samples": 0,
+		"opening_streaks": {},
 	}
 
 func _track_turn(tracker: Dictionary, _prior_state: GameState, next_state: GameState, report: Dictionary, _owner: int) -> void:
 	var applied_actions: Array = report.get("applied_actions", [])
 	var failed_actions: Array = report.get("failed_actions", [])
-	tracker["actions_applied"] = int(tracker.get("actions_applied", 0)) + applied_actions.size()
-	tracker["actions_failed"] = int(tracker.get("actions_failed", 0)) + failed_actions.size()
-	for action_variant in applied_actions:
-		var action: Dictionary = action_variant
-		if String(action.get("type", "")) == "pass":
-			tracker["pass_actions"] = int(tracker.get("pass_actions", 0)) + 1
+	var applied_count: int = int(report.get("applied_count", -1))
+	if applied_count < 0:
+		applied_count = applied_actions.size()
+	var failed_count: int = int(report.get("failed_count", -1))
+	if failed_count < 0:
+		failed_count = failed_actions.size()
+	tracker["actions_applied"] = int(tracker.get("actions_applied", 0)) + applied_count
+	tracker["actions_failed"] = int(tracker.get("actions_failed", 0)) + failed_count
+	var pass_applied_count: int = int(report.get("pass_applied_count", -1))
+	if pass_applied_count < 0:
+		pass_applied_count = 0
+		for action_variant in applied_actions:
+			var action: Dictionary = action_variant
+			if String(action.get("type", "")) == "pass":
+				pass_applied_count += 1
+	tracker["pass_actions"] = int(tracker.get("pass_actions", 0)) + pass_applied_count
 
 	var avg_energy: float = _average_ai_energy(next_state)
 	tracker["avg_energy_accum"] = float(tracker.get("avg_energy_accum", 0.0)) + avg_energy
@@ -2423,6 +3154,7 @@ func _collect_metrics(state: GameState, tracker: Dictionary, checkpoint_turn: in
 	var ai_owner_set: Dictionary = {}
 	for owner_variant in ai_owners:
 		ai_owner_set[int(owner_variant)] = true
+	var has_non_hostile_ai_pair: bool = _has_non_hostile_ai_pairs(state, ai_owners)
 
 	var type_counts: Dictionary = {"basic": 0, "melee": 0, "ranged": 0, "defense": 0, "gather": 0}
 	var frontline_counts: Dictionary = {"basic": 0, "melee": 0, "ranged": 0, "defense": 0, "gather": 0}
@@ -2435,9 +3167,13 @@ func _collect_metrics(state: GameState, tracker: Dictionary, checkpoint_turn: in
 	var resource_gather_tiles: int = 0
 	var frontline_gather_tiles: int = 0
 	var exposed_ranged_tiles: int = 0
+	var flank_productive_score: float = 0.0
+	var flank_drift_score: float = 0.0
+	var allied_lane_congestion_score: float = 0.0
 
 	var position_owner_index: Dictionary = {}
 	var hostile_positions_by_owner: Dictionary = {}
+	var objective_targets_by_owner: Dictionary = {}
 	var resource_tiles: Dictionary = {}
 	for node_variant in state.resource_nodes:
 		var node: Dictionary = node_variant
@@ -2461,6 +3197,7 @@ func _collect_metrics(state: GameState, tracker: Dictionary, checkpoint_turn: in
 				continue
 			hostile_positions.append(block.get("pos", Vector2i(-1, -1)))
 		hostile_positions_by_owner[owner_id] = hostile_positions
+		objective_targets_by_owner[owner_id] = _owner_objective_targets_with_resources(state, owner_id)
 
 	for block_variant in state.blocks.values():
 		var block: Dictionary = block_variant
@@ -2478,6 +3215,8 @@ func _collect_metrics(state: GameState, tracker: Dictionary, checkpoint_turn: in
 		var pos: Vector2i = block.get("pos", Vector2i(-1, -1))
 		var nearest_enemy_dist: int = _nearest_distance_to_positions(pos, hostile_positions_by_owner.get(owner, []))
 		var ally_adjacent: int = _adjacent_allied_count_from_index(owner, pos, position_owner_index)
+		var objective_dist: int = _nearest_distance_to_positions(pos, objective_targets_by_owner.get(owner, []))
+		var is_objective_side_lane: bool = objective_dist <= 8 and nearest_enemy_dist >= 2 and nearest_enemy_dist <= 5
 		if ally_adjacent <= 1:
 			low_support_tiles += 1
 		if ally_adjacent >= 2:
@@ -2494,6 +3233,47 @@ func _collect_metrics(state: GameState, tracker: Dictionary, checkpoint_turn: in
 				frontline_gather_tiles += 1
 		if tile_type == "ranged" and nearest_enemy_dist <= 2:
 			exposed_ranged_tiles += 1
+		if is_objective_side_lane:
+			if ally_adjacent >= 2:
+				flank_productive_score += 1.0
+				if tile_type == "melee" or tile_type == "ranged":
+					flank_productive_score += 0.20
+			else:
+				flank_drift_score += 0.75
+		elif nearest_enemy_dist >= 6 and ally_adjacent <= 1 and objective_dist >= 10:
+			flank_drift_score += 0.55
+
+		if has_non_hostile_ai_pair:
+			var non_hostile_adjacent: int = _adjacent_non_hostile_count_from_index(state, owner, pos, position_owner_index, ai_owner_set)
+			if non_hostile_adjacent > 0:
+				var contested_factor: float = 0.0
+				if nearest_enemy_dist <= 4:
+					contested_factor = 1.0
+				elif nearest_enemy_dist <= 6:
+					contested_factor = 0.45
+				var corridor_factor: float = 1.0 if state.is_narrow_corridor_tile(pos) else 0.0
+				if contested_factor > 0.0:
+					allied_lane_congestion_score += (0.30 + float(non_hostile_adjacent) * 0.28) * (0.80 + contested_factor * 0.60 + corridor_factor * 0.35)
+				elif corridor_factor > 0.0:
+					allied_lane_congestion_score += 0.16 * float(non_hostile_adjacent)
+
+	var opening_value_map: Dictionary = _valuable_opening_map(state, ai_owners, position_owner_index, hostile_positions_by_owner, objective_targets_by_owner)
+	var prior_opening_streaks: Dictionary = tracker.get("opening_streaks", {})
+	var next_opening_streaks: Dictionary = {}
+	var opening_latency_score: float = 0.0
+	var opening_latency_samples: float = 0.0
+	for opening_key_variant in opening_value_map.keys():
+		var opening_key: String = String(opening_key_variant)
+		var opening_row: Dictionary = opening_value_map[opening_key]
+		var streak: int = int(prior_opening_streaks.get(opening_key, 0)) + 1
+		next_opening_streaks[opening_key] = streak
+		var opening_weight: float = float(opening_row.get("value", 1.0))
+		if bool(opening_row.get("contested", false)):
+			opening_weight += 0.35
+		if streak > 1:
+			opening_latency_score += float(streak - 1) * opening_weight
+		opening_latency_samples += opening_weight
+	tracker["opening_streaks"] = next_opening_streaks
 
 	var objective: Dictionary = _objective_metrics(state, tracker.get("initial_state", state))
 	var pass_rate: float = float(tracker.get("pass_actions", 0)) / maxf(1.0, float(tracker.get("actions_applied", 0)))
@@ -2504,6 +3284,16 @@ func _collect_metrics(state: GameState, tracker: Dictionary, checkpoint_turn: in
 	var resource_neglect: int = 0
 	if checkpoint_turn >= 50 and resource_control <= 0.05 and resource_progress <= 0.0:
 		resource_neglect = 1
+	var ally_obstruction_penalty: float = 0.0
+	if has_non_hostile_ai_pair:
+		ally_obstruction_penalty = clampf(allied_lane_congestion_score / maxf(1.0, float(total_tiles) * 0.22), 0.0, 1.8)
+	var opening_claim_latency_penalty: float = clampf(opening_latency_score / maxf(1.0, opening_latency_samples * 1.7), 0.0, 1.8)
+	var flank_productivity: float = 0.5
+	var flank_total: float = flank_productive_score + flank_drift_score
+	if flank_total > 0.0:
+		flank_productivity = clampf((flank_productive_score + 0.6) / (flank_total + 1.2), 0.0, 1.0)
+		var drift_tax: float = minf(0.25, flank_drift_score / maxf(1.0, float(total_tiles) * 0.20))
+		flank_productivity = clampf(flank_productivity - drift_tax, 0.0, 1.0)
 
 	return {
 		"turn": checkpoint_turn,
@@ -2522,11 +3312,17 @@ func _collect_metrics(state: GameState, tracker: Dictionary, checkpoint_turn: in
 		"fail_rate": fail_rate,
 		"avg_energy": avg_energy,
 		"objective": objective,
+		"ally_obstruction_penalty": ally_obstruction_penalty,
+		"opening_claim_latency_penalty": opening_claim_latency_penalty,
+		"flank_productivity": flank_productivity,
 		"pathology": {
 			"frontline_gather": frontline_gather_tiles,
 			"exposed_ranged": exposed_ranged_tiles,
 			"backline_specialized": backline_specialized,
 			"resource_neglect": resource_neglect,
+			"ally_obstruction": ally_obstruction_penalty,
+			"opening_claim_latency": opening_claim_latency_penalty,
+			"flank_drift": flank_drift_score,
 			"high_fail_rate": 1 if fail_rate > 0.22 else 0,
 		},
 	}
@@ -2551,6 +3347,121 @@ func _adjacent_allied_count_from_index(owner_id: int, tile: Vector2i, position_o
 		if owner == owner_id:
 			count += 1
 	return count
+
+func _has_non_hostile_ai_pairs(state: GameState, ai_owners: Array) -> bool:
+	for i in range(ai_owners.size()):
+		var left_owner: int = int(ai_owners[i])
+		for j in range(i + 1, ai_owners.size()):
+			var right_owner: int = int(ai_owners[j])
+			if not state.are_hostile(left_owner, right_owner):
+				return true
+	return false
+
+func _adjacent_non_hostile_count_from_index(state: GameState, owner_id: int, tile: Vector2i, position_owner_index: Dictionary, ai_owner_set: Dictionary) -> int:
+	var count: int = 0
+	for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var other_owner: int = int(position_owner_index.get(_tile_key(tile + step), -1))
+		if other_owner <= 0 or other_owner == owner_id:
+			continue
+		if not ai_owner_set.has(other_owner):
+			continue
+		if state.are_hostile(owner_id, other_owner):
+			continue
+		count += 1
+	return count
+
+func _owned_within_manhattan_from_index(owner_id: int, tile: Vector2i, max_distance: int, position_owner_index: Dictionary, include_center: bool = false) -> int:
+	var count: int = 0
+	for y in range(tile.y - max_distance, tile.y + max_distance + 1):
+		for x in range(tile.x - max_distance, tile.x + max_distance + 1):
+			var sample: Vector2i = Vector2i(x, y)
+			var dist: int = absi(tile.x - sample.x) + absi(tile.y - sample.y)
+			if dist > max_distance:
+				continue
+			if not include_center and dist == 0:
+				continue
+			var sample_owner: int = int(position_owner_index.get(_tile_key(sample), -1))
+			if sample_owner == owner_id:
+				count += 1
+	return count
+
+func _owner_objective_targets_with_resources(state: GameState, owner_id: int) -> Array:
+	var targets: Array = []
+	for node_variant in state.resource_nodes:
+		var node: Dictionary = node_variant
+		if bool(node.get("consumed", false)):
+			continue
+		targets.append(node.get("pos", Vector2i(-1, -1)))
+	if state.door_hp > 0 and state.are_hostile(owner_id, GameState.PLAYER_ID):
+		targets.append(state.door_tile)
+	for block_variant in state.blocks.values():
+		var block: Dictionary = block_variant
+		if not bool(block.get("is_heart", false)):
+			continue
+		var other_owner: int = int(block.get("owner", -1))
+		if not state.are_hostile(owner_id, other_owner):
+			continue
+		targets.append(block.get("pos", Vector2i(-1, -1)))
+	return targets
+
+func _valuable_opening_map(
+	state: GameState,
+	ai_owners: Array,
+	position_owner_index: Dictionary,
+	hostile_positions_by_owner: Dictionary,
+	objective_targets_by_owner: Dictionary
+) -> Dictionary:
+	var openings: Dictionary = {}
+	for owner_variant in ai_owners:
+		var owner_id: int = int(owner_variant)
+		var hostile_positions: Array = hostile_positions_by_owner.get(owner_id, [])
+		var objective_targets: Array = objective_targets_by_owner.get(owner_id, [])
+		for block_variant in state.blocks.values():
+			var block: Dictionary = block_variant
+			if int(block.get("owner", -1)) != owner_id:
+				continue
+			var block_pos: Vector2i = block.get("pos", Vector2i(-1, -1))
+			for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				var tile: Vector2i = block_pos + step
+				if not state.is_inside(tile):
+					continue
+				if not state.is_empty_ground(tile):
+					continue
+				var allied_adjacent: int = _adjacent_allied_count_from_index(owner_id, tile, position_owner_index)
+				if allied_adjacent < MIN_EXPAND_ADJACENT:
+					continue
+				var support_ring: int = _owned_within_manhattan_from_index(owner_id, tile, 2, position_owner_index, false)
+				if support_ring < state.support_required_for_tile(tile, owner_id):
+					continue
+				var nearest_enemy_dist: int = _nearest_distance_to_positions(tile, hostile_positions)
+				var objective_dist: int = _nearest_distance_to_positions(tile, objective_targets)
+				var opening_value: float = 0.0
+				var contested: bool = nearest_enemy_dist <= 4
+				if contested:
+					opening_value += 1.10
+				if allied_adjacent >= 2:
+					opening_value += 0.70
+				if support_ring >= 3:
+					opening_value += 0.45
+				if objective_dist <= 6:
+					opening_value += 0.95
+				elif objective_dist <= 9:
+					opening_value += 0.45
+				if contested and objective_dist <= 8:
+					opening_value += 0.55
+				if state.is_narrow_corridor_tile(tile) and nearest_enemy_dist <= 5:
+					opening_value += 0.35
+				if opening_value < 1.35:
+					continue
+				var opening_key: String = "%d|%s" % [owner_id, _tile_key(tile)]
+				var existing_row: Dictionary = openings.get(opening_key, {})
+				var existing_value: float = float(existing_row.get("value", -1.0))
+				if opening_value > existing_value:
+					openings[opening_key] = {
+						"value": opening_value,
+						"contested": contested,
+					}
+	return openings
 
 func _category_scores(metrics: Dictionary, checkpoint_turn: int) -> Dictionary:
 	var type_counts: Dictionary = metrics.get("type_counts", {})
@@ -2600,6 +3511,7 @@ func _category_scores(metrics: Dictionary, checkpoint_turn: int) -> Dictionary:
 		objective_progress -= 12.0
 	if resource_progress < -0.10:
 		objective_progress -= 6.0
+	objective_progress += (float(metrics.get("flank_productivity", 0.5)) - 0.5) * 12.0
 	objective_progress = clampf(objective_progress, 0.0, 100.0)
 
 	var economy: float = 100.0
@@ -2616,6 +3528,7 @@ func _category_scores(metrics: Dictionary, checkpoint_turn: int) -> Dictionary:
 	var board_shape: float = 52.0
 	board_shape += float(metrics.get("supported_ratio", 0.0)) * 48.0
 	board_shape -= float(metrics.get("low_support_ratio", 0.0)) * 38.0
+	board_shape += (float(metrics.get("flank_productivity", 0.5)) - 0.5) * 8.0
 	board_shape = clampf(board_shape, 0.0, 100.0)
 
 	var anti_pathology: float = 100.0
@@ -2623,6 +3536,9 @@ func _category_scores(metrics: Dictionary, checkpoint_turn: int) -> Dictionary:
 	anti_pathology -= float(metrics.get("exposed_ranged_tiles", 0)) * 9.0
 	anti_pathology -= float(metrics.get("backline_specialized_ratio", 0.0)) * 42.0
 	anti_pathology -= float(metrics.get("pathology", {}).get("resource_neglect", 0)) * 10.0
+	anti_pathology -= float(metrics.get("ally_obstruction_penalty", 0.0)) * 22.0
+	anti_pathology -= float(metrics.get("opening_claim_latency_penalty", 0.0)) * 18.0
+	anti_pathology -= maxf(0.0, 0.48 - float(metrics.get("flank_productivity", 0.5))) * 14.0
 	anti_pathology = clampf(anti_pathology, 0.0, 100.0)
 
 	return {
@@ -3058,6 +3974,10 @@ func _append_category_lines(lines: Array[String], categories: Dictionary, indent
 	for key in CATEGORY_ORDER:
 		lines.append("%s%s = %s" % [indent, key, _format_param_value(categories.get(key, 0.0))])
 
+func _append_tactical_metric_lines(lines: Array[String], tactical_metrics: Dictionary, indent: String = "") -> void:
+	for key in TACTICAL_METRIC_ORDER:
+		lines.append("%s%s = %s" % [indent, key, _format_param_value(tactical_metrics.get(key, 0.0))])
+
 func _append_parameter_lines(
 	lines: Array[String],
 	parameter_keys: Array,
@@ -3121,6 +4041,8 @@ func _build_readable_report(report: Dictionary) -> String:
 		lines.append("id=%s  score=%s" % [String(baseline.get("id", "baseline")), _format_param_value(baseline.get("score", 0.0))])
 		lines.append("Category Scores:")
 		_append_category_lines(lines, baseline.get("score_by_category", {}), "  ")
+		lines.append("Tactical Metrics:")
+		_append_tactical_metric_lines(lines, baseline.get("tactical_metrics", {}), "  ")
 		lines.append("Parameters (effective):")
 		_append_parameter_lines(
 			lines,
@@ -3139,6 +4061,8 @@ func _build_readable_report(report: Dictionary) -> String:
 		lines.append("%d) %s  score=%s" % [i + 1, String(candidate.get("id", "")), _format_param_value(candidate.get("score", 0.0))])
 		lines.append("  Category Scores:")
 		_append_category_lines(lines, candidate.get("score_by_category", {}), "    ")
+		lines.append("  Tactical Metrics:")
+		_append_tactical_metric_lines(lines, candidate.get("tactical_metrics", {}), "    ")
 		lines.append("  Changed Parameters vs Baseline:")
 		_append_parameter_lines(
 			lines,
@@ -3161,6 +4085,22 @@ func _build_readable_report(report: Dictionary) -> String:
 		)
 		lines.append("  Checkpoint Scores: %s" % JSON.stringify(candidate.get("score_by_checkpoint", {})))
 		lines.append("")
+	var performance: Dictionary = report.get("performance", {})
+	var perf_categories: Array = performance.get("categories", [])
+	if not perf_categories.is_empty():
+		lines.append("PERFORMANCE AUDIT")
+		for row_variant in perf_categories:
+			var row: Dictionary = row_variant
+			lines.append(
+				"- %s: total=%ss | pct=%s%% | avg/candidate=%ss | avg/simulation=%ss" % [
+					String(row.get("category", "")),
+					_format_param_value(row.get("total_seconds", 0.0)),
+					_format_param_value(row.get("pct_of_runtime", 0.0)),
+					_format_param_value(row.get("avg_per_candidate_seconds", 0.0)),
+					_format_param_value(row.get("avg_per_simulation_seconds", 0.0)),
+				]
+			)
+		lines.append("")
 	var recommendations: Array = report.get("recommendations", [])
 	if not recommendations.is_empty():
 		lines.append("Recommendations:")
@@ -3180,6 +4120,20 @@ func _build_terminal_summary(run_result: Dictionary) -> String:
 	for i in range(mini(3, top_candidates.size())):
 		var item: Dictionary = top_candidates[i]
 		lines.append("%d) %s  score=%s" % [i + 1, String(item.get("id", "")), _format_param_value(item.get("score", 0.0))])
+		var tactical_metrics: Dictionary = item.get("tactical_metrics", {})
+		if not tactical_metrics.is_empty():
+			lines.append(
+				"   tactical: obstruction=%s latency=%s flank=%s" % [
+					_format_param_value(tactical_metrics.get("ally_obstruction_penalty", 0.0)),
+					_format_param_value(tactical_metrics.get("opening_claim_latency_penalty", 0.0)),
+					_format_param_value(tactical_metrics.get("flank_productivity", 0.0)),
+				]
+			)
+		var ai_profile: Dictionary = item.get("ai_profile", {})
+		if not ai_profile.is_empty():
+			var dominant_strategy: String = String(ai_profile.get("dominant_strategy_intent", ""))
+			if not dominant_strategy.is_empty():
+				lines.append("   strategy: dominant=%s" % dominant_strategy)
 		var changed: Array = item.get("changed_params", [])
 		var changed_preview: Array[String] = []
 		for idx in range(mini(3, changed.size())):
@@ -3193,6 +4147,21 @@ func _build_terminal_summary(run_result: Dictionary) -> String:
 			)
 		if not changed_preview.is_empty():
 			lines.append("   changes: %s" % ", ".join(changed_preview))
+	var performance: Dictionary = run_result.get("performance", {})
+	var bottlenecks: Array = performance.get("top_bottlenecks", [])
+	if not bottlenecks.is_empty():
+		lines.append("Top runtime bottlenecks:")
+		for row_variant in bottlenecks:
+			var row: Dictionary = row_variant
+			lines.append(
+				"  - %s: %.2fs (%.1f%%) avg/candidate %.3fs avg/sim %.3fs" % [
+					String(row.get("category", "")),
+					float(row.get("total_seconds", 0.0)),
+					float(row.get("pct_of_runtime", 0.0)),
+					float(row.get("avg_per_candidate_seconds", 0.0)),
+					float(row.get("avg_per_simulation_seconds", 0.0)),
+				]
+			)
 	if not output.is_empty():
 		lines.append("JSON: %s" % String(output.get("json", "")))
 		lines.append("Text: %s" % String(output.get("text", "")))
