@@ -1,0 +1,72 @@
+﻿{
+    "baseline_id":  "stable_visual_baseline_v1",
+    "created_utc":  "2026-04-22T05:45:02Z",
+    "source_branch":  "art-updates",
+    "source_head":  "1052a94a7a236902f8c561c2377ea23b77fd07f5",
+    "notes":  [
+                  "Checkpoint captured from working tree because 3D renderer files are not fully represented in commit history.",
+                  "Project targets Godot 4.5 (per project.godot); headless capture in this environment (Godot 4.6) reports shader keyword incompatibility for CLEARCOAT_GLOSS."
+              ],
+    "files":  [
+                  {
+                      "path":  "project.godot",
+                      "sha256":  "e706519e9b5c025270442f17ddeef4fa4fb20fe0fe1c798f63e2c6c3bef4445f"
+                  },
+                  {
+                      "path":  "scenes/Main.tscn",
+                      "sha256":  "5ed8d49d7f1504f0984a70cc8b225ce9b217c6b611400b3074e143b1b06de12a"
+                  },
+                  {
+                      "path":  "scripts/GameController.gd",
+                      "sha256":  "f0e8392ed8dbf6bbc72dce9465e62011d61cce742646095353c76276838ab413"
+                  },
+                  {
+                      "path":  "scripts/ui/BoardRenderer.gd",
+                      "sha256":  "617125e5e2c3f9f6e4bf9fcf35e97cc2c7670897fd915e2a4435c5ac2a7bd088"
+                  },
+                  {
+                      "path":  "scripts/ui/World3DRenderer.gd",
+                      "sha256":  "ffbcbcbf751ff742a0e6bdd68d4ece4998bf6b678c63f915637e86c1e5bc99ca"
+                  },
+                  {
+                      "path":  "scripts/ui/World3DRenderer.gd.uid",
+                      "sha256":  "5d849a7e476d8c4e9d98681141af1a4ee9536290af9b353fce79dcf4ce3c4fea"
+                  },
+                  {
+                      "path":  "assets/shaders/slime_layer.gdshader",
+                      "sha256":  "e580ae72b9d36f4f19c99a73bb61221288f58ff340ff8701134573ada94c37fc"
+                  },
+                  {
+                      "path":  "assets/world3d/generated/stone_albedo.png",
+                      "sha256":  "6ea7105a9cdcf6a934b2d676cfe0ff7c05c9221c81a675e4fbb8c105cd1fdd09"
+                  },
+                  {
+                      "path":  "assets/world3d/generated/stone_roughness.png",
+                      "sha256":  "960a529b933629455a2f585d704446fabb271fa15f5e999b74a677951b27f7c0"
+                  },
+                  {
+                      "path":  "assets/world3d/generated/stone_normal.png",
+                      "sha256":  "e02fa59aee198938bb1256bc9f11f77f22ea7b587d7cbe6c7d92454abaa2dede"
+                  },
+                  {
+                      "path":  "assets/world3d/generated/slime_detail.png",
+                      "sha256":  "5736083de6333151c354b1180b272d766f852ab29ef473e91a049c9b163e2b4f"
+                  },
+                  {
+                      "path":  "docs/visual/graphics_goal_v1.md",
+                      "sha256":  "b563488bf49649003f54c0ca7588964cc765056841522b242d13fd22ebeecec2"
+                  },
+                  {
+                      "path":  "docs/validation/3d_stabilization_checklist.md",
+                      "sha256":  "301741a8ca2838458a0e332728fb16091c5e6bb6a105b1f824a8a96934288e38"
+                  },
+                  {
+                      "path":  "tools/capture_ooze_compare.gd",
+                      "sha256":  "03b70171c8b486274a1f333cafce487f4a904f956d8f01ff662f97ab9be64ccd"
+                  },
+                  {
+                      "path":  "tools/generate_world3d_assets.gd",
+                      "sha256":  "1eb834164fe94456dd4195999c2845813d018ec380899c44bfc728a5a8ee3e07"
+                  }
+              ]
+}
