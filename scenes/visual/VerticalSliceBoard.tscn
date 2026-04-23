@@ -1,0 +1,796 @@
+[gd_scene load_steps=43 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/visual/kit/blockers/BlockerFamily_Ridge.tscn" id="1_ridge"]
+[ext_resource type="PackedScene" path="res://scenes/visual/kit/blockers/BlockerFamily_SplitPillar.tscn" id="2_split"]
+[ext_resource type="PackedScene" path="res://scenes/visual/kit/blockers/BlockerFamily_BrokenArch.tscn" id="3_arch"]
+[ext_resource type="PackedScene" path="res://scenes/visual/kit/blockers/BlockerFamily_BoulderNest.tscn" id="4_boulder"]
+
+[sub_resource type="Environment" id="1_env"]
+background_mode = 1
+background_color = Color(0.03, 0.033, 0.045, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.33, 0.35, 0.4, 1)
+ambient_light_energy = 0.92
+tonemap_mode = 3
+adjustment_enabled = true
+adjustment_brightness = 0.96
+adjustment_contrast = 1.06
+adjustment_saturation = 1.03
+fog_enabled = false
+
+[sub_resource type="StandardMaterial3D" id="2_mat_ground"]
+albedo_color = Color(0.082, 0.086, 0.098, 1)
+roughness = 0.94
+metallic = 0
+
+[sub_resource type="StandardMaterial3D" id="3_mat_board_top"]
+albedo_color = Color(0.24, 0.25, 0.275, 1)
+roughness = 0.56
+metallic = 0.05
+clearcoat_enabled = true
+clearcoat = 0.24
+clearcoat_roughness = 0.66
+
+[sub_resource type="StandardMaterial3D" id="4_mat_board_edge"]
+albedo_color = Color(0.13, 0.136, 0.15, 1)
+roughness = 0.72
+metallic = 0
+
+[sub_resource type="StandardMaterial3D" id="5_mat_cave"]
+albedo_color = Color(0.155, 0.16, 0.182, 1)
+roughness = 0.9
+metallic = 0
+cull_mode = 1
+
+[sub_resource type="StandardMaterial3D" id="6_mat_base_dark"]
+albedo_color = Color(0.09, 0.098, 0.118, 1)
+roughness = 0.34
+metallic = 0.28
+
+[sub_resource type="StandardMaterial3D" id="7_mat_base_trim"]
+albedo_color = Color(0.26, 0.275, 0.305, 1)
+roughness = 0.26
+metallic = 0.56
+
+[sub_resource type="StandardMaterial3D" id="8_mat_crystal_cyan"]
+albedo_color = Color(0.73, 0.96, 1, 1)
+roughness = 0.04
+metallic = 0
+emission_enabled = true
+emission = Color(0.26, 0.79, 1, 1)
+emission_energy_multiplier = 2.35
+
+[sub_resource type="StandardMaterial3D" id="9_mat_crystal_magenta"]
+albedo_color = Color(1, 0.64, 1, 1)
+roughness = 0.04
+metallic = 0
+emission_enabled = true
+emission = Color(0.9, 0.26, 1, 1)
+emission_energy_multiplier = 2.2
+
+[sub_resource type="StandardMaterial3D" id="10_mat_crystal_lime"]
+albedo_color = Color(0.92, 1, 0.63, 1)
+roughness = 0.05
+metallic = 0
+emission_enabled = true
+emission = Color(0.58, 0.94, 0.28, 1)
+emission_energy_multiplier = 2
+
+[sub_resource type="StandardMaterial3D" id="11_mat_crystal_orange"]
+albedo_color = Color(1, 0.82, 0.48, 1)
+roughness = 0.05
+metallic = 0
+emission_enabled = true
+emission = Color(1, 0.58, 0.2, 1)
+emission_energy_multiplier = 2.05
+
+[sub_resource type="StandardMaterial3D" id="13_mat_ooze_cyan"]
+albedo_color = Color(0.12, 0.52, 0.62, 1)
+roughness = 0.12
+metallic = 0
+clearcoat_enabled = true
+clearcoat = 0.92
+clearcoat_roughness = 0.04
+emission_enabled = true
+emission = Color(0.06, 0.22, 0.29, 1)
+emission_energy_multiplier = 0.24
+
+[sub_resource type="StandardMaterial3D" id="14_mat_ooze_magenta"]
+albedo_color = Color(0.58, 0.2, 0.62, 1)
+roughness = 0.12
+metallic = 0
+clearcoat_enabled = true
+clearcoat = 0.92
+clearcoat_roughness = 0.04
+emission_enabled = true
+emission = Color(0.2, 0.05, 0.24, 1)
+emission_energy_multiplier = 0.22
+
+[sub_resource type="StandardMaterial3D" id="15_mat_ooze_lime"]
+albedo_color = Color(0.48, 0.58, 0.18, 1)
+roughness = 0.13
+metallic = 0
+clearcoat_enabled = true
+clearcoat = 0.92
+clearcoat_roughness = 0.05
+emission_enabled = true
+emission = Color(0.12, 0.18, 0.05, 1)
+emission_energy_multiplier = 0.2
+
+[sub_resource type="StandardMaterial3D" id="16_mat_ooze_orange"]
+albedo_color = Color(0.62, 0.32, 0.11, 1)
+roughness = 0.13
+metallic = 0
+clearcoat_enabled = true
+clearcoat = 0.92
+clearcoat_roughness = 0.05
+emission_enabled = true
+emission = Color(0.24, 0.1, 0.03, 1)
+emission_energy_multiplier = 0.2
+
+[sub_resource type="BoxMesh" id="17_mesh_ground"]
+size = Vector3(27, 0.5, 18)
+
+[sub_resource type="BoxMesh" id="18_mesh_board"]
+size = Vector3(15, 0.72, 9.3)
+
+[sub_resource type="BoxMesh" id="19_mesh_edge_long"]
+size = Vector3(15.4, 0.34, 0.42)
+
+[sub_resource type="BoxMesh" id="20_mesh_edge_short"]
+size = Vector3(0.42, 0.34, 9.7)
+
+[sub_resource type="BoxMesh" id="21_mesh_boundary_long"]
+size = Vector3(19, 2.5, 0.66)
+
+[sub_resource type="BoxMesh" id="22_mesh_boundary_short"]
+size = Vector3(0.66, 2.5, 12.6)
+
+[sub_resource type="CylinderMesh" id="23_mesh_boundary_pillar"]
+top_radius = 0.56
+bottom_radius = 0.62
+height = 2.9
+radial_segments = 14
+
+[sub_resource type="SphereMesh" id="24_mesh_cave_shell"]
+radius = 30
+height = 60
+radial_segments = 30
+rings = 16
+
+[sub_resource type="CylinderMesh" id="25_mesh_base_round"]
+top_radius = 0.58
+bottom_radius = 0.72
+height = 0.24
+radial_segments = 20
+
+[sub_resource type="TorusMesh" id="26_mesh_base_ring"]
+inner_radius = 0.4
+outer_radius = 0.58
+ring_segments = 16
+rings = 26
+
+[sub_resource type="PrismMesh" id="27_mesh_crystal_tall"]
+left_to_right = 0.7
+size = Vector3(0.34, 1.14, 0.26)
+
+[sub_resource type="PrismMesh" id="28_mesh_crystal_mid"]
+left_to_right = 0.68
+size = Vector3(0.26, 0.8, 0.22)
+
+[sub_resource type="PrismMesh" id="29_mesh_crystal_shard"]
+left_to_right = 0.65
+size = Vector3(0.16, 0.46, 0.14)
+
+[sub_resource type="SphereMesh" id="30_mesh_ooze"]
+radius = 1
+height = 2
+radial_segments = 30
+rings = 16
+
+[sub_resource type="TorusMesh" id="31_mesh_ooze_wrap"]
+inner_radius = 0.54
+outer_radius = 0.86
+ring_segments = 20
+rings = 28
+
+[sub_resource type="BoxMesh" id="32_mesh_plinth"]
+size = Vector3(1.04, 0.2, 1.04)
+
+[sub_resource type="SphereMesh" id="33_mesh_orb"]
+radius = 0.2
+height = 0.34
+radial_segments = 12
+rings = 8
+
+[sub_resource type="CylinderMesh" id="34_mesh_cave_column"]
+top_radius = 0.44
+bottom_radius = 0.58
+height = 2.5
+radial_segments = 12
+
+[sub_resource type="StandardMaterial3D" id="35_mat_ooze_lip_cyan"]
+albedo_color = Color(0.09, 0.38, 0.46, 1)
+roughness = 0.24
+metallic = 0
+clearcoat_enabled = true
+clearcoat = 0.74
+clearcoat_roughness = 0.2
+
+[sub_resource type="StandardMaterial3D" id="36_mat_ooze_lip_magenta"]
+albedo_color = Color(0.38, 0.14, 0.44, 1)
+roughness = 0.24
+metallic = 0
+clearcoat_enabled = true
+clearcoat = 0.74
+clearcoat_roughness = 0.2
+
+[sub_resource type="StandardMaterial3D" id="37_mat_ooze_lip_lime"]
+albedo_color = Color(0.33, 0.42, 0.12, 1)
+roughness = 0.25
+metallic = 0
+clearcoat_enabled = true
+clearcoat = 0.72
+clearcoat_roughness = 0.2
+
+[sub_resource type="StandardMaterial3D" id="38_mat_ooze_lip_orange"]
+albedo_color = Color(0.45, 0.22, 0.08, 1)
+roughness = 0.25
+metallic = 0
+clearcoat_enabled = true
+clearcoat = 0.72
+clearcoat_roughness = 0.2
+
+[node name="VerticalSliceBoard" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("1_env")
+
+[node name="HeroCamera" type="Camera3D" parent="."]
+position = Vector3(0.4, 9.15, 11.45)
+rotation_degrees = Vector3(-34.5, -2.5, 0)
+current = true
+fov = 42.0
+near = 0.05
+far = 180.0
+
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-62, -32, 0)
+light_color = Color(1, 0.95, 0.9, 1)
+light_energy = 2.5
+shadow_enabled = false
+
+[node name="AccentBlue" type="OmniLight3D" parent="."]
+position = Vector3(7.8, 3.4, -4.2)
+light_color = Color(0.24, 0.53, 1, 1)
+light_energy = 0.82
+omni_range = 17.5
+shadow_enabled = false
+
+[node name="AccentWarm" type="OmniLight3D" parent="."]
+position = Vector3(-7.6, 2.9, 4.9)
+light_color = Color(1, 0.56, 0.18, 1)
+light_energy = 0.84
+omni_range = 17.5
+shadow_enabled = false
+
+[node name="AccentMagenta" type="OmniLight3D" parent="."]
+position = Vector3(0.4, 2.7, -5.9)
+light_color = Color(0.86, 0.3, 1, 1)
+light_energy = 0.62
+omni_range = 13
+shadow_enabled = false
+
+[node name="CenterFill" type="OmniLight3D" parent="."]
+position = Vector3(0, 2.8, 0)
+light_color = Color(0.76, 0.82, 0.95, 1)
+light_energy = 0.74
+omni_range = 19
+shadow_enabled = false
+
+[node name="EnvironmentRoot" type="Node3D" parent="."]
+
+[node name="GroundBase" type="MeshInstance3D" parent="EnvironmentRoot"]
+mesh = SubResource("17_mesh_ground")
+surface_material_override/0 = SubResource("2_mat_ground")
+position = Vector3(0, -1, 0)
+
+[node name="CaveShell" type="MeshInstance3D" parent="EnvironmentRoot"]
+mesh = SubResource("24_mesh_cave_shell")
+surface_material_override/0 = SubResource("5_mat_cave")
+position = Vector3(0, 11, 0)
+
+[node name="NorthBoundary" type="MeshInstance3D" parent="EnvironmentRoot"]
+mesh = SubResource("21_mesh_boundary_long")
+surface_material_override/0 = SubResource("5_mat_cave")
+position = Vector3(0, 0.88, -6.3)
+
+[node name="SouthBoundary" type="MeshInstance3D" parent="EnvironmentRoot"]
+mesh = SubResource("21_mesh_boundary_long")
+surface_material_override/0 = SubResource("5_mat_cave")
+position = Vector3(0, 0.88, 6.3)
+
+[node name="WestBoundary" type="MeshInstance3D" parent="EnvironmentRoot"]
+mesh = SubResource("22_mesh_boundary_short")
+surface_material_override/0 = SubResource("5_mat_cave")
+position = Vector3(-9.3, 0.88, 0)
+
+[node name="EastBoundary" type="MeshInstance3D" parent="EnvironmentRoot"]
+mesh = SubResource("22_mesh_boundary_short")
+surface_material_override/0 = SubResource("5_mat_cave")
+position = Vector3(9.3, 0.88, 0)
+
+[node name="PillarNW" type="MeshInstance3D" parent="EnvironmentRoot"]
+mesh = SubResource("23_mesh_boundary_pillar")
+surface_material_override/0 = SubResource("5_mat_cave")
+position = Vector3(-9, 1.3, -5.9)
+
+[node name="PillarNE" type="MeshInstance3D" parent="EnvironmentRoot"]
+mesh = SubResource("23_mesh_boundary_pillar")
+surface_material_override/0 = SubResource("5_mat_cave")
+position = Vector3(9, 1.3, -5.9)
+
+[node name="PillarSW" type="MeshInstance3D" parent="EnvironmentRoot"]
+mesh = SubResource("23_mesh_boundary_pillar")
+surface_material_override/0 = SubResource("5_mat_cave")
+position = Vector3(-9, 1.3, 5.9)
+
+[node name="PillarSE" type="MeshInstance3D" parent="EnvironmentRoot"]
+mesh = SubResource("23_mesh_boundary_pillar")
+surface_material_override/0 = SubResource("5_mat_cave")
+position = Vector3(9, 1.3, 5.9)
+
+[node name="ColumnLeft" type="MeshInstance3D" parent="EnvironmentRoot"]
+mesh = SubResource("34_mesh_cave_column")
+surface_material_override/0 = SubResource("5_mat_cave")
+position = Vector3(-6.3, 0.7, -2.4)
+rotation_degrees = Vector3(0, 18, 0)
+
+[node name="ColumnRight" type="MeshInstance3D" parent="EnvironmentRoot"]
+mesh = SubResource("34_mesh_cave_column")
+surface_material_override/0 = SubResource("5_mat_cave")
+position = Vector3(6.1, 0.72, 2.2)
+rotation_degrees = Vector3(0, -16, 0)
+
+[node name="BoardRoot" type="Node3D" parent="."]
+
+[node name="BoardSlab" type="MeshInstance3D" parent="BoardRoot"]
+mesh = SubResource("18_mesh_board")
+surface_material_override/0 = SubResource("3_mat_board_top")
+position = Vector3(0, -0.36, 0)
+
+[node name="BoardEdgeNorth" type="MeshInstance3D" parent="BoardRoot"]
+mesh = SubResource("19_mesh_edge_long")
+surface_material_override/0 = SubResource("4_mat_board_edge")
+position = Vector3(0, 0.08, -4.82)
+
+[node name="BoardEdgeSouth" type="MeshInstance3D" parent="BoardRoot"]
+mesh = SubResource("19_mesh_edge_long")
+surface_material_override/0 = SubResource("4_mat_board_edge")
+position = Vector3(0, 0.08, 4.82)
+
+[node name="BoardEdgeWest" type="MeshInstance3D" parent="BoardRoot"]
+mesh = SubResource("20_mesh_edge_short")
+surface_material_override/0 = SubResource("4_mat_board_edge")
+position = Vector3(-7.62, 0.08, 0)
+
+[node name="BoardEdgeEast" type="MeshInstance3D" parent="BoardRoot"]
+mesh = SubResource("20_mesh_edge_short")
+surface_material_override/0 = SubResource("4_mat_board_edge")
+position = Vector3(7.62, 0.08, 0)
+
+[node name="OozeRoot" type="Node3D" parent="BoardRoot"]
+
+[node name="OozeCyan" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("13_mat_ooze_cyan")
+position = Vector3(-2.66, 0.03, -1.46)
+rotation_degrees = Vector3(0, 10, 0)
+scale = Vector3(1.74, 0.08, 1.38)
+
+[node name="OozeCyanLobe" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("13_mat_ooze_cyan")
+position = Vector3(-3.78, 0.03, -2.02)
+rotation_degrees = Vector3(0, -26, 0)
+scale = Vector3(1.04, 0.074, 0.92)
+
+[node name="OozeCyanTail" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("13_mat_ooze_cyan")
+position = Vector3(-1.7, 0.028, -1.9)
+rotation_degrees = Vector3(0, 24, 0)
+scale = Vector3(0.86, 0.068, 0.76)
+
+[node name="OozeCyanLip" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("35_mat_ooze_lip_cyan")
+position = Vector3(-2.66, 0.015, -1.46)
+rotation_degrees = Vector3(0, 10, 0)
+scale = Vector3(2.02, 0.05, 1.62)
+
+[node name="OozeCyanLipLobe" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("35_mat_ooze_lip_cyan")
+position = Vector3(-3.78, 0.015, -2.02)
+rotation_degrees = Vector3(0, -26, 0)
+scale = Vector3(1.24, 0.046, 1.06)
+
+[node name="OozeMagenta" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("14_mat_ooze_magenta")
+position = Vector3(2.56, 0.03, -1.35)
+rotation_degrees = Vector3(0, -14, 0)
+scale = Vector3(1.7, 0.082, 1.36)
+
+[node name="OozeMagentaLobe" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("14_mat_ooze_magenta")
+position = Vector3(3.86, 0.03, -2.04)
+rotation_degrees = Vector3(0, 20, 0)
+scale = Vector3(1.1, 0.075, 0.92)
+
+[node name="OozeMagentaTail" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("14_mat_ooze_magenta")
+position = Vector3(1.72, 0.028, -1.95)
+rotation_degrees = Vector3(0, -28, 0)
+scale = Vector3(0.88, 0.068, 0.78)
+
+[node name="OozeMagentaLip" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("36_mat_ooze_lip_magenta")
+position = Vector3(2.56, 0.015, -1.35)
+rotation_degrees = Vector3(0, -14, 0)
+scale = Vector3(1.96, 0.05, 1.56)
+
+[node name="OozeMagentaLipLobe" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("36_mat_ooze_lip_magenta")
+position = Vector3(3.86, 0.015, -2.04)
+rotation_degrees = Vector3(0, 20, 0)
+scale = Vector3(1.3, 0.046, 1.06)
+
+[node name="OozeLime" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("15_mat_ooze_lime")
+position = Vector3(-2.98, 0.03, 2.36)
+rotation_degrees = Vector3(0, 12, 0)
+scale = Vector3(1.82, 0.084, 1.54)
+
+[node name="OozeLimeLobe" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("15_mat_ooze_lime")
+position = Vector3(-4.18, 0.03, 2.98)
+rotation_degrees = Vector3(0, -20, 0)
+scale = Vector3(1.16, 0.074, 0.98)
+
+[node name="OozeLimeTail" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("15_mat_ooze_lime")
+position = Vector3(-1.86, 0.028, 2.96)
+rotation_degrees = Vector3(0, 28, 0)
+scale = Vector3(0.9, 0.068, 0.8)
+
+[node name="OozeLimeLip" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("37_mat_ooze_lip_lime")
+position = Vector3(-2.98, 0.015, 2.36)
+rotation_degrees = Vector3(0, 12, 0)
+scale = Vector3(2.08, 0.05, 1.72)
+
+[node name="OozeLimeLipLobe" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("37_mat_ooze_lip_lime")
+position = Vector3(-4.18, 0.015, 2.98)
+rotation_degrees = Vector3(0, -20, 0)
+scale = Vector3(1.34, 0.046, 1.1)
+
+[node name="OozeOrange" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("16_mat_ooze_orange")
+position = Vector3(3.18, 0.03, 2.42)
+rotation_degrees = Vector3(0, -12, 0)
+scale = Vector3(1.88, 0.084, 1.62)
+
+[node name="OozeOrangeLobe" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("16_mat_ooze_orange")
+position = Vector3(4.46, 0.03, 3.04)
+rotation_degrees = Vector3(0, 16, 0)
+scale = Vector3(1.2, 0.074, 1.02)
+
+[node name="OozeOrangeTail" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("16_mat_ooze_orange")
+position = Vector3(2.04, 0.028, 2.94)
+rotation_degrees = Vector3(0, -24, 0)
+scale = Vector3(0.96, 0.068, 0.82)
+
+[node name="OozeOrangeLip" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("38_mat_ooze_lip_orange")
+position = Vector3(3.18, 0.015, 2.42)
+rotation_degrees = Vector3(0, -12, 0)
+scale = Vector3(2.16, 0.05, 1.82)
+
+[node name="OozeOrangeLipLobe" type="MeshInstance3D" parent="BoardRoot/OozeRoot"]
+mesh = SubResource("30_mesh_ooze")
+surface_material_override/0 = SubResource("38_mat_ooze_lip_orange")
+position = Vector3(4.46, 0.015, 3.04)
+rotation_degrees = Vector3(0, 16, 0)
+scale = Vector3(1.36, 0.046, 1.14)
+
+[node name="Structures" type="Node3D" parent="BoardRoot"]
+
+[node name="CyanSpire" type="Node3D" parent="BoardRoot/Structures"]
+position = Vector3(-4.8, 0, -2.8)
+scale = Vector3(1.32, 1.32, 1.32)
+
+[node name="BaseCore" type="MeshInstance3D" parent="BoardRoot/Structures/CyanSpire"]
+mesh = SubResource("25_mesh_base_round")
+surface_material_override/0 = SubResource("6_mat_base_dark")
+position = Vector3(0, 0.12, 0)
+
+[node name="BaseRing" type="MeshInstance3D" parent="BoardRoot/Structures/CyanSpire"]
+mesh = SubResource("26_mesh_base_ring")
+surface_material_override/0 = SubResource("7_mat_base_trim")
+position = Vector3(0, 0.16, 0)
+rotation_degrees = Vector3(90, 0, 0)
+
+[node name="CoreCrystal" type="MeshInstance3D" parent="BoardRoot/Structures/CyanSpire"]
+mesh = SubResource("27_mesh_crystal_tall")
+surface_material_override/0 = SubResource("8_mat_crystal_cyan")
+position = Vector3(0, 0.72, 0)
+
+[node name="SideShardA" type="MeshInstance3D" parent="BoardRoot/Structures/CyanSpire"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("8_mat_crystal_cyan")
+position = Vector3(0.28, 0.44, -0.2)
+rotation_degrees = Vector3(0, -18, 12)
+
+[node name="SideShardB" type="MeshInstance3D" parent="BoardRoot/Structures/CyanSpire"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("8_mat_crystal_cyan")
+position = Vector3(-0.24, 0.4, 0.22)
+rotation_degrees = Vector3(0, 24, -10)
+
+[node name="BackFin" type="MeshInstance3D" parent="BoardRoot/Structures/CyanSpire"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("8_mat_crystal_cyan")
+position = Vector3(0.06, 0.48, -0.3)
+rotation_degrees = Vector3(0, 4, 20)
+scale = Vector3(0.9, 1.18, 0.88)
+
+[node name="OozeWrap" type="MeshInstance3D" parent="BoardRoot/Structures/CyanSpire"]
+mesh = SubResource("31_mesh_ooze_wrap")
+surface_material_override/0 = SubResource("13_mat_ooze_cyan")
+position = Vector3(0, 0.03, 0)
+rotation_degrees = Vector3(90, 0, 0)
+scale = Vector3(0.84, 1, 0.84)
+
+[node name="MagentaFork" type="Node3D" parent="BoardRoot/Structures"]
+position = Vector3(4.95, 0, -2.76)
+scale = Vector3(1.32, 1.32, 1.32)
+
+[node name="Plinth" type="MeshInstance3D" parent="BoardRoot/Structures/MagentaFork"]
+mesh = SubResource("32_mesh_plinth")
+surface_material_override/0 = SubResource("6_mat_base_dark")
+position = Vector3(0, 0.1, 0)
+rotation_degrees = Vector3(0, 16, 0)
+
+[node name="Trim" type="MeshInstance3D" parent="BoardRoot/Structures/MagentaFork"]
+mesh = SubResource("26_mesh_base_ring")
+surface_material_override/0 = SubResource("7_mat_base_trim")
+position = Vector3(0, 0.17, 0)
+rotation_degrees = Vector3(90, 0, 0)
+scale = Vector3(0.88, 1, 0.88)
+
+[node name="ForkA" type="MeshInstance3D" parent="BoardRoot/Structures/MagentaFork"]
+mesh = SubResource("28_mesh_crystal_mid")
+surface_material_override/0 = SubResource("9_mat_crystal_magenta")
+position = Vector3(-0.14, 0.56, 0.14)
+rotation_degrees = Vector3(0, -6, 0)
+
+[node name="ForkB" type="MeshInstance3D" parent="BoardRoot/Structures/MagentaFork"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("9_mat_crystal_magenta")
+position = Vector3(0.26, 0.52, 0.08)
+rotation_degrees = Vector3(0, 24, 18)
+scale = Vector3(1.05, 1.2, 1.05)
+
+[node name="ForkC" type="MeshInstance3D" parent="BoardRoot/Structures/MagentaFork"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("9_mat_crystal_magenta")
+position = Vector3(-0.24, 0.48, -0.18)
+rotation_degrees = Vector3(0, -30, -16)
+scale = Vector3(0.95, 1.05, 0.95)
+
+[node name="ForkD" type="MeshInstance3D" parent="BoardRoot/Structures/MagentaFork"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("9_mat_crystal_magenta")
+position = Vector3(0.03, 0.5, -0.27)
+rotation_degrees = Vector3(0, 2, 14)
+scale = Vector3(0.84, 1.16, 0.82)
+
+[node name="OozeWrap" type="MeshInstance3D" parent="BoardRoot/Structures/MagentaFork"]
+mesh = SubResource("31_mesh_ooze_wrap")
+surface_material_override/0 = SubResource("14_mat_ooze_magenta")
+position = Vector3(0, 0.03, 0)
+rotation_degrees = Vector3(90, 0, 0)
+scale = Vector3(0.82, 1, 0.82)
+
+[node name="LimeBastion" type="Node3D" parent="BoardRoot/Structures"]
+position = Vector3(-4.95, 0, 3.12)
+scale = Vector3(1.32, 1.32, 1.32)
+
+[node name="BaseCore" type="MeshInstance3D" parent="BoardRoot/Structures/LimeBastion"]
+mesh = SubResource("25_mesh_base_round")
+surface_material_override/0 = SubResource("6_mat_base_dark")
+position = Vector3(0, 0.12, 0)
+scale = Vector3(0.9, 1, 0.9)
+
+[node name="Trim" type="MeshInstance3D" parent="BoardRoot/Structures/LimeBastion"]
+mesh = SubResource("26_mesh_base_ring")
+surface_material_override/0 = SubResource("7_mat_base_trim")
+position = Vector3(0, 0.17, 0)
+rotation_degrees = Vector3(90, 0, 0)
+scale = Vector3(0.8, 1, 0.8)
+
+[node name="CoreOrb" type="MeshInstance3D" parent="BoardRoot/Structures/LimeBastion"]
+mesh = SubResource("33_mesh_orb")
+surface_material_override/0 = SubResource("10_mat_crystal_lime")
+position = Vector3(0, 0.46, 0)
+
+[node name="ShardA" type="MeshInstance3D" parent="BoardRoot/Structures/LimeBastion"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("10_mat_crystal_lime")
+position = Vector3(0.23, 0.38, -0.22)
+rotation_degrees = Vector3(0, -16, 10)
+
+[node name="ShardB" type="MeshInstance3D" parent="BoardRoot/Structures/LimeBastion"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("10_mat_crystal_lime")
+position = Vector3(-0.22, 0.36, 0.18)
+rotation_degrees = Vector3(0, 24, -8)
+
+[node name="ShardC" type="MeshInstance3D" parent="BoardRoot/Structures/LimeBastion"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("10_mat_crystal_lime")
+position = Vector3(0.02, 0.42, -0.26)
+rotation_degrees = Vector3(0, -4, 12)
+scale = Vector3(0.86, 1.08, 0.86)
+
+[node name="OozeWrap" type="MeshInstance3D" parent="BoardRoot/Structures/LimeBastion"]
+mesh = SubResource("31_mesh_ooze_wrap")
+surface_material_override/0 = SubResource("15_mat_ooze_lime")
+position = Vector3(0, 0.03, 0)
+rotation_degrees = Vector3(90, 0, 0)
+scale = Vector3(0.8, 1, 0.8)
+
+[node name="OrangeCrown" type="Node3D" parent="BoardRoot/Structures"]
+position = Vector3(5.2, 0, 3)
+scale = Vector3(1.32, 1.32, 1.32)
+
+[node name="Plinth" type="MeshInstance3D" parent="BoardRoot/Structures/OrangeCrown"]
+mesh = SubResource("32_mesh_plinth")
+surface_material_override/0 = SubResource("6_mat_base_dark")
+position = Vector3(0, 0.1, 0)
+scale = Vector3(0.95, 1, 0.95)
+rotation_degrees = Vector3(0, -12, 0)
+
+[node name="Ring" type="MeshInstance3D" parent="BoardRoot/Structures/OrangeCrown"]
+mesh = SubResource("26_mesh_base_ring")
+surface_material_override/0 = SubResource("7_mat_base_trim")
+position = Vector3(0, 0.17, 0)
+rotation_degrees = Vector3(90, 0, 0)
+scale = Vector3(0.86, 1, 0.86)
+
+[node name="CoreCrystal" type="MeshInstance3D" parent="BoardRoot/Structures/OrangeCrown"]
+mesh = SubResource("28_mesh_crystal_mid")
+surface_material_override/0 = SubResource("11_mat_crystal_orange")
+position = Vector3(0, 0.56, 0)
+
+[node name="SideA" type="MeshInstance3D" parent="BoardRoot/Structures/OrangeCrown"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("11_mat_crystal_orange")
+position = Vector3(0.2, 0.4, 0.22)
+rotation_degrees = Vector3(0, 32, 14)
+
+[node name="SideB" type="MeshInstance3D" parent="BoardRoot/Structures/OrangeCrown"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("11_mat_crystal_orange")
+position = Vector3(-0.22, 0.37, -0.18)
+rotation_degrees = Vector3(0, -28, -12)
+
+[node name="SideC" type="MeshInstance3D" parent="BoardRoot/Structures/OrangeCrown"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("11_mat_crystal_orange")
+position = Vector3(0.02, 0.46, -0.26)
+rotation_degrees = Vector3(0, 4, 16)
+scale = Vector3(0.84, 1.1, 0.82)
+
+[node name="OozeWrap" type="MeshInstance3D" parent="BoardRoot/Structures/OrangeCrown"]
+mesh = SubResource("31_mesh_ooze_wrap")
+surface_material_override/0 = SubResource("16_mat_ooze_orange")
+position = Vector3(0, 0.03, 0)
+rotation_degrees = Vector3(90, 0, 0)
+scale = Vector3(0.8, 1, 0.8)
+
+[node name="MidNeutralA" type="Node3D" parent="BoardRoot/Structures"]
+position = Vector3(-1.1, 0, -0.92)
+
+[node name="Base" type="MeshInstance3D" parent="BoardRoot/Structures/MidNeutralA"]
+mesh = SubResource("25_mesh_base_round")
+surface_material_override/0 = SubResource("6_mat_base_dark")
+position = Vector3(0, 0.09, 0)
+scale = Vector3(0.62, 0.66, 0.62)
+
+[node name="Crystal" type="MeshInstance3D" parent="BoardRoot/Structures/MidNeutralA"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("8_mat_crystal_cyan")
+position = Vector3(0, 0.34, 0)
+scale = Vector3(1, 1.2, 1)
+
+[node name="MidNeutralB" type="Node3D" parent="BoardRoot/Structures"]
+position = Vector3(1.2, 0, 0.96)
+
+[node name="Base" type="MeshInstance3D" parent="BoardRoot/Structures/MidNeutralB"]
+mesh = SubResource("25_mesh_base_round")
+surface_material_override/0 = SubResource("6_mat_base_dark")
+position = Vector3(0, 0.09, 0)
+scale = Vector3(0.62, 0.66, 0.62)
+
+[node name="Crystal" type="MeshInstance3D" parent="BoardRoot/Structures/MidNeutralB"]
+mesh = SubResource("29_mesh_crystal_shard")
+surface_material_override/0 = SubResource("9_mat_crystal_magenta")
+position = Vector3(0, 0.34, 0)
+scale = Vector3(1, 1.2, 1)
+
+[node name="Blockers" type="Node3D" parent="BoardRoot"]
+
+[node name="BlockerA1" parent="BoardRoot/Blockers" instance=ExtResource("1_ridge")]
+position = Vector3(-0.15, 0, -0.1)
+rotation_degrees = Vector3(0, 12, 0)
+
+[node name="BlockerA2" parent="BoardRoot/Blockers" instance=ExtResource("1_ridge")]
+position = Vector3(-3.3, 0, -1.95)
+rotation_degrees = Vector3(0, 41, 0)
+scale = Vector3(0.84, 0.92, 0.9)
+
+[node name="BlockerB1" parent="BoardRoot/Blockers" instance=ExtResource("2_split")]
+position = Vector3(3.6, 0, -0.95)
+rotation_degrees = Vector3(0, -28, 0)
+
+[node name="BlockerB2" parent="BoardRoot/Blockers" instance=ExtResource("2_split")]
+position = Vector3(2.18, 0, 1.86)
+rotation_degrees = Vector3(0, 36, 0)
+scale = Vector3(0.86, 0.88, 0.92)
+
+[node name="BlockerC1" parent="BoardRoot/Blockers" instance=ExtResource("3_arch")]
+position = Vector3(-1.02, 0, 2.66)
+rotation_degrees = Vector3(0, 8, 0)
+
+[node name="BlockerC2" parent="BoardRoot/Blockers" instance=ExtResource("3_arch")]
+position = Vector3(0.85, 0, -0.86)
+rotation_degrees = Vector3(0, -44, 0)
+scale = Vector3(0.86, 0.82, 0.86)
+
+[node name="BlockerD1" parent="BoardRoot/Blockers" instance=ExtResource("4_boulder")]
+position = Vector3(-4.34, 0, 2.28)
+rotation_degrees = Vector3(0, -16, 0)
+
+[node name="BlockerD2" parent="BoardRoot/Blockers" instance=ExtResource("4_boulder")]
+position = Vector3(4.18, 0, 2.56)
+rotation_degrees = Vector3(0, 18, 0)
+scale = Vector3(1.08, 0.92, 1.04)
+
+[node name="BlockerD3" parent="BoardRoot/Blockers" instance=ExtResource("4_boulder")]
+position = Vector3(-4.76, 0, -2.62)
+rotation_degrees = Vector3(0, 30, 0)
+scale = Vector3(0.92, 0.9, 0.92)
+
+[node name="BlockerD4" parent="BoardRoot/Blockers" instance=ExtResource("4_boulder")]
+position = Vector3(4.66, 0, -2.46)
+rotation_degrees = Vector3(0, -24, 0)
+scale = Vector3(0.92, 0.9, 0.92)

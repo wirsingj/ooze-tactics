@@ -1,0 +1,67 @@
+OOZE AI TRAINING REPORT
+Generated: 2026-04-20T19:38:18
+Passes: 3  Stop: insufficient_budget_for_min_pass  Elapsed: 29.24 min
+Score: start=43.5704 final=43.7108 delta=+0.1404
+
+PASS SUMMARIES
+Pass 1: baseline=43.57 best=grid_1 43.71
+  accepted=none
+  reject: grid_1: small gain seen but consistency hits 1/2
+  reject: rand_3: score improvement below threshold
+
+Pass 2: baseline=43.57 best=grid_1 43.71
+  accepted=grid_1 score=43.71
+  reason: Accepting grid_1 due to consistent improvement across passes (delta +0.14, hits 2).
+  deltas role=+0.14 spec=-0.03 obj=+0.06 econ=+0.08
+  applied keys: ranged_saturation_soft_cap, resource_safe_phase_bonus, specialization_safe_phase_penalty, tile_upgrade_min_score
+
+Pass 3: baseline=43.71 best=grid_1 43.71
+  accepted=none
+  reject: grid_1: score improvement below threshold
+
+APPLIED PARAMETER CHANGES
+  ranged_saturation_soft_cap = 0.32 (before 0.34, delta -0.02)
+  resource_safe_phase_bonus = 8 (before 10, delta -2)
+  specialization_safe_phase_penalty = 12 (before 14, delta -2)
+  tile_upgrade_min_score = 64 (before 66, delta -2)
+
+FINAL BASELINE SNAPSHOT
+  defense_local_ratio_hard_cap = 0.55
+  defense_local_ratio_soft_cap = 0.4
+  defense_nearby_soft_limit = 2
+  engaged_upgrade_energy_threshold = 16
+  gather_conversion_resource_max_dist = 2
+  gather_safe_min_enemy_distance = 4
+  max_tile_upgrades_per_turn = 2
+  non_engaged_upgrade_energy_threshold = 18
+  objective_backfill_penalty = 32
+  objective_progress_weight = 22
+  objective_upgrade_distance_max = 14
+  objective_upgrade_enemy_distance_max = 10
+  ranged_backline_penalty = 14
+  ranged_frontline_penalty = 28
+  ranged_saturation_hard_cap = 0.52
+  ranged_saturation_max_penalty = 36
+  ranged_saturation_min_tiles = 8
+  ranged_saturation_soft_cap = 0.32
+  resource_approaching_phase_bonus = 4
+  resource_gather_focus_bonus = 12
+  resource_low_threat_bonus = 6
+  resource_near_threat_penalty = 10
+  resource_node_hold_bonus = 14
+  resource_objective_max_distance = 9
+  resource_objective_step_weight = 4
+  resource_safe_phase_bonus = 8
+  specialization_adjacent_penalty = 3
+  specialization_backline_blanket_penalty = 12
+  specialization_hard_cap = 0.62
+  specialization_local_cluster_penalty = 5
+  specialization_local_radius = 2
+  specialization_local_soft_limit = 3
+  specialization_max_penalty = 30
+  specialization_min_tiles = 9
+  specialization_path_penalty = 12
+  specialization_safe_phase_penalty = 12
+  specialization_soft_cap = 0.45
+  tile_upgrade_min_score = 64
+  upgrade_priority_margin = 10

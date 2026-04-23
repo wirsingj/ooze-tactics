@@ -59,6 +59,9 @@ var selected_tile: Vector2i = Vector2i(-1, -1)
 var hovered_tile: Vector2i = Vector2i(-1, -1)
 var selected_tile_type: String = "basic"
 var run_over: bool = false
+var pending_left_click_active: bool = false
+var pending_left_click_tile: Vector2i = Vector2i(-1, -1)
+var pending_left_click_spectator: bool = false
 
 var valid_place_targets: Array = []
 var valid_convert_targets: Array = []
@@ -101,6 +104,7 @@ var world_background_layer: WorldRenderLayer = null
 var world_slime_layer: WorldRenderLayer = null
 var world_emissive_layer: WorldRenderLayer = null
 var world_overlay_layer: WorldRenderLayer = null
+var world_3d_enabled: bool = true
 
 var _button_style_normal: StyleBoxTexture = null
 var _button_style_hover: StyleBoxTexture = null
@@ -110,6 +114,9 @@ var upgrade_choices: Array = []
 
 @onready var ui_root: Control = $CanvasLayer/UI
 @onready var board_region: Control = $CanvasLayer/UI/BoardRegion
+@onready var world_3d_host: SubViewportContainer = $CanvasLayer/UI/BoardRegion/World3DHost
+@onready var world_3d_viewport: SubViewport = $CanvasLayer/UI/BoardRegion/World3DHost/World3DViewport
+@onready var world_3d_root: World3DRenderer = $CanvasLayer/UI/BoardRegion/World3DHost/World3DViewport/World3DRoot
 @onready var top_panel: Control = $CanvasLayer/UI/TopPanel
 @onready var right_panel: Control = $CanvasLayer/UI/RightPanel
 @onready var bottom_panel: Control = $CanvasLayer/UI/BottomPanel
@@ -154,6 +161,8 @@ func _ready() -> void:
 	renderer.tile_size = _render_tile_size
 	turn_resolver.tick_system = tick_system
 	_setup_world_layers()
+	_sync_graphics_style_from_runflow()
+	_setup_3d_presentation()
 	_apply_ui_theme()
 	upgrade_overlay.visible = false
 	_load_data()
@@ -169,11 +178,15 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_update_board_layout()
 	_sync_hover_hint_from_mouse()
+	var using_3d: bool = _use_3d_world()
 	var spectator_hard_pause: bool = _is_spectator_mode() and spectator_paused
 	var pacing_delta: float = 0.0 if spectator_hard_pause else delta * turn_speed_multiplier
 
 	var needs_redraw: bool = false
-	if pacing_delta > 0.0:
+	if using_3d and world_3d_root != null:
+		world_3d_root.tick_visual(pacing_delta if pacing_delta > 0.0 else delta)
+
+	if pacing_delta > 0.0 and not using_3d:
 		anim_timer += pacing_delta
 		if anim_timer >= ANIM_FRAME_TIME:
 			anim_timer = 0.0
@@ -191,13 +204,17 @@ func _process(delta: float) -> void:
 			_refresh_ui()
 
 	if pacing_delta > 0.0 and _update_turn_pulse(pacing_delta):
-		needs_redraw = true
+		if not using_3d:
+			needs_redraw = true
 
 	if pacing_delta > 0.0 and _is_spectator_mode() and not spectator_paused and not run_over and not _is_modal_overlay_open() and not pulse_active:
 		spectator_turn_delay = maxf(0.0, spectator_turn_delay - pacing_delta)
 		if spectator_turn_delay <= 0.0:
 			_run_next_spectator_turn()
-			needs_redraw = true
+			if using_3d:
+				_queue_world_redraw()
+			else:
+				needs_redraw = true
 
 	if needs_redraw:
 		_update_slime_shader_time(pacing_delta)
@@ -276,6 +293,8 @@ func _update_slime_shader_time(delta: float) -> void:
 	(world_slime_layer.material as ShaderMaterial).set_shader_parameter("u_time", slime_shader_time)
 
 func _draw_world_background(canvas: Node2D) -> void:
+	if _use_3d_world():
+		return
 	if state == null:
 		return
 	renderer.draw_world_background(
@@ -288,6 +307,8 @@ func _draw_world_background(canvas: Node2D) -> void:
 	)
 
 func _draw_world_slime(canvas: Node2D) -> void:
+	if _use_3d_world():
+		return
 	if state == null:
 		return
 	renderer.draw_world_slime(
@@ -304,6 +325,8 @@ func _draw_world_slime(canvas: Node2D) -> void:
 	)
 
 func _draw_world_emissive(canvas: Node2D) -> void:
+	if _use_3d_world():
+		return
 	if state == null:
 		return
 	renderer.draw_world_emissive(
@@ -315,6 +338,8 @@ func _draw_world_emissive(canvas: Node2D) -> void:
 	)
 
 func _draw_world_overlay(canvas: Node2D) -> void:
+	if _use_3d_world():
+		return
 	if state == null:
 		return
 	var enemy_flash_alpha: float = 0.0
@@ -334,6 +359,9 @@ func _draw_world_overlay(canvas: Node2D) -> void:
 	)
 
 func _queue_world_redraw() -> void:
+	if _use_3d_world():
+		_sync_3d_world()
+		return
 	if world_background_layer != null:
 		world_background_layer.queue_redraw()
 	if world_slime_layer != null:
@@ -343,8 +371,77 @@ func _queue_world_redraw() -> void:
 	if world_overlay_layer != null:
 		world_overlay_layer.queue_redraw()
 
+func _setup_3d_presentation() -> void:
+	var using_3d: bool = _use_3d_world()
+	if world_3d_host != null:
+		world_3d_host.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		world_3d_host.stretch = false
+		world_3d_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		world_3d_host.visible = using_3d
+	if using_3d and world_3d_viewport != null:
+		if world_3d_viewport.world_3d == null:
+			world_3d_viewport.world_3d = World3D.new()
+		world_3d_viewport.transparent_bg = false
+	if using_3d and world_3d_root != null:
+		world_3d_root.configure(renderer)
+	if world_background_layer != null:
+		world_background_layer.visible = not using_3d
+	if world_slime_layer != null:
+		world_slime_layer.visible = not using_3d
+	if world_emissive_layer != null:
+		world_emissive_layer.visible = not using_3d
+	if world_overlay_layer != null:
+		world_overlay_layer.visible = not using_3d
+
+func _sync_graphics_style_from_runflow() -> void:
+	var run_flow = _run_flow()
+	if run_flow == null:
+		world_3d_enabled = true
+		return
+	if run_flow.has_method("is_graphics_style_3d"):
+		world_3d_enabled = bool(run_flow.call("is_graphics_style_3d"))
+
+func _use_3d_world() -> bool:
+	return world_3d_enabled and world_3d_root != null and world_3d_host != null and world_3d_viewport != null
+
+func _sync_3d_world() -> void:
+	if not _use_3d_world() or state == null:
+		return
+	world_3d_root.sync_world(
+		state,
+		selected_tile,
+		hovered_tile,
+		queued_actions,
+		hover_preview_action,
+		hover_invalid_reason,
+		recent_enemy_actions,
+		anim_frame
+	)
+
+func _handle_3d_camera_input(event: InputEvent) -> bool:
+	if not _use_3d_world():
+		return false
+	var mouse_pos: Vector2 = get_viewport().get_mouse_position()
+	var inside_board: bool = board_clip_rect.has_point(mouse_pos)
+	var board_local: Vector2 = mouse_pos - board_clip_rect.position
+	return world_3d_root.handle_camera_input(event, board_local, inside_board)
+
+func _clear_pending_left_click() -> void:
+	pending_left_click_active = false
+	pending_left_click_tile = Vector2i(-1, -1)
+	pending_left_click_spectator = false
+
 func _unhandled_input(event: InputEvent) -> void:
+	if _use_3d_world() and not _is_modal_overlay_open():
+		if _handle_3d_camera_input(event):
+			if event is InputEventMouseButton:
+				var camera_mouse_event: InputEventMouseButton = event
+				if camera_mouse_event.button_index == MOUSE_BUTTON_LEFT and not camera_mouse_event.pressed:
+					_clear_pending_left_click()
+			return
+
 	if run_over or _is_modal_overlay_open():
+		_clear_pending_left_click()
 		return
 
 	if _is_spectator_mode():
@@ -355,12 +452,28 @@ func _unhandled_input(event: InputEvent) -> void:
 			_queue_world_redraw()
 			return
 		if pulse_active:
+			_clear_pending_left_click()
 			return
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			var spectate_tile: Vector2i = _mouse_to_tile(get_local_mouse_position())
-			if spectate_tile != Vector2i(-1, -1) and _try_dev_heart_defeat(spectate_tile):
-				_refresh_ui()
-				_queue_world_redraw()
+		if event is InputEventMouseButton:
+			var spectator_mouse: InputEventMouseButton = event
+			if spectator_mouse.button_index == MOUSE_BUTTON_LEFT:
+				if spectator_mouse.pressed:
+					pending_left_click_active = true
+					pending_left_click_spectator = true
+					pending_left_click_tile = _mouse_to_tile(get_local_mouse_position())
+				else:
+					if not pending_left_click_active or not pending_left_click_spectator:
+						return
+					var consume_drag_release: bool = _use_3d_world() and world_3d_root != null and world_3d_root.should_consume_left_release()
+					var spectate_tile: Vector2i = _mouse_to_tile(get_local_mouse_position())
+					if spectate_tile == Vector2i(-1, -1):
+						spectate_tile = pending_left_click_tile
+					_clear_pending_left_click()
+					if consume_drag_release:
+						return
+					if spectate_tile != Vector2i(-1, -1) and _try_dev_heart_defeat(spectate_tile):
+						_refresh_ui()
+						_queue_world_redraw()
 		return
 
 	if event is InputEventMouseMotion:
@@ -371,13 +484,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventMouseButton and event.pressed:
-		var mouse_event: InputEventMouseButton = event
-		var tile: Vector2i = _mouse_to_tile(get_local_mouse_position())
-		if tile == Vector2i(-1, -1):
+		var pressed_event: InputEventMouseButton = event
+		if pressed_event.button_index == MOUSE_BUTTON_LEFT:
+			pending_left_click_active = true
+			pending_left_click_spectator = false
+			pending_left_click_tile = _mouse_to_tile(get_local_mouse_position())
 			return
 
-		selected_tile = tile
-		if mouse_event.button_index == MOUSE_BUTTON_LEFT:
+	if event is InputEventMouseButton and not event.pressed:
+		var release_event: InputEventMouseButton = event
+		if release_event.button_index == MOUSE_BUTTON_LEFT:
+			if not pending_left_click_active or pending_left_click_spectator:
+				return
+			var consume_drag_release: bool = _use_3d_world() and world_3d_root != null and world_3d_root.should_consume_left_release()
+			var tile: Vector2i = _mouse_to_tile(get_local_mouse_position())
+			if tile == Vector2i(-1, -1):
+				tile = pending_left_click_tile
+			_clear_pending_left_click()
+			if consume_drag_release or tile == Vector2i(-1, -1):
+				return
+			selected_tile = tile
 			if _try_dev_heart_defeat(tile):
 				_recompute_action_context()
 				_refresh_ui()
@@ -388,13 +514,23 @@ func _unhandled_input(event: InputEvent) -> void:
 				_set_status("Invalid: %s" % String(outcome.get("reason", "unknown")), 2.2)
 			elif not String(outcome.get("message", "")).is_empty():
 				_set_status(String(outcome["message"]), 1.4)
-		elif mouse_event.button_index == MOUSE_BUTTON_RIGHT:
+			_recompute_action_context()
+			_refresh_ui()
+			_queue_world_redraw()
+			return
+
+	if event is InputEventMouseButton and event.pressed:
+		var right_event: InputEventMouseButton = event
+		if right_event.button_index == MOUSE_BUTTON_RIGHT:
+			var tile: Vector2i = _mouse_to_tile(get_local_mouse_position())
+			if tile == Vector2i(-1, -1):
+				return
+			selected_tile = tile
 			if not _remove_player_action_for_tile(tile):
 				_set_status("No queued action on that tile", 1.4)
-
-		_recompute_action_context()
-		_refresh_ui()
-		_queue_world_redraw()
+			_recompute_action_context()
+			_refresh_ui()
+			_queue_world_redraw()
 
 func _wire_ui() -> void:
 	basic_button.pressed.connect(_set_mode.bind("basic"))
@@ -468,15 +604,15 @@ func _clear_button_hover_description() -> void:
 	_refresh_ui()
 
 func _apply_ui_theme() -> void:
-	var theme: Theme = Theme.new()
+	var ui_theme: Theme = Theme.new()
 	var font: Font = _load_runtime_font("res://assets/fonts/PressStart2P-Regular.ttf")
 	if font != null:
-		theme.set_default_font(font)
-	theme.set_default_font_size(11)
+		ui_theme.set_default_font(font)
+	ui_theme.set_default_font_size(11)
 
 	var panel_style: StyleBoxTexture = _make_stylebox_texture(renderer.make_ui_skin("ui_panel_tile"), 10, 8)
 	panel_style.modulate_color = Color(1.0, 1.0, 1.0, 1.0)
-	theme.set_stylebox("panel", "PanelContainer", panel_style)
+	ui_theme.set_stylebox("panel", "PanelContainer", panel_style)
 
 	_button_style_normal = _make_stylebox_texture(renderer.make_ui_skin("ui_button_tile"), 8, 6)
 	_button_style_normal.modulate_color = Color(0.94, 0.94, 0.94, 1.0)
@@ -487,25 +623,25 @@ func _apply_ui_theme() -> void:
 	_button_style_selected = _make_stylebox_texture(renderer.make_ui_skin("ui_button_selected"), 8, 6)
 	_button_style_selected.modulate_color = Color(1.0, 1.0, 1.0, 1.0)
 
-	theme.set_stylebox("normal", "Button", _button_style_normal)
-	theme.set_stylebox("hover", "Button", _button_style_hover)
-	theme.set_stylebox("pressed", "Button", _button_style_pressed)
-	theme.set_stylebox("focus", "Button", _button_style_hover)
+	ui_theme.set_stylebox("normal", "Button", _button_style_normal)
+	ui_theme.set_stylebox("hover", "Button", _button_style_hover)
+	ui_theme.set_stylebox("pressed", "Button", _button_style_pressed)
+	ui_theme.set_stylebox("focus", "Button", _button_style_hover)
 
-	theme.set_color("font_color", "Label", Color(0.96, 0.94, 0.86))
-	theme.set_color("default_color", "RichTextLabel", Color(0.94, 0.93, 0.86))
-	theme.set_color("font_color", "Button", Color(0.97, 0.95, 0.88))
-	theme.set_color("icon_normal_color", "Button", Color(1.0, 1.0, 1.0, 1.0))
-	theme.set_color("icon_hover_color", "Button", Color(1.0, 1.0, 1.0, 1.0))
-	theme.set_color("icon_pressed_color", "Button", Color(1.0, 1.0, 1.0, 1.0))
-	theme.set_color("icon_focus_color", "Button", Color(1.0, 1.0, 1.0, 1.0))
-	theme.set_color("icon_disabled_color", "Button", Color(1.0, 1.0, 1.0, 0.95))
-	theme.set_constant("line_separation", "RichTextLabel", 2)
+	ui_theme.set_color("font_color", "Label", Color(0.96, 0.94, 0.86))
+	ui_theme.set_color("default_color", "RichTextLabel", Color(0.94, 0.93, 0.86))
+	ui_theme.set_color("font_color", "Button", Color(0.97, 0.95, 0.88))
+	ui_theme.set_color("icon_normal_color", "Button", Color(1.0, 1.0, 1.0, 1.0))
+	ui_theme.set_color("icon_hover_color", "Button", Color(1.0, 1.0, 1.0, 1.0))
+	ui_theme.set_color("icon_pressed_color", "Button", Color(1.0, 1.0, 1.0, 1.0))
+	ui_theme.set_color("icon_focus_color", "Button", Color(1.0, 1.0, 1.0, 1.0))
+	ui_theme.set_color("icon_disabled_color", "Button", Color(1.0, 1.0, 1.0, 0.95))
+	ui_theme.set_constant("line_separation", "RichTextLabel", 2)
 	var rich_empty: StyleBoxEmpty = StyleBoxEmpty.new()
-	theme.set_stylebox("normal", "RichTextLabel", rich_empty)
-	theme.set_stylebox("focus", "RichTextLabel", rich_empty)
+	ui_theme.set_stylebox("normal", "RichTextLabel", rich_empty)
+	ui_theme.set_stylebox("focus", "RichTextLabel", rich_empty)
 
-	ui_root.theme = theme
+	ui_root.theme = ui_theme
 	top_panel.add_theme_stylebox_override("panel", _stylebox_modulated(panel_style, Color(0.97, 0.95, 0.92, 1.0)))
 	right_panel.add_theme_stylebox_override("panel", _stylebox_modulated(panel_style, Color(0.93, 0.92, 0.89, 1.0)))
 	bottom_panel.add_theme_stylebox_override("panel", _stylebox_modulated(panel_style, Color(0.95, 0.93, 0.90, 1.0)))
@@ -682,6 +818,7 @@ func _start_level() -> void:
 	recent_enemy_failed_actions.clear()
 	enemy_intent_actions.clear()
 	hovered_tile = Vector2i(-1, -1)
+	_clear_pending_left_click()
 	pulse_batches.clear()
 	pulse_batch_index = -1
 	pulse_batch_timer = 0.0
@@ -699,6 +836,10 @@ func _start_level() -> void:
 	_initialize_owner_display_numbers()
 	_setup_actor_cycle()
 	_refresh_enemy_intents()
+	if _use_3d_world():
+		# Camera reset contract: only explicit new-level startup may request a camera reset.
+		# Turn updates and normal renderer sync paths must preserve user camera state.
+		world_3d_root.reset_startup_contract()
 	_update_board_layout(true)
 	_recompute_action_context()
 	_apply_control_mode_state()
@@ -1812,6 +1953,9 @@ func _mouse_to_tile(mouse_pos: Vector2) -> Vector2i:
 		return Vector2i(-1, -1)
 	if not board_clip_rect.has_point(mouse_pos):
 		return Vector2i(-1, -1)
+	if _use_3d_world():
+		var viewport_mouse: Vector2 = mouse_pos - board_clip_rect.position
+		return world_3d_root.viewport_to_tile(viewport_mouse)
 	var local: Vector2 = mouse_pos - board_origin
 	if local.x < 0 or local.y < 0:
 		return Vector2i(-1, -1)
@@ -2023,7 +2167,22 @@ func _update_board_layout(force: bool = false) -> void:
 	var centered_y: float = region.position.y + maxf(0.0, floor((region.size.y - map_size.y) * 0.5))
 
 	board_origin = Vector2(centered_x, centered_y)
+	if _use_3d_world():
+		_update_3d_layout(region)
 	_queue_world_redraw()
+
+func _update_3d_layout(region: Rect2) -> void:
+	if not _use_3d_world() or board_region == null:
+		return
+	var board_region_rect: Rect2 = board_region.get_global_rect()
+	var local_pos: Vector2 = region.position - board_region_rect.position
+	world_3d_host.position = local_pos
+	world_3d_host.size = region.size
+	board_clip_rect = Rect2(region.position, region.size)
+	var viewport_size: Vector2i = Vector2i(maxi(64, int(round(region.size.x))), maxi(64, int(round(region.size.y))))
+	if world_3d_viewport.size != viewport_size:
+		world_3d_viewport.size = viewport_size
+	world_3d_root.set_viewport_size(viewport_size)
 
 func _play_region_rect() -> Rect2:
 	var region: Rect2 = board_region.get_global_rect()

@@ -1,0 +1,68 @@
+[gd_scene load_steps=6 format=3]
+
+[sub_resource type="StandardMaterial3D" id="1_mat_stone"]
+albedo_color = Color(0.19, 0.195, 0.21, 1)
+roughness = 0.78
+metallic = 0
+
+[sub_resource type="BoxMesh" id="2_mesh_spine"]
+size = Vector3(1.3, 0.58, 0.52)
+
+[sub_resource type="BoxMesh" id="3_mesh_shoulder"]
+size = Vector3(0.82, 0.42, 0.44)
+
+[sub_resource type="SphereMesh" id="4_mesh_chunk"]
+radius = 0.24
+height = 0.34
+radial_segments = 8
+rings = 5
+
+[sub_resource type="PrismMesh" id="5_mesh_wedge"]
+left_to_right = 0.62
+size = Vector3(0.54, 0.38, 0.44)
+
+[node name="BlockerFamily_Ridge" type="Node3D"]
+
+[node name="Spine" type="MeshInstance3D" parent="."]
+mesh = SubResource("2_mesh_spine")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(0, 0.32, 0)
+rotation_degrees = Vector3(0, 18, 0)
+
+[node name="ShoulderA" type="MeshInstance3D" parent="."]
+mesh = SubResource("3_mesh_shoulder")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(-0.5, 0.45, 0.08)
+rotation_degrees = Vector3(0, -22, 0)
+
+[node name="ShoulderB" type="MeshInstance3D" parent="."]
+mesh = SubResource("3_mesh_shoulder")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(0.44, 0.39, -0.12)
+rotation_degrees = Vector3(0, 36, 0)
+scale = Vector3(0.8, 0.92, 0.9)
+
+[node name="Chunk" type="MeshInstance3D" parent="."]
+mesh = SubResource("4_mesh_chunk")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(0.16, 0.56, 0.22)
+scale = Vector3(1, 0.72, 1)
+
+[node name="Wedge" type="MeshInstance3D" parent="."]
+mesh = SubResource("5_mesh_wedge")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(-0.16, 0.52, -0.2)
+rotation_degrees = Vector3(0, -14, 0)
+
+[node name="WedgeRear" type="MeshInstance3D" parent="."]
+mesh = SubResource("5_mesh_wedge")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(0.42, 0.42, 0.16)
+rotation_degrees = Vector3(0, 48, 0)
+scale = Vector3(0.7, 0.76, 0.68)
+
+[node name="Pebble" type="MeshInstance3D" parent="."]
+mesh = SubResource("4_mesh_chunk")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(-0.52, 0.12, -0.06)
+scale = Vector3(0.84, 0.58, 0.82)

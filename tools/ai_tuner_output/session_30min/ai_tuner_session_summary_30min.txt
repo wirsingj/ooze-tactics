@@ -1,0 +1,14 @@
+AI TUNER 30-MIN SESSION SUMMARY
+Elapsed: 29.24 min  Stop: insufficient_budget_for_min_pass
+Score: 43.5704 -> 43.7108 (delta 0.1404)
+
+Changed keys:
+  objectives.resource_safe_phase_bonus: 10 -> 8 (delta -2)
+  ranged.ranged_saturation_soft_cap: 0.34 -> 0.32 (delta -0.02)
+  specialization.specialization_safe_phase_penalty: 14 -> 12 (delta -2)
+  upgrades.tile_upgrade_min_score: 66 -> 64 (delta -2)
+
+Passes:
+  Pass 1: budget_before=30m allocation=12m baseline=43.5704 best=grid_1 43.7108 accepted= reason=
+  Pass 2: budget_before=15.94m allocation=7.09m baseline=43.5704 best=grid_1 43.7108 accepted=grid_1 reason=Accepting grid_1 due to consistent improvement across passes (delta +0.14, hits 2).
+  Pass 3: budget_before=8.82m allocation=8.82m baseline=43.7108 best=grid_1 43.7108 accepted= reason=

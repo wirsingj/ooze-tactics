@@ -1,0 +1,28 @@
+{
+  "repo_root": "C:\\Users\\wirsi\\OneDrive\\Desktop\\git\\ooze-tactics",
+  "export_dir": "assets/meshes/generated",
+  "assets": [
+    "assets/meshes/generated/crystal_small.glb",
+    "assets/meshes/generated/crystal_hero.glb",
+    "assets/meshes/generated/node_base.glb",
+    "assets/meshes/generated/blocker_wall.glb",
+    "assets/meshes/generated/cave_wall_segment.glb",
+    "assets/meshes/generated/cave_door_arch.glb",
+    "assets/meshes/generated/board_edge_trim.glb",
+    "assets/meshes/generated/ooze_puddle_a.glb",
+    "assets/meshes/generated/ooze_puddle_b.glb",
+    "assets/meshes/generated/ooze_puddle_c.glb"
+  ],
+  "replacement_map": {
+    "crystal_small.glb": "Replaces small crystal markers/props generated as Prism/Cylinder meshes in World3DRenderer crystal and role marker paths.",
+    "crystal_hero.glb": "Replaces large focal crystal placeholders for heart/nexus/centerpiece nodes.",
+    "node_base.glb": "Replaces circular node/pylon base placeholders currently built from primitive cylinders.",
+    "blocker_wall.glb": "Replaces blocker cube/sphere/cylinder/prism primitive variants in _rebuild_static_world blocker placement.",
+    "cave_wall_segment.glb": "Replaces cave perimeter wall chunks currently built from box primitives in _add_cave_perimeter.",
+    "cave_door_arch.glb": "Replaces doorway arch and door framing primitives in _add_cave_doors.",
+    "board_edge_trim.glb": "Replaces board frame/edge trim box primitives created in _rebuild_static_world.",
+    "ooze_puddle_a.glb": "Replaces procedural/debug ooze puddle primitives for authored ooze zone silhouettes.",
+    "ooze_puddle_b.glb": "Replaces procedural/debug ooze puddle primitives for authored ooze zone silhouettes.",
+    "ooze_puddle_c.glb": "Replaces procedural/debug ooze puddle primitives for authored ooze zone silhouettes."
+  }
+}

@@ -1,0 +1,25 @@
+AI TUNER SESSION SUMMARY (40 MIN)
+Generated: 2026-04-20T18:50:03
+Stop: plateau
+Elapsed(min): 35
+Scores: 43.3076717980251 -> 43.3076717980251 (delta 0.0)
+Effective passes: 4
+Weights: 0.4, 0.3, 0.2, 0.1
+Passes run: 3
+
+Pass 1: baseline=43.3076717980251 best=43.4469073164132 accepted=43.3076717980251 accepted_flag=False
+  deltas role= spec= obj= econ= shape= anti=
+  reject: grid_1: score improvement below threshold
+  reject: rand_3: score improvement below threshold
+  reject: rand_4: score improvement below threshold
+  reject: rand_2: score improvement below threshold
+
+Pass 2: baseline=43.3076717980251 best=43.4469073164132 accepted=43.3076717980251 accepted_flag=False
+  deltas role= spec= obj= econ= shape= anti=
+  reject: grid_1: score improvement below threshold
+
+Pass 3: baseline=43.3076717980251 best=43.4469073164132 accepted=43.3076717980251 accepted_flag=False
+  deltas role= spec= obj= econ= shape= anti=
+  reject: grid_1: score improvement below threshold
+
+Applied parameter changes: none

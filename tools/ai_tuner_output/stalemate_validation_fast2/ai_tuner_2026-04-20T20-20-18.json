@@ -1,0 +1,2890 @@
+{
+	"all_candidates": [
+		{
+			"changed_params": [],
+			"diff_vs_baseline": {
+				"defense_local_ratio_hard_cap": {
+					"baseline": 0.55,
+					"candidate": 0.55,
+					"changed": false,
+					"delta": 0.0
+				},
+				"defense_local_ratio_soft_cap": {
+					"baseline": 0.4,
+					"candidate": 0.4,
+					"changed": false,
+					"delta": 0.0
+				},
+				"defense_nearby_soft_limit": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"engaged_upgrade_energy_threshold": {
+					"baseline": 16.0,
+					"candidate": 16.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"gather_conversion_resource_max_dist": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"gather_safe_min_enemy_distance": {
+					"baseline": 4.0,
+					"candidate": 4.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"max_tile_upgrades_per_turn": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"non_engaged_upgrade_energy_threshold": {
+					"baseline": 18.0,
+					"candidate": 18.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_backfill_penalty": {
+					"baseline": 32.0,
+					"candidate": 32.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_progress_weight": {
+					"baseline": 22.0,
+					"candidate": 22.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_upgrade_distance_max": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_upgrade_enemy_distance_max": {
+					"baseline": 10.0,
+					"candidate": 10.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_backline_penalty": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_frontline_penalty": {
+					"baseline": 28.0,
+					"candidate": 28.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_hard_cap": {
+					"baseline": 0.52,
+					"candidate": 0.52,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_max_penalty": {
+					"baseline": 36.0,
+					"candidate": 36.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_min_tiles": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_soft_cap": {
+					"baseline": 0.32,
+					"candidate": 0.32,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_approaching_phase_bonus": {
+					"baseline": 4.0,
+					"candidate": 4.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_gather_focus_bonus": {
+					"baseline": 12.0,
+					"candidate": 12.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_low_threat_bonus": {
+					"baseline": 6.0,
+					"candidate": 6.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_near_threat_penalty": {
+					"baseline": 10.0,
+					"candidate": 10.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_node_hold_bonus": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_objective_max_distance": {
+					"baseline": 9.0,
+					"candidate": 9.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_objective_step_weight": {
+					"baseline": 4.0,
+					"candidate": 4.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_safe_phase_bonus": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_adjacent_penalty": {
+					"baseline": 3.0,
+					"candidate": 3.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_backline_blanket_penalty": {
+					"baseline": 12.0,
+					"candidate": 12.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_hard_cap": {
+					"baseline": 0.62,
+					"candidate": 0.62,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_local_cluster_penalty": {
+					"baseline": 5.0,
+					"candidate": 5.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_local_radius": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_local_soft_limit": {
+					"baseline": 3.0,
+					"candidate": 3.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_max_penalty": {
+					"baseline": 30.0,
+					"candidate": 30.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_min_tiles": {
+					"baseline": 9.0,
+					"candidate": 9.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_path_penalty": {
+					"baseline": 12.0,
+					"candidate": 12.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_safe_phase_penalty": {
+					"baseline": 12.0,
+					"candidate": 12.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_soft_cap": {
+					"baseline": 0.45,
+					"candidate": 0.45,
+					"changed": false,
+					"delta": 0.0
+				},
+				"tile_upgrade_min_score": {
+					"baseline": 64.0,
+					"candidate": 64.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"upgrade_priority_margin": {
+					"baseline": 10.0,
+					"candidate": 10.0,
+					"changed": false,
+					"delta": 0.0
+				}
+			},
+			"effective_params": {
+				"defense_local_ratio_hard_cap": 0.55,
+				"defense_local_ratio_soft_cap": 0.4,
+				"defense_nearby_soft_limit": 2.0,
+				"engaged_upgrade_energy_threshold": 16.0,
+				"gather_conversion_resource_max_dist": 2.0,
+				"gather_safe_min_enemy_distance": 4.0,
+				"max_tile_upgrades_per_turn": 2.0,
+				"non_engaged_upgrade_energy_threshold": 18.0,
+				"objective_backfill_penalty": 32.0,
+				"objective_progress_weight": 22.0,
+				"objective_upgrade_distance_max": 14.0,
+				"objective_upgrade_enemy_distance_max": 10.0,
+				"ranged_backline_penalty": 14.0,
+				"ranged_frontline_penalty": 28.0,
+				"ranged_saturation_hard_cap": 0.52,
+				"ranged_saturation_max_penalty": 36.0,
+				"ranged_saturation_min_tiles": 8.0,
+				"ranged_saturation_soft_cap": 0.32,
+				"resource_approaching_phase_bonus": 4.0,
+				"resource_gather_focus_bonus": 12.0,
+				"resource_low_threat_bonus": 6.0,
+				"resource_near_threat_penalty": 10.0,
+				"resource_node_hold_bonus": 14.0,
+				"resource_objective_max_distance": 9.0,
+				"resource_objective_step_weight": 4.0,
+				"resource_safe_phase_bonus": 8.0,
+				"specialization_adjacent_penalty": 3.0,
+				"specialization_backline_blanket_penalty": 12.0,
+				"specialization_hard_cap": 0.62,
+				"specialization_local_cluster_penalty": 5.0,
+				"specialization_local_radius": 2.0,
+				"specialization_local_soft_limit": 3.0,
+				"specialization_max_penalty": 30.0,
+				"specialization_min_tiles": 9.0,
+				"specialization_path_penalty": 12.0,
+				"specialization_safe_phase_penalty": 12.0,
+				"specialization_soft_cap": 0.45,
+				"tile_upgrade_min_score": 64.0,
+				"upgrade_priority_margin": 10.0
+			},
+			"id": "baseline",
+			"label": "Baseline",
+			"overrides": {
+
+			},
+			"pathology_counts": {
+				"backline_specialized": 6.07317073170732,
+				"exposed_ranged": 0.0,
+				"frontline_gather": 0.51219512195122,
+				"high_fail_rate": 0.0,
+				"resource_neglect": 0.0
+			},
+			"runs": [
+				{
+					"checkpoints": {
+						"15": {
+							"category_scores": {
+								"anti_pathology": 58.0,
+								"board_shape": 90.1311475409836,
+								"economy": 100.0,
+								"objective_progress": 49.3125,
+								"role_balance": 0.0,
+								"specialization_quality": 0.0
+							},
+							"metrics": {
+								"avg_energy": 20.9833333333333,
+								"backline_specialized_ratio": 1.0,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 0,
+									"gather": 0,
+									"melee": 0,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.114754098360656,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.34375,
+									"resource_control": 0.0625,
+									"resource_progress": 0.1875
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 3,
+									"exposed_ranged": 0,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.0491803278688525,
+								"supported_ratio": 0.885245901639344,
+								"tier_counts": {
+									"1": 3,
+									"2": 0,
+									"3": 0
+								},
+								"total_tiles": 61,
+								"turn": 15,
+								"type_counts": {
+									"basic": 58,
+									"defense": 0,
+									"gather": 3,
+									"melee": 0,
+									"ranged": 0
+								}
+							},
+							"pathology": {
+								"backline_specialized": 3,
+								"exposed_ranged": 0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 45.1412397540984,
+							"turn": 15
+						},
+						"150": {
+							"category_scores": {
+								"anti_pathology": 95.875,
+								"board_shape": 92.0109289617486,
+								"economy": 58.3323333333333,
+								"objective_progress": 56.4375,
+								"role_balance": 28.2404371584699,
+								"specialization_quality": 62.7132084309134
+							},
+							"metrics": {
+								"avg_energy": 56.8633333333333,
+								"backline_specialized_ratio": 0.0982142857142857,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 15,
+									"gather": 0,
+									"melee": 25,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.092896174863388,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.5,
+									"resource_control": 0.125,
+									"resource_progress": 0.28125
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 11,
+									"exposed_ranged": 0,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.612021857923497,
+								"supported_ratio": 0.907103825136612,
+								"tier_counts": {
+									"1": 105,
+									"2": 6,
+									"3": 1
+								},
+								"total_tiles": 183,
+								"turn": 150,
+								"type_counts": {
+									"basic": 71,
+									"defense": 30,
+									"gather": 4,
+									"melee": 74,
+									"ranged": 4
+								}
+							},
+							"pathology": {
+								"backline_specialized": 11,
+								"exposed_ranged": 0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 59.7071207611241,
+							"turn": 150
+						},
+						"45": {
+							"category_scores": {
+								"anti_pathology": 76.6382978723404,
+								"board_shape": 91.5686274509804,
+								"economy": 93.6772222222222,
+								"objective_progress": 53.625,
+								"role_balance": 0.0,
+								"specialization_quality": 59.4383979974969
+							},
+							"metrics": {
+								"avg_energy": 36.0722222222222,
+								"backline_specialized_ratio": 0.127659574468085,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 4,
+									"gather": 0,
+									"melee": 11,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 1,
+								"low_support_ratio": 0.0980392156862745,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.5,
+									"resource_control": 0.125,
+									"resource_progress": 0.1875
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 6,
+									"exposed_ranged": 0,
+									"frontline_gather": 1,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.46078431372549,
+								"supported_ratio": 0.901960784313726,
+								"tier_counts": {
+									"1": 44,
+									"2": 3,
+									"3": 0
+								},
+								"total_tiles": 102,
+								"turn": 45,
+								"type_counts": {
+									"basic": 55,
+									"defense": 5,
+									"gather": 4,
+									"melee": 37,
+									"ranged": 1
+								}
+							},
+							"pathology": {
+								"backline_specialized": 6,
+								"exposed_ranged": 0,
+								"frontline_gather": 1,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 57.1933701919066,
+							"turn": 45
+						},
+						"90": {
+							"category_scores": {
+								"anti_pathology": 80.6,
+								"board_shape": 92.5960264900662,
+								"economy": 78.6463888888889,
+								"objective_progress": 54.5625,
+								"role_balance": 27.1258278145695,
+								"specialization_quality": 69.1241206769683
+							},
+							"metrics": {
+								"avg_energy": 44.9138888888889,
+								"backline_specialized_ratio": 0.0333333333333333,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 1,
+									"defense": 31,
+									"gather": 0,
+									"melee": 19,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 1,
+								"low_support_ratio": 0.0860927152317881,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.5,
+									"resource_control": 0.125,
+									"resource_progress": 0.21875
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 3,
+									"exposed_ranged": 0,
+									"frontline_gather": 1,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.596026490066225,
+								"supported_ratio": 0.913907284768212,
+								"tier_counts": {
+									"1": 85,
+									"2": 3,
+									"3": 2
+								},
+								"total_tiles": 151,
+								"turn": 90,
+								"type_counts": {
+									"basic": 61,
+									"defense": 35,
+									"gather": 4,
+									"melee": 49,
+									"ranged": 2
+								}
+							},
+							"pathology": {
+								"backline_specialized": 3,
+								"exposed_ranged": 0,
+								"frontline_gather": 1,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 62.2928437270052,
+							"turn": 90
+						}
+					},
+					"final_objective": {
+						"door_progress": 0.0,
+						"heart_destroy_progress": 0.0,
+						"military_progress": 0.5,
+						"resource_control": 0.125,
+						"resource_progress": 0.28125
+					},
+					"final_turn": 150,
+					"outcome": {
+						"status": "ongoing"
+					},
+					"ran_to_outcome_window": false,
+					"runtime_seconds": 57.022,
+					"scenario": "stall_probe_fast",
+					"scenario_type": "fast",
+					"seed": 1337
+				},
+				{
+					"checkpoints": {
+						"15": {
+							"category_scores": {
+								"anti_pathology": 58.0,
+								"board_shape": 90.1311475409836,
+								"economy": 100.0,
+								"objective_progress": 49.3125,
+								"role_balance": 0.0,
+								"specialization_quality": 0.0
+							},
+							"metrics": {
+								"avg_energy": 20.9833333333333,
+								"backline_specialized_ratio": 1.0,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 0,
+									"gather": 0,
+									"melee": 0,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.114754098360656,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.34375,
+									"resource_control": 0.0625,
+									"resource_progress": 0.1875
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 3,
+									"exposed_ranged": 0,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.0491803278688525,
+								"supported_ratio": 0.885245901639344,
+								"tier_counts": {
+									"1": 3,
+									"2": 0,
+									"3": 0
+								},
+								"total_tiles": 61,
+								"turn": 15,
+								"type_counts": {
+									"basic": 58,
+									"defense": 0,
+									"gather": 3,
+									"melee": 0,
+									"ranged": 0
+								}
+							},
+							"pathology": {
+								"backline_specialized": 3,
+								"exposed_ranged": 0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 45.1412397540984,
+							"turn": 15
+						},
+						"150": {
+							"category_scores": {
+								"anti_pathology": 95.875,
+								"board_shape": 92.0109289617486,
+								"economy": 58.3323333333333,
+								"objective_progress": 56.4375,
+								"role_balance": 28.2404371584699,
+								"specialization_quality": 62.7132084309134
+							},
+							"metrics": {
+								"avg_energy": 56.8633333333333,
+								"backline_specialized_ratio": 0.0982142857142857,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 15,
+									"gather": 0,
+									"melee": 25,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.092896174863388,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.5,
+									"resource_control": 0.125,
+									"resource_progress": 0.28125
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 11,
+									"exposed_ranged": 0,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.612021857923497,
+								"supported_ratio": 0.907103825136612,
+								"tier_counts": {
+									"1": 105,
+									"2": 6,
+									"3": 1
+								},
+								"total_tiles": 183,
+								"turn": 150,
+								"type_counts": {
+									"basic": 71,
+									"defense": 30,
+									"gather": 4,
+									"melee": 74,
+									"ranged": 4
+								}
+							},
+							"pathology": {
+								"backline_specialized": 11,
+								"exposed_ranged": 0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 59.7071207611241,
+							"turn": 150
+						},
+						"45": {
+							"category_scores": {
+								"anti_pathology": 76.6382978723404,
+								"board_shape": 91.5686274509804,
+								"economy": 93.6772222222222,
+								"objective_progress": 53.625,
+								"role_balance": 0.0,
+								"specialization_quality": 59.4383979974969
+							},
+							"metrics": {
+								"avg_energy": 36.0722222222222,
+								"backline_specialized_ratio": 0.127659574468085,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 4,
+									"gather": 0,
+									"melee": 11,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 1,
+								"low_support_ratio": 0.0980392156862745,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.5,
+									"resource_control": 0.125,
+									"resource_progress": 0.1875
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 6,
+									"exposed_ranged": 0,
+									"frontline_gather": 1,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.46078431372549,
+								"supported_ratio": 0.901960784313726,
+								"tier_counts": {
+									"1": 44,
+									"2": 3,
+									"3": 0
+								},
+								"total_tiles": 102,
+								"turn": 45,
+								"type_counts": {
+									"basic": 55,
+									"defense": 5,
+									"gather": 4,
+									"melee": 37,
+									"ranged": 1
+								}
+							},
+							"pathology": {
+								"backline_specialized": 6,
+								"exposed_ranged": 0,
+								"frontline_gather": 1,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 57.1933701919066,
+							"turn": 45
+						},
+						"90": {
+							"category_scores": {
+								"anti_pathology": 80.6,
+								"board_shape": 92.5960264900662,
+								"economy": 78.6463888888889,
+								"objective_progress": 54.5625,
+								"role_balance": 27.1258278145695,
+								"specialization_quality": 69.1241206769683
+							},
+							"metrics": {
+								"avg_energy": 44.9138888888889,
+								"backline_specialized_ratio": 0.0333333333333333,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 1,
+									"defense": 31,
+									"gather": 0,
+									"melee": 19,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 1,
+								"low_support_ratio": 0.0860927152317881,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.5,
+									"resource_control": 0.125,
+									"resource_progress": 0.21875
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 3,
+									"exposed_ranged": 0,
+									"frontline_gather": 1,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.596026490066225,
+								"supported_ratio": 0.913907284768212,
+								"tier_counts": {
+									"1": 85,
+									"2": 3,
+									"3": 2
+								},
+								"total_tiles": 151,
+								"turn": 90,
+								"type_counts": {
+									"basic": 61,
+									"defense": 35,
+									"gather": 4,
+									"melee": 49,
+									"ranged": 2
+								}
+							},
+							"pathology": {
+								"backline_specialized": 3,
+								"exposed_ranged": 0,
+								"frontline_gather": 1,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 62.2928437270052,
+							"turn": 90
+						}
+					},
+					"final_objective": {
+						"door_progress": 0.0,
+						"heart_destroy_progress": 0.0,
+						"military_progress": 0.5,
+						"resource_control": 0.125,
+						"resource_progress": 0.28125
+					},
+					"final_turn": 222,
+					"outcome": {
+						"reason": "turn_limit",
+						"status": "loss"
+					},
+					"ran_to_outcome_window": true,
+					"runtime_seconds": 103.514,
+					"scenario": "stall_probe_fast_outcome",
+					"scenario_type": "outcome",
+					"seed": 1337
+				}
+			],
+			"runtime_breakdown": {
+				"fast": {
+					"actor_turns": 150.0,
+					"elapsed_seconds": 57.022,
+					"simulations": 1
+				},
+				"outcome": {
+					"actor_turns": 222.0,
+					"elapsed_seconds": 103.514,
+					"simulations": 1
+				}
+			},
+			"score": 53.8287432946927,
+			"score_by_category": {
+				"anti_pathology": 79.6947067981318,
+				"board_shape": 91.6932413114484,
+				"economy": 80.5334268292683,
+				"objective_progress": 53.8582317073171,
+				"role_balance": 15.5431549234611,
+				"specialization_quality": 51.3977514290873
+			},
+			"score_by_checkpoint": {
+				"15": 45.1412397540984,
+				"150": 59.7071207611241,
+				"45": 57.1933701919066,
+				"90": 62.2928437270052
+			}
+		}
+	],
+	"baseline": {
+		"changed_params": [],
+		"diff_vs_baseline": {
+			"defense_local_ratio_hard_cap": {
+				"baseline": 0.55,
+				"candidate": 0.55,
+				"changed": false,
+				"delta": 0.0
+			},
+			"defense_local_ratio_soft_cap": {
+				"baseline": 0.4,
+				"candidate": 0.4,
+				"changed": false,
+				"delta": 0.0
+			},
+			"defense_nearby_soft_limit": {
+				"baseline": 2.0,
+				"candidate": 2.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"engaged_upgrade_energy_threshold": {
+				"baseline": 16.0,
+				"candidate": 16.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"gather_conversion_resource_max_dist": {
+				"baseline": 2.0,
+				"candidate": 2.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"gather_safe_min_enemy_distance": {
+				"baseline": 4.0,
+				"candidate": 4.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"max_tile_upgrades_per_turn": {
+				"baseline": 2.0,
+				"candidate": 2.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"non_engaged_upgrade_energy_threshold": {
+				"baseline": 18.0,
+				"candidate": 18.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"objective_backfill_penalty": {
+				"baseline": 32.0,
+				"candidate": 32.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"objective_progress_weight": {
+				"baseline": 22.0,
+				"candidate": 22.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"objective_upgrade_distance_max": {
+				"baseline": 14.0,
+				"candidate": 14.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"objective_upgrade_enemy_distance_max": {
+				"baseline": 10.0,
+				"candidate": 10.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"ranged_backline_penalty": {
+				"baseline": 14.0,
+				"candidate": 14.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"ranged_frontline_penalty": {
+				"baseline": 28.0,
+				"candidate": 28.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"ranged_saturation_hard_cap": {
+				"baseline": 0.52,
+				"candidate": 0.52,
+				"changed": false,
+				"delta": 0.0
+			},
+			"ranged_saturation_max_penalty": {
+				"baseline": 36.0,
+				"candidate": 36.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"ranged_saturation_min_tiles": {
+				"baseline": 8.0,
+				"candidate": 8.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"ranged_saturation_soft_cap": {
+				"baseline": 0.32,
+				"candidate": 0.32,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_approaching_phase_bonus": {
+				"baseline": 4.0,
+				"candidate": 4.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_gather_focus_bonus": {
+				"baseline": 12.0,
+				"candidate": 12.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_low_threat_bonus": {
+				"baseline": 6.0,
+				"candidate": 6.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_near_threat_penalty": {
+				"baseline": 10.0,
+				"candidate": 10.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_node_hold_bonus": {
+				"baseline": 14.0,
+				"candidate": 14.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_objective_max_distance": {
+				"baseline": 9.0,
+				"candidate": 9.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_objective_step_weight": {
+				"baseline": 4.0,
+				"candidate": 4.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_safe_phase_bonus": {
+				"baseline": 8.0,
+				"candidate": 8.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_adjacent_penalty": {
+				"baseline": 3.0,
+				"candidate": 3.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_backline_blanket_penalty": {
+				"baseline": 12.0,
+				"candidate": 12.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_hard_cap": {
+				"baseline": 0.62,
+				"candidate": 0.62,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_local_cluster_penalty": {
+				"baseline": 5.0,
+				"candidate": 5.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_local_radius": {
+				"baseline": 2.0,
+				"candidate": 2.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_local_soft_limit": {
+				"baseline": 3.0,
+				"candidate": 3.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_max_penalty": {
+				"baseline": 30.0,
+				"candidate": 30.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_min_tiles": {
+				"baseline": 9.0,
+				"candidate": 9.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_path_penalty": {
+				"baseline": 12.0,
+				"candidate": 12.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_safe_phase_penalty": {
+				"baseline": 12.0,
+				"candidate": 12.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_soft_cap": {
+				"baseline": 0.45,
+				"candidate": 0.45,
+				"changed": false,
+				"delta": 0.0
+			},
+			"tile_upgrade_min_score": {
+				"baseline": 64.0,
+				"candidate": 64.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"upgrade_priority_margin": {
+				"baseline": 10.0,
+				"candidate": 10.0,
+				"changed": false,
+				"delta": 0.0
+			}
+		},
+		"effective_params": {
+			"defense_local_ratio_hard_cap": 0.55,
+			"defense_local_ratio_soft_cap": 0.4,
+			"defense_nearby_soft_limit": 2.0,
+			"engaged_upgrade_energy_threshold": 16.0,
+			"gather_conversion_resource_max_dist": 2.0,
+			"gather_safe_min_enemy_distance": 4.0,
+			"max_tile_upgrades_per_turn": 2.0,
+			"non_engaged_upgrade_energy_threshold": 18.0,
+			"objective_backfill_penalty": 32.0,
+			"objective_progress_weight": 22.0,
+			"objective_upgrade_distance_max": 14.0,
+			"objective_upgrade_enemy_distance_max": 10.0,
+			"ranged_backline_penalty": 14.0,
+			"ranged_frontline_penalty": 28.0,
+			"ranged_saturation_hard_cap": 0.52,
+			"ranged_saturation_max_penalty": 36.0,
+			"ranged_saturation_min_tiles": 8.0,
+			"ranged_saturation_soft_cap": 0.32,
+			"resource_approaching_phase_bonus": 4.0,
+			"resource_gather_focus_bonus": 12.0,
+			"resource_low_threat_bonus": 6.0,
+			"resource_near_threat_penalty": 10.0,
+			"resource_node_hold_bonus": 14.0,
+			"resource_objective_max_distance": 9.0,
+			"resource_objective_step_weight": 4.0,
+			"resource_safe_phase_bonus": 8.0,
+			"specialization_adjacent_penalty": 3.0,
+			"specialization_backline_blanket_penalty": 12.0,
+			"specialization_hard_cap": 0.62,
+			"specialization_local_cluster_penalty": 5.0,
+			"specialization_local_radius": 2.0,
+			"specialization_local_soft_limit": 3.0,
+			"specialization_max_penalty": 30.0,
+			"specialization_min_tiles": 9.0,
+			"specialization_path_penalty": 12.0,
+			"specialization_safe_phase_penalty": 12.0,
+			"specialization_soft_cap": 0.45,
+			"tile_upgrade_min_score": 64.0,
+			"upgrade_priority_margin": 10.0
+		},
+		"id": "baseline",
+		"label": "Baseline",
+		"overrides": {
+
+		},
+		"pathology_counts": {
+			"backline_specialized": 6.07317073170732,
+			"exposed_ranged": 0.0,
+			"frontline_gather": 0.51219512195122,
+			"high_fail_rate": 0.0,
+			"resource_neglect": 0.0
+		},
+		"runs": [
+			{
+				"checkpoints": {
+					"15": {
+						"category_scores": {
+							"anti_pathology": 58.0,
+							"board_shape": 90.1311475409836,
+							"economy": 100.0,
+							"objective_progress": 49.3125,
+							"role_balance": 0.0,
+							"specialization_quality": 0.0
+						},
+						"metrics": {
+							"avg_energy": 20.9833333333333,
+							"backline_specialized_ratio": 1.0,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"frontline_counts": {
+								"basic": 0,
+								"defense": 0,
+								"gather": 0,
+								"melee": 0,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 0,
+							"low_support_ratio": 0.114754098360656,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.0,
+								"military_progress": 0.34375,
+								"resource_control": 0.0625,
+								"resource_progress": 0.1875
+							},
+							"pass_rate": 0.0,
+							"pathology": {
+								"backline_specialized": 3,
+								"exposed_ranged": 0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.0491803278688525,
+							"supported_ratio": 0.885245901639344,
+							"tier_counts": {
+								"1": 3,
+								"2": 0,
+								"3": 0
+							},
+							"total_tiles": 61,
+							"turn": 15,
+							"type_counts": {
+								"basic": 58,
+								"defense": 0,
+								"gather": 3,
+								"melee": 0,
+								"ranged": 0
+							}
+						},
+						"pathology": {
+							"backline_specialized": 3,
+							"exposed_ranged": 0,
+							"frontline_gather": 0,
+							"high_fail_rate": 0,
+							"resource_neglect": 0
+						},
+						"total_score": 45.1412397540984,
+						"turn": 15
+					},
+					"150": {
+						"category_scores": {
+							"anti_pathology": 95.875,
+							"board_shape": 92.0109289617486,
+							"economy": 58.3323333333333,
+							"objective_progress": 56.4375,
+							"role_balance": 28.2404371584699,
+							"specialization_quality": 62.7132084309134
+						},
+						"metrics": {
+							"avg_energy": 56.8633333333333,
+							"backline_specialized_ratio": 0.0982142857142857,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"frontline_counts": {
+								"basic": 0,
+								"defense": 15,
+								"gather": 0,
+								"melee": 25,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 0,
+							"low_support_ratio": 0.092896174863388,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.0,
+								"military_progress": 0.5,
+								"resource_control": 0.125,
+								"resource_progress": 0.28125
+							},
+							"pass_rate": 0.0,
+							"pathology": {
+								"backline_specialized": 11,
+								"exposed_ranged": 0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.612021857923497,
+							"supported_ratio": 0.907103825136612,
+							"tier_counts": {
+								"1": 105,
+								"2": 6,
+								"3": 1
+							},
+							"total_tiles": 183,
+							"turn": 150,
+							"type_counts": {
+								"basic": 71,
+								"defense": 30,
+								"gather": 4,
+								"melee": 74,
+								"ranged": 4
+							}
+						},
+						"pathology": {
+							"backline_specialized": 11,
+							"exposed_ranged": 0,
+							"frontline_gather": 0,
+							"high_fail_rate": 0,
+							"resource_neglect": 0
+						},
+						"total_score": 59.7071207611241,
+						"turn": 150
+					},
+					"45": {
+						"category_scores": {
+							"anti_pathology": 76.6382978723404,
+							"board_shape": 91.5686274509804,
+							"economy": 93.6772222222222,
+							"objective_progress": 53.625,
+							"role_balance": 0.0,
+							"specialization_quality": 59.4383979974969
+						},
+						"metrics": {
+							"avg_energy": 36.0722222222222,
+							"backline_specialized_ratio": 0.127659574468085,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"frontline_counts": {
+								"basic": 0,
+								"defense": 4,
+								"gather": 0,
+								"melee": 11,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 1,
+							"low_support_ratio": 0.0980392156862745,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.0,
+								"military_progress": 0.5,
+								"resource_control": 0.125,
+								"resource_progress": 0.1875
+							},
+							"pass_rate": 0.0,
+							"pathology": {
+								"backline_specialized": 6,
+								"exposed_ranged": 0,
+								"frontline_gather": 1,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.46078431372549,
+							"supported_ratio": 0.901960784313726,
+							"tier_counts": {
+								"1": 44,
+								"2": 3,
+								"3": 0
+							},
+							"total_tiles": 102,
+							"turn": 45,
+							"type_counts": {
+								"basic": 55,
+								"defense": 5,
+								"gather": 4,
+								"melee": 37,
+								"ranged": 1
+							}
+						},
+						"pathology": {
+							"backline_specialized": 6,
+							"exposed_ranged": 0,
+							"frontline_gather": 1,
+							"high_fail_rate": 0,
+							"resource_neglect": 0
+						},
+						"total_score": 57.1933701919066,
+						"turn": 45
+					},
+					"90": {
+						"category_scores": {
+							"anti_pathology": 80.6,
+							"board_shape": 92.5960264900662,
+							"economy": 78.6463888888889,
+							"objective_progress": 54.5625,
+							"role_balance": 27.1258278145695,
+							"specialization_quality": 69.1241206769683
+						},
+						"metrics": {
+							"avg_energy": 44.9138888888889,
+							"backline_specialized_ratio": 0.0333333333333333,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"frontline_counts": {
+								"basic": 1,
+								"defense": 31,
+								"gather": 0,
+								"melee": 19,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 1,
+							"low_support_ratio": 0.0860927152317881,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.0,
+								"military_progress": 0.5,
+								"resource_control": 0.125,
+								"resource_progress": 0.21875
+							},
+							"pass_rate": 0.0,
+							"pathology": {
+								"backline_specialized": 3,
+								"exposed_ranged": 0,
+								"frontline_gather": 1,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.596026490066225,
+							"supported_ratio": 0.913907284768212,
+							"tier_counts": {
+								"1": 85,
+								"2": 3,
+								"3": 2
+							},
+							"total_tiles": 151,
+							"turn": 90,
+							"type_counts": {
+								"basic": 61,
+								"defense": 35,
+								"gather": 4,
+								"melee": 49,
+								"ranged": 2
+							}
+						},
+						"pathology": {
+							"backline_specialized": 3,
+							"exposed_ranged": 0,
+							"frontline_gather": 1,
+							"high_fail_rate": 0,
+							"resource_neglect": 0
+						},
+						"total_score": 62.2928437270052,
+						"turn": 90
+					}
+				},
+				"final_objective": {
+					"door_progress": 0.0,
+					"heart_destroy_progress": 0.0,
+					"military_progress": 0.5,
+					"resource_control": 0.125,
+					"resource_progress": 0.28125
+				},
+				"final_turn": 150,
+				"outcome": {
+					"status": "ongoing"
+				},
+				"ran_to_outcome_window": false,
+				"runtime_seconds": 57.022,
+				"scenario": "stall_probe_fast",
+				"scenario_type": "fast",
+				"seed": 1337
+			},
+			{
+				"checkpoints": {
+					"15": {
+						"category_scores": {
+							"anti_pathology": 58.0,
+							"board_shape": 90.1311475409836,
+							"economy": 100.0,
+							"objective_progress": 49.3125,
+							"role_balance": 0.0,
+							"specialization_quality": 0.0
+						},
+						"metrics": {
+							"avg_energy": 20.9833333333333,
+							"backline_specialized_ratio": 1.0,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"frontline_counts": {
+								"basic": 0,
+								"defense": 0,
+								"gather": 0,
+								"melee": 0,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 0,
+							"low_support_ratio": 0.114754098360656,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.0,
+								"military_progress": 0.34375,
+								"resource_control": 0.0625,
+								"resource_progress": 0.1875
+							},
+							"pass_rate": 0.0,
+							"pathology": {
+								"backline_specialized": 3,
+								"exposed_ranged": 0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.0491803278688525,
+							"supported_ratio": 0.885245901639344,
+							"tier_counts": {
+								"1": 3,
+								"2": 0,
+								"3": 0
+							},
+							"total_tiles": 61,
+							"turn": 15,
+							"type_counts": {
+								"basic": 58,
+								"defense": 0,
+								"gather": 3,
+								"melee": 0,
+								"ranged": 0
+							}
+						},
+						"pathology": {
+							"backline_specialized": 3,
+							"exposed_ranged": 0,
+							"frontline_gather": 0,
+							"high_fail_rate": 0,
+							"resource_neglect": 0
+						},
+						"total_score": 45.1412397540984,
+						"turn": 15
+					},
+					"150": {
+						"category_scores": {
+							"anti_pathology": 95.875,
+							"board_shape": 92.0109289617486,
+							"economy": 58.3323333333333,
+							"objective_progress": 56.4375,
+							"role_balance": 28.2404371584699,
+							"specialization_quality": 62.7132084309134
+						},
+						"metrics": {
+							"avg_energy": 56.8633333333333,
+							"backline_specialized_ratio": 0.0982142857142857,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"frontline_counts": {
+								"basic": 0,
+								"defense": 15,
+								"gather": 0,
+								"melee": 25,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 0,
+							"low_support_ratio": 0.092896174863388,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.0,
+								"military_progress": 0.5,
+								"resource_control": 0.125,
+								"resource_progress": 0.28125
+							},
+							"pass_rate": 0.0,
+							"pathology": {
+								"backline_specialized": 11,
+								"exposed_ranged": 0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.612021857923497,
+							"supported_ratio": 0.907103825136612,
+							"tier_counts": {
+								"1": 105,
+								"2": 6,
+								"3": 1
+							},
+							"total_tiles": 183,
+							"turn": 150,
+							"type_counts": {
+								"basic": 71,
+								"defense": 30,
+								"gather": 4,
+								"melee": 74,
+								"ranged": 4
+							}
+						},
+						"pathology": {
+							"backline_specialized": 11,
+							"exposed_ranged": 0,
+							"frontline_gather": 0,
+							"high_fail_rate": 0,
+							"resource_neglect": 0
+						},
+						"total_score": 59.7071207611241,
+						"turn": 150
+					},
+					"45": {
+						"category_scores": {
+							"anti_pathology": 76.6382978723404,
+							"board_shape": 91.5686274509804,
+							"economy": 93.6772222222222,
+							"objective_progress": 53.625,
+							"role_balance": 0.0,
+							"specialization_quality": 59.4383979974969
+						},
+						"metrics": {
+							"avg_energy": 36.0722222222222,
+							"backline_specialized_ratio": 0.127659574468085,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"frontline_counts": {
+								"basic": 0,
+								"defense": 4,
+								"gather": 0,
+								"melee": 11,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 1,
+							"low_support_ratio": 0.0980392156862745,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.0,
+								"military_progress": 0.5,
+								"resource_control": 0.125,
+								"resource_progress": 0.1875
+							},
+							"pass_rate": 0.0,
+							"pathology": {
+								"backline_specialized": 6,
+								"exposed_ranged": 0,
+								"frontline_gather": 1,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.46078431372549,
+							"supported_ratio": 0.901960784313726,
+							"tier_counts": {
+								"1": 44,
+								"2": 3,
+								"3": 0
+							},
+							"total_tiles": 102,
+							"turn": 45,
+							"type_counts": {
+								"basic": 55,
+								"defense": 5,
+								"gather": 4,
+								"melee": 37,
+								"ranged": 1
+							}
+						},
+						"pathology": {
+							"backline_specialized": 6,
+							"exposed_ranged": 0,
+							"frontline_gather": 1,
+							"high_fail_rate": 0,
+							"resource_neglect": 0
+						},
+						"total_score": 57.1933701919066,
+						"turn": 45
+					},
+					"90": {
+						"category_scores": {
+							"anti_pathology": 80.6,
+							"board_shape": 92.5960264900662,
+							"economy": 78.6463888888889,
+							"objective_progress": 54.5625,
+							"role_balance": 27.1258278145695,
+							"specialization_quality": 69.1241206769683
+						},
+						"metrics": {
+							"avg_energy": 44.9138888888889,
+							"backline_specialized_ratio": 0.0333333333333333,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"frontline_counts": {
+								"basic": 1,
+								"defense": 31,
+								"gather": 0,
+								"melee": 19,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 1,
+							"low_support_ratio": 0.0860927152317881,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.0,
+								"military_progress": 0.5,
+								"resource_control": 0.125,
+								"resource_progress": 0.21875
+							},
+							"pass_rate": 0.0,
+							"pathology": {
+								"backline_specialized": 3,
+								"exposed_ranged": 0,
+								"frontline_gather": 1,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.596026490066225,
+							"supported_ratio": 0.913907284768212,
+							"tier_counts": {
+								"1": 85,
+								"2": 3,
+								"3": 2
+							},
+							"total_tiles": 151,
+							"turn": 90,
+							"type_counts": {
+								"basic": 61,
+								"defense": 35,
+								"gather": 4,
+								"melee": 49,
+								"ranged": 2
+							}
+						},
+						"pathology": {
+							"backline_specialized": 3,
+							"exposed_ranged": 0,
+							"frontline_gather": 1,
+							"high_fail_rate": 0,
+							"resource_neglect": 0
+						},
+						"total_score": 62.2928437270052,
+						"turn": 90
+					}
+				},
+				"final_objective": {
+					"door_progress": 0.0,
+					"heart_destroy_progress": 0.0,
+					"military_progress": 0.5,
+					"resource_control": 0.125,
+					"resource_progress": 0.28125
+				},
+				"final_turn": 222,
+				"outcome": {
+					"reason": "turn_limit",
+					"status": "loss"
+				},
+				"ran_to_outcome_window": true,
+				"runtime_seconds": 103.514,
+				"scenario": "stall_probe_fast_outcome",
+				"scenario_type": "outcome",
+				"seed": 1337
+			}
+		],
+		"runtime_breakdown": {
+			"fast": {
+				"actor_turns": 150.0,
+				"elapsed_seconds": 57.022,
+				"simulations": 1
+			},
+			"outcome": {
+				"actor_turns": 222.0,
+				"elapsed_seconds": 103.514,
+				"simulations": 1
+			}
+		},
+		"score": 53.8287432946927,
+		"score_by_category": {
+			"anti_pathology": 79.6947067981318,
+			"board_shape": 91.6932413114484,
+			"economy": 80.5334268292683,
+			"objective_progress": 53.8582317073171,
+			"role_balance": 15.5431549234611,
+			"specialization_quality": 51.3977514290873
+		},
+		"score_by_checkpoint": {
+			"15": 45.1412397540984,
+			"150": 59.7071207611241,
+			"45": 57.1933701919066,
+			"90": 62.2928437270052
+		}
+	},
+	"baseline_effective_params": {
+		"defense_local_ratio_hard_cap": 0.55,
+		"defense_local_ratio_soft_cap": 0.4,
+		"defense_nearby_soft_limit": 2.0,
+		"engaged_upgrade_energy_threshold": 16.0,
+		"gather_conversion_resource_max_dist": 2.0,
+		"gather_safe_min_enemy_distance": 4.0,
+		"max_tile_upgrades_per_turn": 2.0,
+		"non_engaged_upgrade_energy_threshold": 18.0,
+		"objective_backfill_penalty": 32.0,
+		"objective_progress_weight": 22.0,
+		"objective_upgrade_distance_max": 14.0,
+		"objective_upgrade_enemy_distance_max": 10.0,
+		"ranged_backline_penalty": 14.0,
+		"ranged_frontline_penalty": 28.0,
+		"ranged_saturation_hard_cap": 0.52,
+		"ranged_saturation_max_penalty": 36.0,
+		"ranged_saturation_min_tiles": 8.0,
+		"ranged_saturation_soft_cap": 0.32,
+		"resource_approaching_phase_bonus": 4.0,
+		"resource_gather_focus_bonus": 12.0,
+		"resource_low_threat_bonus": 6.0,
+		"resource_near_threat_penalty": 10.0,
+		"resource_node_hold_bonus": 14.0,
+		"resource_objective_max_distance": 9.0,
+		"resource_objective_step_weight": 4.0,
+		"resource_safe_phase_bonus": 8.0,
+		"specialization_adjacent_penalty": 3.0,
+		"specialization_backline_blanket_penalty": 12.0,
+		"specialization_hard_cap": 0.62,
+		"specialization_local_cluster_penalty": 5.0,
+		"specialization_local_radius": 2.0,
+		"specialization_local_soft_limit": 3.0,
+		"specialization_max_penalty": 30.0,
+		"specialization_min_tiles": 9.0,
+		"specialization_path_penalty": 12.0,
+		"specialization_safe_phase_penalty": 12.0,
+		"specialization_soft_cap": 0.45,
+		"tile_upgrade_min_score": 64.0,
+		"upgrade_priority_margin": 10.0
+	},
+	"candidate_count": 1,
+	"checkpoint_weights": {
+		"15": 0.8,
+		"150": 1.2,
+		"45": 1.0,
+		"90": 1.1
+	},
+	"checkpoints": [
+		15,
+		45,
+		90,
+		150
+	],
+	"config_used": {
+		"checkpoint_weights": {
+			"15": 0.8,
+			"150": 1.2,
+			"45": 1.0,
+			"90": 1.1
+		},
+		"checkpoints": [
+			15.0,
+			45.0,
+			90.0,
+			150.0
+		],
+		"fixed_overrides": {
+
+		},
+		"output_dir": "res://tools/ai_tuner_output/stalemate_validation_fast2",
+		"runs_per_seed": 1.0,
+		"scenarios": [
+			{
+				"door_hp": 32.0,
+				"enemies_allied": true,
+				"enemy_team_size": 2.0,
+				"level_index": 3.0,
+				"name": "stall_probe_fast",
+				"outcome_check_interval": 6.0,
+				"player_team_size": 2.0,
+				"scenario_type": "fast",
+				"seeds": [
+					1337.0
+				],
+				"stop_at_last_checkpoint": true,
+				"template_ids": [
+					"room_wide_chamber"
+				],
+				"turn_limit": 220.0
+			}
+		],
+		"search": {
+			"grid_parameters": {
+
+			},
+			"max_grid_candidates": 0.0,
+			"max_total_candidates": 1.0,
+			"random_iterations": 0.0,
+			"random_parameters": {
+
+			},
+			"random_seed": 1337.0
+		},
+		"top_n": 3.0,
+		"training": {
+			"enabled": false,
+			"scenario_mix": {
+				"fast_scenario_ratio": 0.75,
+				"min_outcome_scenarios": 1.0
+			}
+		}
+	},
+	"generated_at": "2026-04-20T20:20:18",
+	"ok": true,
+	"parameter_keys": [
+		"defense_local_ratio_hard_cap",
+		"defense_local_ratio_soft_cap",
+		"defense_nearby_soft_limit",
+		"engaged_upgrade_energy_threshold",
+		"gather_conversion_resource_max_dist",
+		"gather_safe_min_enemy_distance",
+		"max_tile_upgrades_per_turn",
+		"non_engaged_upgrade_energy_threshold",
+		"objective_backfill_penalty",
+		"objective_progress_weight",
+		"objective_upgrade_distance_max",
+		"objective_upgrade_enemy_distance_max",
+		"ranged_backline_penalty",
+		"ranged_frontline_penalty",
+		"ranged_saturation_hard_cap",
+		"ranged_saturation_max_penalty",
+		"ranged_saturation_min_tiles",
+		"ranged_saturation_soft_cap",
+		"resource_approaching_phase_bonus",
+		"resource_gather_focus_bonus",
+		"resource_low_threat_bonus",
+		"resource_near_threat_penalty",
+		"resource_node_hold_bonus",
+		"resource_objective_max_distance",
+		"resource_objective_step_weight",
+		"resource_safe_phase_bonus",
+		"specialization_adjacent_penalty",
+		"specialization_backline_blanket_penalty",
+		"specialization_hard_cap",
+		"specialization_local_cluster_penalty",
+		"specialization_local_radius",
+		"specialization_local_soft_limit",
+		"specialization_max_penalty",
+		"specialization_min_tiles",
+		"specialization_path_penalty",
+		"specialization_safe_phase_penalty",
+		"specialization_soft_cap",
+		"tile_upgrade_min_score",
+		"upgrade_priority_margin"
+	],
+	"planned_candidate_count": 1,
+	"recommendations": [
+		"Best candidate is effectively tied with baseline; keep current constants and collect more scenarios."
+	],
+	"runtime_stats": {
+		"budget_stop": false,
+		"budget_stop_reason": "",
+		"elapsed_seconds": 160.564,
+		"estimated_pass_seconds": 81.4,
+		"evaluated_actor_turns": 372.0,
+		"evaluated_candidate_count": 1,
+		"evaluated_fast_actor_turns": 150.0,
+		"evaluated_fast_simulation_count": 1,
+		"evaluated_outcome_actor_turns": 222.0,
+		"evaluated_outcome_simulation_count": 1,
+		"evaluated_simulation_count": 2,
+		"fast_elapsed_seconds": 57.022,
+		"outcome_elapsed_seconds": 103.514,
+		"planned_actor_turns": 370.0,
+		"planned_candidate_count": 1,
+		"planned_fast_actor_turns": 150.0,
+		"planned_fast_simulation_count": 1,
+		"planned_outcome_actor_turns": 220.0,
+		"planned_outcome_simulation_count": 1,
+		"planned_simulation_count": 2
+	},
+	"scenario_count": 2,
+	"scenario_mix": {
+		"fast_scenario_ratio": 0.75,
+		"min_outcome_scenarios": 1
+	},
+	"scenario_runs_per_candidate": {
+		"fast_runs": 1,
+		"outcome_runs": 1,
+		"total_runs": 2
+	},
+	"template_ids": [
+		"room_wide_chamber",
+		"room_broken_spine",
+		"room_twist_forks"
+	],
+	"top_candidates": [
+		{
+			"changed_params": [],
+			"diff_vs_baseline": {
+				"defense_local_ratio_hard_cap": {
+					"baseline": 0.55,
+					"candidate": 0.55,
+					"changed": false,
+					"delta": 0.0
+				},
+				"defense_local_ratio_soft_cap": {
+					"baseline": 0.4,
+					"candidate": 0.4,
+					"changed": false,
+					"delta": 0.0
+				},
+				"defense_nearby_soft_limit": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"engaged_upgrade_energy_threshold": {
+					"baseline": 16.0,
+					"candidate": 16.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"gather_conversion_resource_max_dist": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"gather_safe_min_enemy_distance": {
+					"baseline": 4.0,
+					"candidate": 4.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"max_tile_upgrades_per_turn": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"non_engaged_upgrade_energy_threshold": {
+					"baseline": 18.0,
+					"candidate": 18.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_backfill_penalty": {
+					"baseline": 32.0,
+					"candidate": 32.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_progress_weight": {
+					"baseline": 22.0,
+					"candidate": 22.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_upgrade_distance_max": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_upgrade_enemy_distance_max": {
+					"baseline": 10.0,
+					"candidate": 10.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_backline_penalty": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_frontline_penalty": {
+					"baseline": 28.0,
+					"candidate": 28.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_hard_cap": {
+					"baseline": 0.52,
+					"candidate": 0.52,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_max_penalty": {
+					"baseline": 36.0,
+					"candidate": 36.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_min_tiles": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_soft_cap": {
+					"baseline": 0.32,
+					"candidate": 0.32,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_approaching_phase_bonus": {
+					"baseline": 4.0,
+					"candidate": 4.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_gather_focus_bonus": {
+					"baseline": 12.0,
+					"candidate": 12.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_low_threat_bonus": {
+					"baseline": 6.0,
+					"candidate": 6.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_near_threat_penalty": {
+					"baseline": 10.0,
+					"candidate": 10.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_node_hold_bonus": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_objective_max_distance": {
+					"baseline": 9.0,
+					"candidate": 9.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_objective_step_weight": {
+					"baseline": 4.0,
+					"candidate": 4.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_safe_phase_bonus": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_adjacent_penalty": {
+					"baseline": 3.0,
+					"candidate": 3.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_backline_blanket_penalty": {
+					"baseline": 12.0,
+					"candidate": 12.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_hard_cap": {
+					"baseline": 0.62,
+					"candidate": 0.62,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_local_cluster_penalty": {
+					"baseline": 5.0,
+					"candidate": 5.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_local_radius": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_local_soft_limit": {
+					"baseline": 3.0,
+					"candidate": 3.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_max_penalty": {
+					"baseline": 30.0,
+					"candidate": 30.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_min_tiles": {
+					"baseline": 9.0,
+					"candidate": 9.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_path_penalty": {
+					"baseline": 12.0,
+					"candidate": 12.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_safe_phase_penalty": {
+					"baseline": 12.0,
+					"candidate": 12.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_soft_cap": {
+					"baseline": 0.45,
+					"candidate": 0.45,
+					"changed": false,
+					"delta": 0.0
+				},
+				"tile_upgrade_min_score": {
+					"baseline": 64.0,
+					"candidate": 64.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"upgrade_priority_margin": {
+					"baseline": 10.0,
+					"candidate": 10.0,
+					"changed": false,
+					"delta": 0.0
+				}
+			},
+			"effective_params": {
+				"defense_local_ratio_hard_cap": 0.55,
+				"defense_local_ratio_soft_cap": 0.4,
+				"defense_nearby_soft_limit": 2.0,
+				"engaged_upgrade_energy_threshold": 16.0,
+				"gather_conversion_resource_max_dist": 2.0,
+				"gather_safe_min_enemy_distance": 4.0,
+				"max_tile_upgrades_per_turn": 2.0,
+				"non_engaged_upgrade_energy_threshold": 18.0,
+				"objective_backfill_penalty": 32.0,
+				"objective_progress_weight": 22.0,
+				"objective_upgrade_distance_max": 14.0,
+				"objective_upgrade_enemy_distance_max": 10.0,
+				"ranged_backline_penalty": 14.0,
+				"ranged_frontline_penalty": 28.0,
+				"ranged_saturation_hard_cap": 0.52,
+				"ranged_saturation_max_penalty": 36.0,
+				"ranged_saturation_min_tiles": 8.0,
+				"ranged_saturation_soft_cap": 0.32,
+				"resource_approaching_phase_bonus": 4.0,
+				"resource_gather_focus_bonus": 12.0,
+				"resource_low_threat_bonus": 6.0,
+				"resource_near_threat_penalty": 10.0,
+				"resource_node_hold_bonus": 14.0,
+				"resource_objective_max_distance": 9.0,
+				"resource_objective_step_weight": 4.0,
+				"resource_safe_phase_bonus": 8.0,
+				"specialization_adjacent_penalty": 3.0,
+				"specialization_backline_blanket_penalty": 12.0,
+				"specialization_hard_cap": 0.62,
+				"specialization_local_cluster_penalty": 5.0,
+				"specialization_local_radius": 2.0,
+				"specialization_local_soft_limit": 3.0,
+				"specialization_max_penalty": 30.0,
+				"specialization_min_tiles": 9.0,
+				"specialization_path_penalty": 12.0,
+				"specialization_safe_phase_penalty": 12.0,
+				"specialization_soft_cap": 0.45,
+				"tile_upgrade_min_score": 64.0,
+				"upgrade_priority_margin": 10.0
+			},
+			"id": "baseline",
+			"label": "Baseline",
+			"overrides": {
+
+			},
+			"pathology_counts": {
+				"backline_specialized": 6.07317073170732,
+				"exposed_ranged": 0.0,
+				"frontline_gather": 0.51219512195122,
+				"high_fail_rate": 0.0,
+				"resource_neglect": 0.0
+			},
+			"runs": [
+				{
+					"checkpoints": {
+						"15": {
+							"category_scores": {
+								"anti_pathology": 58.0,
+								"board_shape": 90.1311475409836,
+								"economy": 100.0,
+								"objective_progress": 49.3125,
+								"role_balance": 0.0,
+								"specialization_quality": 0.0
+							},
+							"metrics": {
+								"avg_energy": 20.9833333333333,
+								"backline_specialized_ratio": 1.0,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 0,
+									"gather": 0,
+									"melee": 0,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.114754098360656,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.34375,
+									"resource_control": 0.0625,
+									"resource_progress": 0.1875
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 3,
+									"exposed_ranged": 0,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.0491803278688525,
+								"supported_ratio": 0.885245901639344,
+								"tier_counts": {
+									"1": 3,
+									"2": 0,
+									"3": 0
+								},
+								"total_tiles": 61,
+								"turn": 15,
+								"type_counts": {
+									"basic": 58,
+									"defense": 0,
+									"gather": 3,
+									"melee": 0,
+									"ranged": 0
+								}
+							},
+							"pathology": {
+								"backline_specialized": 3,
+								"exposed_ranged": 0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 45.1412397540984,
+							"turn": 15
+						},
+						"150": {
+							"category_scores": {
+								"anti_pathology": 95.875,
+								"board_shape": 92.0109289617486,
+								"economy": 58.3323333333333,
+								"objective_progress": 56.4375,
+								"role_balance": 28.2404371584699,
+								"specialization_quality": 62.7132084309134
+							},
+							"metrics": {
+								"avg_energy": 56.8633333333333,
+								"backline_specialized_ratio": 0.0982142857142857,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 15,
+									"gather": 0,
+									"melee": 25,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.092896174863388,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.5,
+									"resource_control": 0.125,
+									"resource_progress": 0.28125
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 11,
+									"exposed_ranged": 0,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.612021857923497,
+								"supported_ratio": 0.907103825136612,
+								"tier_counts": {
+									"1": 105,
+									"2": 6,
+									"3": 1
+								},
+								"total_tiles": 183,
+								"turn": 150,
+								"type_counts": {
+									"basic": 71,
+									"defense": 30,
+									"gather": 4,
+									"melee": 74,
+									"ranged": 4
+								}
+							},
+							"pathology": {
+								"backline_specialized": 11,
+								"exposed_ranged": 0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 59.7071207611241,
+							"turn": 150
+						},
+						"45": {
+							"category_scores": {
+								"anti_pathology": 76.6382978723404,
+								"board_shape": 91.5686274509804,
+								"economy": 93.6772222222222,
+								"objective_progress": 53.625,
+								"role_balance": 0.0,
+								"specialization_quality": 59.4383979974969
+							},
+							"metrics": {
+								"avg_energy": 36.0722222222222,
+								"backline_specialized_ratio": 0.127659574468085,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 4,
+									"gather": 0,
+									"melee": 11,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 1,
+								"low_support_ratio": 0.0980392156862745,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.5,
+									"resource_control": 0.125,
+									"resource_progress": 0.1875
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 6,
+									"exposed_ranged": 0,
+									"frontline_gather": 1,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.46078431372549,
+								"supported_ratio": 0.901960784313726,
+								"tier_counts": {
+									"1": 44,
+									"2": 3,
+									"3": 0
+								},
+								"total_tiles": 102,
+								"turn": 45,
+								"type_counts": {
+									"basic": 55,
+									"defense": 5,
+									"gather": 4,
+									"melee": 37,
+									"ranged": 1
+								}
+							},
+							"pathology": {
+								"backline_specialized": 6,
+								"exposed_ranged": 0,
+								"frontline_gather": 1,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 57.1933701919066,
+							"turn": 45
+						},
+						"90": {
+							"category_scores": {
+								"anti_pathology": 80.6,
+								"board_shape": 92.5960264900662,
+								"economy": 78.6463888888889,
+								"objective_progress": 54.5625,
+								"role_balance": 27.1258278145695,
+								"specialization_quality": 69.1241206769683
+							},
+							"metrics": {
+								"avg_energy": 44.9138888888889,
+								"backline_specialized_ratio": 0.0333333333333333,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 1,
+									"defense": 31,
+									"gather": 0,
+									"melee": 19,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 1,
+								"low_support_ratio": 0.0860927152317881,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.5,
+									"resource_control": 0.125,
+									"resource_progress": 0.21875
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 3,
+									"exposed_ranged": 0,
+									"frontline_gather": 1,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.596026490066225,
+								"supported_ratio": 0.913907284768212,
+								"tier_counts": {
+									"1": 85,
+									"2": 3,
+									"3": 2
+								},
+								"total_tiles": 151,
+								"turn": 90,
+								"type_counts": {
+									"basic": 61,
+									"defense": 35,
+									"gather": 4,
+									"melee": 49,
+									"ranged": 2
+								}
+							},
+							"pathology": {
+								"backline_specialized": 3,
+								"exposed_ranged": 0,
+								"frontline_gather": 1,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 62.2928437270052,
+							"turn": 90
+						}
+					},
+					"final_objective": {
+						"door_progress": 0.0,
+						"heart_destroy_progress": 0.0,
+						"military_progress": 0.5,
+						"resource_control": 0.125,
+						"resource_progress": 0.28125
+					},
+					"final_turn": 150,
+					"outcome": {
+						"status": "ongoing"
+					},
+					"ran_to_outcome_window": false,
+					"runtime_seconds": 57.022,
+					"scenario": "stall_probe_fast",
+					"scenario_type": "fast",
+					"seed": 1337
+				},
+				{
+					"checkpoints": {
+						"15": {
+							"category_scores": {
+								"anti_pathology": 58.0,
+								"board_shape": 90.1311475409836,
+								"economy": 100.0,
+								"objective_progress": 49.3125,
+								"role_balance": 0.0,
+								"specialization_quality": 0.0
+							},
+							"metrics": {
+								"avg_energy": 20.9833333333333,
+								"backline_specialized_ratio": 1.0,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 0,
+									"gather": 0,
+									"melee": 0,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.114754098360656,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.34375,
+									"resource_control": 0.0625,
+									"resource_progress": 0.1875
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 3,
+									"exposed_ranged": 0,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.0491803278688525,
+								"supported_ratio": 0.885245901639344,
+								"tier_counts": {
+									"1": 3,
+									"2": 0,
+									"3": 0
+								},
+								"total_tiles": 61,
+								"turn": 15,
+								"type_counts": {
+									"basic": 58,
+									"defense": 0,
+									"gather": 3,
+									"melee": 0,
+									"ranged": 0
+								}
+							},
+							"pathology": {
+								"backline_specialized": 3,
+								"exposed_ranged": 0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 45.1412397540984,
+							"turn": 15
+						},
+						"150": {
+							"category_scores": {
+								"anti_pathology": 95.875,
+								"board_shape": 92.0109289617486,
+								"economy": 58.3323333333333,
+								"objective_progress": 56.4375,
+								"role_balance": 28.2404371584699,
+								"specialization_quality": 62.7132084309134
+							},
+							"metrics": {
+								"avg_energy": 56.8633333333333,
+								"backline_specialized_ratio": 0.0982142857142857,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 15,
+									"gather": 0,
+									"melee": 25,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.092896174863388,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.5,
+									"resource_control": 0.125,
+									"resource_progress": 0.28125
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 11,
+									"exposed_ranged": 0,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.612021857923497,
+								"supported_ratio": 0.907103825136612,
+								"tier_counts": {
+									"1": 105,
+									"2": 6,
+									"3": 1
+								},
+								"total_tiles": 183,
+								"turn": 150,
+								"type_counts": {
+									"basic": 71,
+									"defense": 30,
+									"gather": 4,
+									"melee": 74,
+									"ranged": 4
+								}
+							},
+							"pathology": {
+								"backline_specialized": 11,
+								"exposed_ranged": 0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 59.7071207611241,
+							"turn": 150
+						},
+						"45": {
+							"category_scores": {
+								"anti_pathology": 76.6382978723404,
+								"board_shape": 91.5686274509804,
+								"economy": 93.6772222222222,
+								"objective_progress": 53.625,
+								"role_balance": 0.0,
+								"specialization_quality": 59.4383979974969
+							},
+							"metrics": {
+								"avg_energy": 36.0722222222222,
+								"backline_specialized_ratio": 0.127659574468085,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 4,
+									"gather": 0,
+									"melee": 11,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 1,
+								"low_support_ratio": 0.0980392156862745,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.5,
+									"resource_control": 0.125,
+									"resource_progress": 0.1875
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 6,
+									"exposed_ranged": 0,
+									"frontline_gather": 1,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.46078431372549,
+								"supported_ratio": 0.901960784313726,
+								"tier_counts": {
+									"1": 44,
+									"2": 3,
+									"3": 0
+								},
+								"total_tiles": 102,
+								"turn": 45,
+								"type_counts": {
+									"basic": 55,
+									"defense": 5,
+									"gather": 4,
+									"melee": 37,
+									"ranged": 1
+								}
+							},
+							"pathology": {
+								"backline_specialized": 6,
+								"exposed_ranged": 0,
+								"frontline_gather": 1,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 57.1933701919066,
+							"turn": 45
+						},
+						"90": {
+							"category_scores": {
+								"anti_pathology": 80.6,
+								"board_shape": 92.5960264900662,
+								"economy": 78.6463888888889,
+								"objective_progress": 54.5625,
+								"role_balance": 27.1258278145695,
+								"specialization_quality": 69.1241206769683
+							},
+							"metrics": {
+								"avg_energy": 44.9138888888889,
+								"backline_specialized_ratio": 0.0333333333333333,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"frontline_counts": {
+									"basic": 1,
+									"defense": 31,
+									"gather": 0,
+									"melee": 19,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 1,
+								"low_support_ratio": 0.0860927152317881,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.5,
+									"resource_control": 0.125,
+									"resource_progress": 0.21875
+								},
+								"pass_rate": 0.0,
+								"pathology": {
+									"backline_specialized": 3,
+									"exposed_ranged": 0,
+									"frontline_gather": 1,
+									"high_fail_rate": 0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.596026490066225,
+								"supported_ratio": 0.913907284768212,
+								"tier_counts": {
+									"1": 85,
+									"2": 3,
+									"3": 2
+								},
+								"total_tiles": 151,
+								"turn": 90,
+								"type_counts": {
+									"basic": 61,
+									"defense": 35,
+									"gather": 4,
+									"melee": 49,
+									"ranged": 2
+								}
+							},
+							"pathology": {
+								"backline_specialized": 3,
+								"exposed_ranged": 0,
+								"frontline_gather": 1,
+								"high_fail_rate": 0,
+								"resource_neglect": 0
+							},
+							"total_score": 62.2928437270052,
+							"turn": 90
+						}
+					},
+					"final_objective": {
+						"door_progress": 0.0,
+						"heart_destroy_progress": 0.0,
+						"military_progress": 0.5,
+						"resource_control": 0.125,
+						"resource_progress": 0.28125
+					},
+					"final_turn": 222,
+					"outcome": {
+						"reason": "turn_limit",
+						"status": "loss"
+					},
+					"ran_to_outcome_window": true,
+					"runtime_seconds": 103.514,
+					"scenario": "stall_probe_fast_outcome",
+					"scenario_type": "outcome",
+					"seed": 1337
+				}
+			],
+			"runtime_breakdown": {
+				"fast": {
+					"actor_turns": 150.0,
+					"elapsed_seconds": 57.022,
+					"simulations": 1
+				},
+				"outcome": {
+					"actor_turns": 222.0,
+					"elapsed_seconds": 103.514,
+					"simulations": 1
+				}
+			},
+			"score": 53.8287432946927,
+			"score_by_category": {
+				"anti_pathology": 79.6947067981318,
+				"board_shape": 91.6932413114484,
+				"economy": 80.5334268292683,
+				"objective_progress": 53.8582317073171,
+				"role_balance": 15.5431549234611,
+				"specialization_quality": 51.3977514290873
+			},
+			"score_by_checkpoint": {
+				"15": 45.1412397540984,
+				"150": 59.7071207611241,
+				"45": 57.1933701919066,
+				"90": 62.2928437270052
+			}
+		}
+	],
+	"workload": {
+		"candidate_count": 1,
+		"estimated_actor_turns": 370,
+		"evaluated_actor_turns": 372.0,
+		"evaluated_candidate_count": 1,
+		"evaluated_fast_actor_turns": 150.0,
+		"evaluated_fast_simulation_count": 1,
+		"evaluated_outcome_actor_turns": 222.0,
+		"evaluated_outcome_simulation_count": 1,
+		"evaluated_simulation_count": 2,
+		"fast_actor_turns": 150,
+		"fast_simulation_count": 1,
+		"outcome_actor_turns": 220,
+		"outcome_simulation_count": 1,
+		"planned_candidate_count": 1,
+		"simulation_count": 2
+	}
+}

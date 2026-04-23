@@ -28,7 +28,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.04, 0.05, 0.08, 0.2)
+color = Color(0.02, 0.02, 0.03, 0.34)
 
 [node name="Center" type="CenterContainer" parent="."]
 layout_mode = 1
@@ -46,27 +46,31 @@ theme_override_constants/separation = 22
 custom_minimum_size = Vector2(0, 460)
 layout_mode = 2
 
-[node name="ButtonsRow" type="HBoxContainer" parent="Center/VBox"]
+[node name="ButtonsPanel" type="PanelContainer" parent="Center/VBox"]
+custom_minimum_size = Vector2(900, 90)
+layout_mode = 2
+
+[node name="ButtonsRow" type="HBoxContainer" parent="Center/VBox/ButtonsPanel"]
 layout_mode = 2
 theme_override_constants/separation = 18
 alignment = 1
 
-[node name="StartButton" type="Button" parent="Center/VBox/ButtonsRow"]
+[node name="StartButton" type="Button" parent="Center/VBox/ButtonsPanel/ButtonsRow"]
 custom_minimum_size = Vector2(196, 62)
 layout_mode = 2
 text = "Start"
 
-[node name="DevStartButton" type="Button" parent="Center/VBox/ButtonsRow"]
+[node name="DevStartButton" type="Button" parent="Center/VBox/ButtonsPanel/ButtonsRow"]
 custom_minimum_size = Vector2(196, 62)
 layout_mode = 2
 text = "Dev Start"
 
-[node name="SettingsButton" type="Button" parent="Center/VBox/ButtonsRow"]
+[node name="SettingsButton" type="Button" parent="Center/VBox/ButtonsPanel/ButtonsRow"]
 custom_minimum_size = Vector2(196, 62)
 layout_mode = 2
 text = "Settings"
 
-[node name="ExitButton" type="Button" parent="Center/VBox/ButtonsRow"]
+[node name="ExitButton" type="Button" parent="Center/VBox/ButtonsPanel/ButtonsRow"]
 custom_minimum_size = Vector2(196, 62)
 layout_mode = 2
 text = "Exit"

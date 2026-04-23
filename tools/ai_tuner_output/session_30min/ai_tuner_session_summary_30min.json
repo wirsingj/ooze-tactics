@@ -1,0 +1,113 @@
+{
+    "generated_at":  "2026-04-20T19:42:59",
+    "source_report":  "C:\\Users\\wirsi\\OneDrive\\Desktop\\git\\ooze-tactics\\tools\\ai_tuner_output\\session_30min\\ai_training_2026-04-20T19-38-18.json",
+    "elapsed_minutes":  29.2432,
+    "stop_reason":  "insufficient_budget_for_min_pass",
+    "passes_run":  3,
+    "effective_pass_count":  4,
+    "pass_weights":  [
+                         0.4,
+                         0.3,
+                         0.2,
+                         0.1
+                     ],
+    "starting_baseline_score":  43.5704419328615,
+    "final_baseline_score":  43.7108417828476,
+    "total_improvement":  0.14039984998611,
+    "passes":  [
+                   {
+                       "pass":  1,
+                       "budget_remaining_before_min":  30,
+                       "pass_allocation_min":  12,
+                       "baseline_score_before":  43.5704419328615,
+                       "best_candidate_id":  "grid_1",
+                       "best_candidate_score":  43.7108417828476,
+                       "accepted":  false,
+                       "accepted_candidate_id":  "",
+                       "accepted_score":  43.5704419328615,
+                       "accept_reason":  "",
+                       "accepted_category_deltas":  {
+
+                                                    },
+                       "baseline_update":  null
+                   },
+                   {
+                       "pass":  2,
+                       "budget_remaining_before_min":  15.94,
+                       "pass_allocation_min":  7.09,
+                       "baseline_score_before":  43.5704419328615,
+                       "best_candidate_id":  "grid_1",
+                       "best_candidate_score":  43.7108417828476,
+                       "accepted":  true,
+                       "accepted_candidate_id":  "grid_1",
+                       "accepted_score":  43.7108417828476,
+                       "accept_reason":  "Accepting grid_1 due to consistent improvement across passes (delta +0.14, hits 2).",
+                       "accepted_category_deltas":  {
+                                                        "anti_pathology":  0.313050115028432,
+                                                        "board_shape":  0.0581443685012459,
+                                                        "economy":  0.0847154017857292,
+                                                        "objective_progress":  0.0552455357142847,
+                                                        "role_balance":  0.137323832928878,
+                                                        "specialization_quality":  -0.0304578584397817
+                                                    },
+                       "baseline_update":  {
+                                               "baseline_path":  "res://config/ooze_ai_baseline.json",
+                                               "ok":  true,
+                                               "updated_keys":  [
+                                                                    "ranged_saturation_soft_cap",
+                                                                    "resource_safe_phase_bonus",
+                                                                    "specialization_safe_phase_penalty",
+                                                                    "tile_upgrade_min_score"
+                                                                ],
+                                               "updated_values":  {
+                                                                      "ranged_saturation_soft_cap":  0.32,
+                                                                      "resource_safe_phase_bonus":  8,
+                                                                      "specialization_safe_phase_penalty":  12,
+                                                                      "tile_upgrade_min_score":  64
+                                                                  }
+                                           }
+                   },
+                   {
+                       "pass":  3,
+                       "budget_remaining_before_min":  8.82,
+                       "pass_allocation_min":  8.82,
+                       "baseline_score_before":  43.7108417828476,
+                       "best_candidate_id":  "grid_1",
+                       "best_candidate_score":  43.7108417828476,
+                       "accepted":  false,
+                       "accepted_candidate_id":  "",
+                       "accepted_score":  43.7108417828476,
+                       "accept_reason":  "",
+                       "accepted_category_deltas":  {
+
+                                                    },
+                       "baseline_update":  null
+                   }
+               ],
+    "changed_keys":  [
+                         {
+                             "key":  "objectives.resource_safe_phase_bonus",
+                             "before":  10,
+                             "after":  8,
+                             "delta":  -2
+                         },
+                         {
+                             "key":  "ranged.ranged_saturation_soft_cap",
+                             "before":  0.34,
+                             "after":  0.32,
+                             "delta":  -0.020000000000000018
+                         },
+                         {
+                             "key":  "specialization.specialization_safe_phase_penalty",
+                             "before":  14,
+                             "after":  12,
+                             "delta":  -2
+                         },
+                         {
+                             "key":  "upgrades.tile_upgrade_min_score",
+                             "before":  66,
+                             "after":  64,
+                             "delta":  -2
+                         }
+                     ]
+}

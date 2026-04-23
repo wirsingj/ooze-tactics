@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://cj1vtyl1ngidv"
+path="res://.godot/imported/weapon-sword.obj-056b0ba97be89a49d123388c207f271e.mesh"
+
+[deps]
+
+files=["res://.godot/imported/weapon-sword.obj-056b0ba97be89a49d123388c207f271e.mesh"]
+
+source_file="res://assets/vendor/kenney/mini-dungeon/extracted/Models/OBJ format/weapon-sword.obj"
+dest_files=["res://.godot/imported/weapon-sword.obj-056b0ba97be89a49d123388c207f271e.mesh", "res://.godot/imported/weapon-sword.obj-056b0ba97be89a49d123388c207f271e.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

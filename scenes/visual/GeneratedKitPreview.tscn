@@ -1,0 +1,140 @@
+[gd_scene load_steps=17 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/meshes/generated/crystal_small.glb" id="1_crystal_small"]
+[ext_resource type="PackedScene" path="res://assets/meshes/generated/crystal_hero.glb" id="2_crystal_hero"]
+[ext_resource type="PackedScene" path="res://assets/meshes/generated/node_base.glb" id="3_node_base"]
+[ext_resource type="PackedScene" path="res://assets/meshes/generated/blocker_wall.glb" id="4_blocker_wall"]
+[ext_resource type="PackedScene" path="res://assets/meshes/generated/cave_wall_segment.glb" id="5_cave_wall"]
+[ext_resource type="PackedScene" path="res://assets/meshes/generated/cave_door_arch.glb" id="6_door_arch"]
+[ext_resource type="PackedScene" path="res://assets/meshes/generated/board_edge_trim.glb" id="7_edge_trim"]
+[ext_resource type="PackedScene" path="res://assets/meshes/generated/ooze_puddle_a.glb" id="8_ooze_a"]
+[ext_resource type="PackedScene" path="res://assets/meshes/generated/ooze_puddle_b.glb" id="9_ooze_b"]
+[ext_resource type="PackedScene" path="res://assets/meshes/generated/ooze_puddle_c.glb" id="10_ooze_c"]
+
+[sub_resource type="Environment" id="1_env"]
+background_mode = 1
+background_color = Color(0.027451, 0.027451, 0.0352941, 1)
+ambient_light_source = 3
+ambient_light_sky_contribution = 0.0
+ambient_light_color = Color(0.28, 0.28, 0.32, 1)
+ambient_light_energy = 0.85
+tonemap_mode = 2
+glow_enabled = true
+glow_intensity = 0.62
+fog_enabled = true
+fog_light_color = Color(0.14, 0.15, 0.18, 1)
+fog_light_energy = 0.35
+fog_density = 0.01
+
+[sub_resource type="StandardMaterial3D" id="2_ground_mat"]
+albedo_color = Color(0.11, 0.11, 0.12, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="3_ground_mesh"]
+size = Vector3(14, 0.4, 10)
+
+[node name="GeneratedKitPreview" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("1_env")
+
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+position = Vector3(0, 5, 0)
+rotation_degrees = Vector3(-51, 29, 0)
+light_color = Color(1, 0.92, 0.84, 1)
+light_energy = 3.1
+shadow_enabled = true
+
+[node name="FillLight" type="OmniLight3D" parent="."]
+position = Vector3(-2.6, 2.4, 2.1)
+light_color = Color(0.38, 0.56, 0.95, 1)
+light_energy = 1.1
+omni_range = 14.0
+
+[node name="WarmBackLight" type="OmniLight3D" parent="."]
+position = Vector3(0, 2.2, -3.3)
+light_color = Color(1, 0.62, 0.36, 1)
+light_energy = 0.9
+omni_range = 10.0
+
+[node name="Camera3D" type="Camera3D" parent="."]
+position = Vector3(0, 6.5, 10.5)
+rotation_degrees = Vector3(-30, 0, 0)
+current = true
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("3_ground_mesh")
+surface_material_override/0 = SubResource("2_ground_mat")
+position = Vector3(0, -0.2, 0)
+
+[node name="CenterNode" parent="." instance=ExtResource("3_node_base")]
+
+[node name="CenterHero" parent="." instance=ExtResource("2_crystal_hero")]
+position = Vector3(0, 0.65, 0)
+
+[node name="CyanCrystal" parent="." instance=ExtResource("1_crystal_small")]
+position = Vector3(-3.2, 0.4, -1.2)
+
+[node name="LimeCrystal" parent="." instance=ExtResource("1_crystal_small")]
+position = Vector3(-2.8, 0.4, 2.2)
+
+[node name="OrangeCrystal" parent="." instance=ExtResource("1_crystal_small")]
+position = Vector3(3.0, 0.4, 1.8)
+
+[node name="MagentaCrystal" parent="." instance=ExtResource("1_crystal_small")]
+position = Vector3(3.2, 0.4, -1.7)
+
+[node name="BlockerA" parent="." instance=ExtResource("4_blocker_wall")]
+position = Vector3(-1.2, 0, 0.8)
+rotation_degrees = Vector3(0, 38, 0)
+
+[node name="BlockerB" parent="." instance=ExtResource("4_blocker_wall")]
+position = Vector3(1.4, 0, -0.4)
+rotation_degrees = Vector3(0, -30, 0)
+
+[node name="BlockerC" parent="." instance=ExtResource("4_blocker_wall")]
+position = Vector3(0.3, 0, 2.4)
+rotation_degrees = Vector3(0, 12, 0)
+
+[node name="CaveWallL" parent="." instance=ExtResource("5_cave_wall")]
+position = Vector3(-4.2, 0, -2.6)
+rotation_degrees = Vector3(0, 32, 0)
+
+[node name="CaveWallR" parent="." instance=ExtResource("5_cave_wall")]
+position = Vector3(4.3, 0, -2.4)
+rotation_degrees = Vector3(0, -34, 0)
+
+[node name="CaveWallBack" parent="." instance=ExtResource("5_cave_wall")]
+position = Vector3(0, 0, -4.2)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="DoorArch" parent="." instance=ExtResource("6_door_arch")]
+position = Vector3(0, 0, -3.6)
+
+[node name="EdgeNorth" parent="." instance=ExtResource("7_edge_trim")]
+position = Vector3(0, 0, -2.9)
+scale = Vector3(2.8, 1, 1)
+
+[node name="EdgeSouth" parent="." instance=ExtResource("7_edge_trim")]
+position = Vector3(0, 0, 2.9)
+rotation_degrees = Vector3(0, 180, 0)
+scale = Vector3(2.8, 1, 1)
+
+[node name="EdgeWest" parent="." instance=ExtResource("7_edge_trim")]
+position = Vector3(-4, 0, 0)
+rotation_degrees = Vector3(0, -90, 0)
+scale = Vector3(2.2, 1, 1)
+
+[node name="EdgeEast" parent="." instance=ExtResource("7_edge_trim")]
+position = Vector3(4, 0, 0)
+rotation_degrees = Vector3(0, 90, 0)
+scale = Vector3(2.2, 1, 1)
+
+[node name="OozeA" parent="." instance=ExtResource("8_ooze_a")]
+position = Vector3(-2.3, 0, -0.2)
+
+[node name="OozeB" parent="." instance=ExtResource("9_ooze_b")]
+position = Vector3(2.1, 0, -0.4)
+
+[node name="OozeC" parent="." instance=ExtResource("10_ooze_c")]
+position = Vector3(0.4, 0, 2.0)

@@ -53,9 +53,23 @@ layout_mode = 2
 text = "Resolution: placeholder (coming soon)"
 horizontal_alignment = 1
 
+[node name="GraphicsRow" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="GraphicsLabel" type="Label" parent="Center/Panel/Margin/VBox/GraphicsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Graphics Style"
+
+[node name="GraphicsStyleOption" type="OptionButton" parent="Center/Panel/Margin/VBox/GraphicsRow"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="Hint" type="Label" parent="Center/Panel/Margin/VBox"]
 layout_mode = 2
-text = "This stub screen reserves a settings flow entry point."
+text = "Choose how gameplay is rendered. 2D uses the legacy sprite atlas, 3D uses the live cave renderer."
 horizontal_alignment = 1
 autowrap_mode = 2
 

@@ -201,6 +201,12 @@ func make_ui_skin(sprite_name: String) -> Texture2D:
 func owner_tint_for_ui(state: GameState, owner_id: int) -> Color:
 	return _owner_tint(state, owner_id)
 
+func role_tint_for_ui(tile_type: String) -> Color:
+	return _overlay_role_tint(tile_type)
+
+func overlay_key_for_type(tile_type: String, gather_infused: bool = false) -> String:
+	return _overlay_key(tile_type, gather_infused)
+
 func _draw_ground(canvas: Node2D, state: GameState, board_origin: Vector2, board_clip_rect: Rect2) -> void:
 	for y in range(state.height):
 		for x in range(state.width):

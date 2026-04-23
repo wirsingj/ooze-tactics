@@ -1,0 +1,418 @@
+OOZE AI TUNER REPORT
+Generated: 2026-04-21T00:31:38
+Candidates: 5 | Scenarios: 2
+Checkpoints: [12,32,60,90]
+
+BASELINE
+id=baseline  score=48.1995
+Category Scores:
+  role_balance = 10.5523
+  specialization_quality = 38.1889
+  objective_progress = 53.2393
+  economy = 61.6944
+  board_shape = 90.9398
+  anti_pathology = 59.0498
+Tactical Metrics:
+  ally_obstruction_penalty = 0.1085
+  opening_claim_latency_penalty = 0.3421
+  flank_productivity = 0.4945
+Parameters (effective):
+  basic_claim_frontline_bonus             = 22       (baseline 22      , delta 0)
+  basic_claim_goal_bonus                  = 8        (baseline 8       , delta 0)
+  basic_claim_opening_bonus               = 12       (baseline 12      , delta 0)
+  defense_local_ratio_hard_cap            = 0.55     (baseline 0.55    , delta 0)
+  defense_local_ratio_soft_cap            = 0.38     (baseline 0.38    , delta 0)
+  defense_nearby_soft_limit               = 2        (baseline 2       , delta 0)
+  engaged_upgrade_energy_threshold        = 16       (baseline 16      , delta 0)
+  flank_pressure_bonus                    = 14       (baseline 14      , delta 0)
+  flank_stalemate_break_bonus             = 8        (baseline 8       , delta 0)
+  gather_conversion_resource_max_dist     = 2        (baseline 2       , delta 0)
+  gather_safe_min_enemy_distance          = 4        (baseline 4       , delta 0)
+  max_tile_upgrades_per_turn              = 2        (baseline 2       , delta 0)
+  non_engaged_upgrade_energy_threshold    = 18       (baseline 18      , delta 0)
+  objective_backfill_penalty              = 28       (baseline 28      , delta 0)
+  objective_progress_weight               = 22       (baseline 22      , delta 0)
+  objective_upgrade_distance_max          = 14       (baseline 14      , delta 0)
+  objective_upgrade_enemy_distance_max    = 10       (baseline 10      , delta 0)
+  ranged_backline_penalty                 = 14       (baseline 14      , delta 0)
+  ranged_frontline_penalty                = 28       (baseline 28      , delta 0)
+  ranged_saturation_hard_cap              = 0.52     (baseline 0.52    , delta 0)
+  ranged_saturation_max_penalty           = 38       (baseline 38      , delta 0)
+  ranged_saturation_min_tiles             = 8        (baseline 8       , delta 0)
+  ranged_saturation_soft_cap              = 0.32     (baseline 0.32    , delta 0)
+  resource_approaching_phase_bonus        = 4        (baseline 4       , delta 0)
+  resource_gather_focus_bonus             = 14       (baseline 14      , delta 0)
+  resource_low_threat_bonus               = 6        (baseline 6       , delta 0)
+  resource_near_threat_penalty            = 8        (baseline 8       , delta 0)
+  resource_node_hold_bonus                = 14       (baseline 14      , delta 0)
+  resource_objective_max_distance         = 9        (baseline 9       , delta 0)
+  resource_objective_step_weight          = 4        (baseline 4       , delta 0)
+  resource_safe_phase_bonus               = 8        (baseline 8       , delta 0)
+  specialization_adjacent_penalty         = 3        (baseline 3       , delta 0)
+  specialization_backline_blanket_penalty = 14       (baseline 14      , delta 0)
+  specialization_hard_cap                 = 0.62     (baseline 0.62    , delta 0)
+  specialization_local_cluster_penalty    = 5        (baseline 5       , delta 0)
+  specialization_local_radius             = 2        (baseline 2       , delta 0)
+  specialization_local_soft_limit         = 3        (baseline 3       , delta 0)
+  specialization_max_penalty              = 30       (baseline 30      , delta 0)
+  specialization_min_tiles                = 9        (baseline 9       , delta 0)
+  specialization_path_penalty             = 10       (baseline 10      , delta 0)
+  specialization_safe_phase_penalty       = 12       (baseline 12      , delta 0)
+  specialization_soft_cap                 = 0.45     (baseline 0.45    , delta 0)
+  tile_upgrade_min_score                  = 64       (baseline 64      , delta 0)
+  upgrade_priority_margin                 = 9        (baseline 9       , delta 0)
+
+TOP CANDIDATES
+1) baseline  score=48.1995
+  Category Scores:
+    role_balance = 10.5523
+    specialization_quality = 38.1889
+    objective_progress = 53.2393
+    economy = 61.6944
+    board_shape = 90.9398
+    anti_pathology = 59.0498
+  Tactical Metrics:
+    ally_obstruction_penalty = 0.1085
+    opening_claim_latency_penalty = 0.3421
+    flank_productivity = 0.4945
+  Changed Parameters vs Baseline:
+    changed_count = 0 / 44
+  Effective Parameters (full):
+    basic_claim_frontline_bonus             = 22       (baseline 22      , delta 0)
+    basic_claim_goal_bonus                  = 8        (baseline 8       , delta 0)
+    basic_claim_opening_bonus               = 12       (baseline 12      , delta 0)
+    defense_local_ratio_hard_cap            = 0.55     (baseline 0.55    , delta 0)
+    defense_local_ratio_soft_cap            = 0.38     (baseline 0.38    , delta 0)
+    defense_nearby_soft_limit               = 2        (baseline 2       , delta 0)
+    engaged_upgrade_energy_threshold        = 16       (baseline 16      , delta 0)
+    flank_pressure_bonus                    = 14       (baseline 14      , delta 0)
+    flank_stalemate_break_bonus             = 8        (baseline 8       , delta 0)
+    gather_conversion_resource_max_dist     = 2        (baseline 2       , delta 0)
+    gather_safe_min_enemy_distance          = 4        (baseline 4       , delta 0)
+    max_tile_upgrades_per_turn              = 2        (baseline 2       , delta 0)
+    non_engaged_upgrade_energy_threshold    = 18       (baseline 18      , delta 0)
+    objective_backfill_penalty              = 28       (baseline 28      , delta 0)
+    objective_progress_weight               = 22       (baseline 22      , delta 0)
+    objective_upgrade_distance_max          = 14       (baseline 14      , delta 0)
+    objective_upgrade_enemy_distance_max    = 10       (baseline 10      , delta 0)
+    ranged_backline_penalty                 = 14       (baseline 14      , delta 0)
+    ranged_frontline_penalty                = 28       (baseline 28      , delta 0)
+    ranged_saturation_hard_cap              = 0.52     (baseline 0.52    , delta 0)
+    ranged_saturation_max_penalty           = 38       (baseline 38      , delta 0)
+    ranged_saturation_min_tiles             = 8        (baseline 8       , delta 0)
+    ranged_saturation_soft_cap              = 0.32     (baseline 0.32    , delta 0)
+    resource_approaching_phase_bonus        = 4        (baseline 4       , delta 0)
+    resource_gather_focus_bonus             = 14       (baseline 14      , delta 0)
+    resource_low_threat_bonus               = 6        (baseline 6       , delta 0)
+    resource_near_threat_penalty            = 8        (baseline 8       , delta 0)
+    resource_node_hold_bonus                = 14       (baseline 14      , delta 0)
+    resource_objective_max_distance         = 9        (baseline 9       , delta 0)
+    resource_objective_step_weight          = 4        (baseline 4       , delta 0)
+    resource_safe_phase_bonus               = 8        (baseline 8       , delta 0)
+    specialization_adjacent_penalty         = 3        (baseline 3       , delta 0)
+    specialization_backline_blanket_penalty = 14       (baseline 14      , delta 0)
+    specialization_hard_cap                 = 0.62     (baseline 0.62    , delta 0)
+    specialization_local_cluster_penalty    = 5        (baseline 5       , delta 0)
+    specialization_local_radius             = 2        (baseline 2       , delta 0)
+    specialization_local_soft_limit         = 3        (baseline 3       , delta 0)
+    specialization_max_penalty              = 30       (baseline 30      , delta 0)
+    specialization_min_tiles                = 9        (baseline 9       , delta 0)
+    specialization_path_penalty             = 10       (baseline 10      , delta 0)
+    specialization_safe_phase_penalty       = 12       (baseline 12      , delta 0)
+    specialization_soft_cap                 = 0.45     (baseline 0.45    , delta 0)
+    tile_upgrade_min_score                  = 64       (baseline 64      , delta 0)
+    upgrade_priority_margin                 = 9        (baseline 9       , delta 0)
+  Checkpoint Scores: {"12":41.3687384336678,"32":46.650531104351,"60":39.1385881011282,"90":35.5002313786996}
+
+2) grid_1  score=48.1995
+  Category Scores:
+    role_balance = 10.5523
+    specialization_quality = 38.1889
+    objective_progress = 53.2393
+    economy = 61.6944
+    board_shape = 90.9398
+    anti_pathology = 59.0498
+  Tactical Metrics:
+    ally_obstruction_penalty = 0.1085
+    opening_claim_latency_penalty = 0.3421
+    flank_productivity = 0.4945
+  Changed Parameters vs Baseline:
+    changed_count = 0 / 44
+  Effective Parameters (full):
+    basic_claim_frontline_bonus             = 22       (baseline 22      , delta 0)
+    basic_claim_goal_bonus                  = 8        (baseline 8       , delta 0)
+    basic_claim_opening_bonus               = 12       (baseline 12      , delta 0)
+    defense_local_ratio_hard_cap            = 0.55     (baseline 0.55    , delta 0)
+    defense_local_ratio_soft_cap            = 0.38     (baseline 0.38    , delta 0)
+    defense_nearby_soft_limit               = 2        (baseline 2       , delta 0)
+    engaged_upgrade_energy_threshold        = 16       (baseline 16      , delta 0)
+    flank_pressure_bonus                    = 14       (baseline 14      , delta 0)
+    flank_stalemate_break_bonus             = 8        (baseline 8       , delta 0)
+    gather_conversion_resource_max_dist     = 2        (baseline 2       , delta 0)
+    gather_safe_min_enemy_distance          = 4        (baseline 4       , delta 0)
+    max_tile_upgrades_per_turn              = 2        (baseline 2       , delta 0)
+    non_engaged_upgrade_energy_threshold    = 18       (baseline 18      , delta 0)
+    objective_backfill_penalty              = 28       (baseline 28      , delta 0)
+    objective_progress_weight               = 22       (baseline 22      , delta 0)
+    objective_upgrade_distance_max          = 14       (baseline 14      , delta 0)
+    objective_upgrade_enemy_distance_max    = 10       (baseline 10      , delta 0)
+    ranged_backline_penalty                 = 14       (baseline 14      , delta 0)
+    ranged_frontline_penalty                = 28       (baseline 28      , delta 0)
+    ranged_saturation_hard_cap              = 0.52     (baseline 0.52    , delta 0)
+    ranged_saturation_max_penalty           = 38       (baseline 38      , delta 0)
+    ranged_saturation_min_tiles             = 8        (baseline 8       , delta 0)
+    ranged_saturation_soft_cap              = 0.32     (baseline 0.32    , delta 0)
+    resource_approaching_phase_bonus        = 4        (baseline 4       , delta 0)
+    resource_gather_focus_bonus             = 14       (baseline 14      , delta 0)
+    resource_low_threat_bonus               = 6        (baseline 6       , delta 0)
+    resource_near_threat_penalty            = 8        (baseline 8       , delta 0)
+    resource_node_hold_bonus                = 14       (baseline 14      , delta 0)
+    resource_objective_max_distance         = 9        (baseline 9       , delta 0)
+    resource_objective_step_weight          = 4        (baseline 4       , delta 0)
+    resource_safe_phase_bonus               = 8        (baseline 8       , delta 0)
+    specialization_adjacent_penalty         = 3        (baseline 3       , delta 0)
+    specialization_backline_blanket_penalty = 14       (baseline 14      , delta 0)
+    specialization_hard_cap                 = 0.62     (baseline 0.62    , delta 0)
+    specialization_local_cluster_penalty    = 5        (baseline 5       , delta 0)
+    specialization_local_radius             = 2        (baseline 2       , delta 0)
+    specialization_local_soft_limit         = 3        (baseline 3       , delta 0)
+    specialization_max_penalty              = 30       (baseline 30      , delta 0)
+    specialization_min_tiles                = 9        (baseline 9       , delta 0)
+    specialization_path_penalty             = 10       (baseline 10      , delta 0)
+    specialization_safe_phase_penalty       = 12       (baseline 12      , delta 0)
+    specialization_soft_cap                 = 0.45     (baseline 0.45    , delta 0)
+    tile_upgrade_min_score                  = 64       (baseline 64      , delta 0)
+    upgrade_priority_margin                 = 9        (baseline 9       , delta 0)
+  Checkpoint Scores: {"12":41.3687384336678,"32":46.650531104351,"60":39.1385881011282,"90":35.5002313786996}
+
+3) rand_3  score=43.0893
+  Category Scores:
+    role_balance = 7.9733
+    specialization_quality = 37.2345
+    objective_progress = 56.6056
+    economy = 64.9376
+    board_shape = 91.6276
+    anti_pathology = 62.963
+  Tactical Metrics:
+    ally_obstruction_penalty = 0.1255
+    opening_claim_latency_penalty = 0.3177
+    flank_productivity = 0.5662
+  Changed Parameters vs Baseline:
+    basic_claim_frontline_bonus             = 24       (baseline 22      , delta +2)
+    basic_claim_goal_bonus                  = 6        (baseline 8       , delta -2)
+    basic_claim_opening_bonus               = 6        (baseline 12      , delta -6)
+    flank_pressure_bonus                    = 20       (baseline 14      , delta +6)
+    flank_stalemate_break_bonus             = 18       (baseline 8       , delta +10)
+    gather_safe_min_enemy_distance          = 5        (baseline 4       , delta +1)
+    objective_backfill_penalty              = 34       (baseline 28      , delta +6)
+    objective_progress_weight               = 23       (baseline 22      , delta +1)
+    resource_near_threat_penalty            = 11       (baseline 8       , delta +3)
+    resource_objective_step_weight          = 3        (baseline 4       , delta -1)
+    specialization_backline_blanket_penalty = 10       (baseline 14      , delta -4)
+    upgrade_priority_margin                 = 12       (baseline 9       , delta +3)
+    changed_count = 12 / 44
+  Effective Parameters (full):
+    basic_claim_frontline_bonus             = 24       (baseline 22      , delta +2)
+    basic_claim_goal_bonus                  = 6        (baseline 8       , delta -2)
+    basic_claim_opening_bonus               = 6        (baseline 12      , delta -6)
+    defense_local_ratio_hard_cap            = 0.55     (baseline 0.55    , delta 0)
+    defense_local_ratio_soft_cap            = 0.38     (baseline 0.38    , delta 0)
+    defense_nearby_soft_limit               = 2        (baseline 2       , delta 0)
+    engaged_upgrade_energy_threshold        = 16       (baseline 16      , delta 0)
+    flank_pressure_bonus                    = 20       (baseline 14      , delta +6)
+    flank_stalemate_break_bonus             = 18       (baseline 8       , delta +10)
+    gather_conversion_resource_max_dist     = 2        (baseline 2       , delta 0)
+    gather_safe_min_enemy_distance          = 5        (baseline 4       , delta +1)
+    max_tile_upgrades_per_turn              = 2        (baseline 2       , delta 0)
+    non_engaged_upgrade_energy_threshold    = 18       (baseline 18      , delta 0)
+    objective_backfill_penalty              = 34       (baseline 28      , delta +6)
+    objective_progress_weight               = 23       (baseline 22      , delta +1)
+    objective_upgrade_distance_max          = 14       (baseline 14      , delta 0)
+    objective_upgrade_enemy_distance_max    = 10       (baseline 10      , delta 0)
+    ranged_backline_penalty                 = 14       (baseline 14      , delta 0)
+    ranged_frontline_penalty                = 28       (baseline 28      , delta 0)
+    ranged_saturation_hard_cap              = 0.52     (baseline 0.52    , delta 0)
+    ranged_saturation_max_penalty           = 38       (baseline 38      , delta 0)
+    ranged_saturation_min_tiles             = 8        (baseline 8       , delta 0)
+    ranged_saturation_soft_cap              = 0.32     (baseline 0.32    , delta 0)
+    resource_approaching_phase_bonus        = 4        (baseline 4       , delta 0)
+    resource_gather_focus_bonus             = 14       (baseline 14      , delta 0)
+    resource_low_threat_bonus               = 6        (baseline 6       , delta 0)
+    resource_near_threat_penalty            = 11       (baseline 8       , delta +3)
+    resource_node_hold_bonus                = 14       (baseline 14      , delta 0)
+    resource_objective_max_distance         = 9        (baseline 9       , delta 0)
+    resource_objective_step_weight          = 3        (baseline 4       , delta -1)
+    resource_safe_phase_bonus               = 8        (baseline 8       , delta 0)
+    specialization_adjacent_penalty         = 3        (baseline 3       , delta 0)
+    specialization_backline_blanket_penalty = 10       (baseline 14      , delta -4)
+    specialization_hard_cap                 = 0.62     (baseline 0.62    , delta 0)
+    specialization_local_cluster_penalty    = 5        (baseline 5       , delta 0)
+    specialization_local_radius             = 2        (baseline 2       , delta 0)
+    specialization_local_soft_limit         = 3        (baseline 3       , delta 0)
+    specialization_max_penalty              = 30       (baseline 30      , delta 0)
+    specialization_min_tiles                = 9        (baseline 9       , delta 0)
+    specialization_path_penalty             = 10       (baseline 10      , delta 0)
+    specialization_safe_phase_penalty       = 12       (baseline 12      , delta 0)
+    specialization_soft_cap                 = 0.45     (baseline 0.45    , delta 0)
+    tile_upgrade_min_score                  = 64       (baseline 64      , delta 0)
+    upgrade_priority_margin                 = 12       (baseline 9       , delta +3)
+  Checkpoint Scores: {"12":41.7015281772575,"32":51.5470253228687,"60":41.2401101513519,"90":39.6769826183426}
+
+4) rand_4  score=41.2134
+  Category Scores:
+    role_balance = 11.0106
+    specialization_quality = 37.982
+    objective_progress = 53.8375
+    economy = 56.3686
+    board_shape = 91.0819
+    anti_pathology = 56.0703
+  Tactical Metrics:
+    ally_obstruction_penalty = 0.1302
+    opening_claim_latency_penalty = 0.3627
+    flank_productivity = 0.5261
+  Changed Parameters vs Baseline:
+    basic_claim_frontline_bonus             = 24       (baseline 22      , delta +2)
+    basic_claim_goal_bonus                  = 16       (baseline 8       , delta +8)
+    basic_claim_opening_bonus               = 6        (baseline 12      , delta -6)
+    defense_local_ratio_soft_cap            = 0.4      (baseline 0.38    , delta +0.02)
+    flank_stalemate_break_bonus             = 12       (baseline 8       , delta +4)
+    gather_safe_min_enemy_distance          = 5        (baseline 4       , delta +1)
+    objective_progress_weight               = 21       (baseline 22      , delta -1)
+    ranged_saturation_max_penalty           = 36       (baseline 38      , delta -2)
+    resource_near_threat_penalty            = 10       (baseline 8       , delta +2)
+    resource_objective_step_weight          = 5        (baseline 4       , delta +1)
+    specialization_backline_blanket_penalty = 10       (baseline 14      , delta -4)
+    specialization_path_penalty             = 16       (baseline 10      , delta +6)
+    upgrade_priority_margin                 = 8        (baseline 9       , delta -1)
+    changed_count = 13 / 44
+  Effective Parameters (full):
+    basic_claim_frontline_bonus             = 24       (baseline 22      , delta +2)
+    basic_claim_goal_bonus                  = 16       (baseline 8       , delta +8)
+    basic_claim_opening_bonus               = 6        (baseline 12      , delta -6)
+    defense_local_ratio_hard_cap            = 0.55     (baseline 0.55    , delta 0)
+    defense_local_ratio_soft_cap            = 0.4      (baseline 0.38    , delta +0.02)
+    defense_nearby_soft_limit               = 2        (baseline 2       , delta 0)
+    engaged_upgrade_energy_threshold        = 16       (baseline 16      , delta 0)
+    flank_pressure_bonus                    = 14       (baseline 14      , delta 0)
+    flank_stalemate_break_bonus             = 12       (baseline 8       , delta +4)
+    gather_conversion_resource_max_dist     = 2        (baseline 2       , delta 0)
+    gather_safe_min_enemy_distance          = 5        (baseline 4       , delta +1)
+    max_tile_upgrades_per_turn              = 2        (baseline 2       , delta 0)
+    non_engaged_upgrade_energy_threshold    = 18       (baseline 18      , delta 0)
+    objective_backfill_penalty              = 28       (baseline 28      , delta 0)
+    objective_progress_weight               = 21       (baseline 22      , delta -1)
+    objective_upgrade_distance_max          = 14       (baseline 14      , delta 0)
+    objective_upgrade_enemy_distance_max    = 10       (baseline 10      , delta 0)
+    ranged_backline_penalty                 = 14       (baseline 14      , delta 0)
+    ranged_frontline_penalty                = 28       (baseline 28      , delta 0)
+    ranged_saturation_hard_cap              = 0.52     (baseline 0.52    , delta 0)
+    ranged_saturation_max_penalty           = 36       (baseline 38      , delta -2)
+    ranged_saturation_min_tiles             = 8        (baseline 8       , delta 0)
+    ranged_saturation_soft_cap              = 0.32     (baseline 0.32    , delta 0)
+    resource_approaching_phase_bonus        = 4        (baseline 4       , delta 0)
+    resource_gather_focus_bonus             = 14       (baseline 14      , delta 0)
+    resource_low_threat_bonus               = 6        (baseline 6       , delta 0)
+    resource_near_threat_penalty            = 10       (baseline 8       , delta +2)
+    resource_node_hold_bonus                = 14       (baseline 14      , delta 0)
+    resource_objective_max_distance         = 9        (baseline 9       , delta 0)
+    resource_objective_step_weight          = 5        (baseline 4       , delta +1)
+    resource_safe_phase_bonus               = 8        (baseline 8       , delta 0)
+    specialization_adjacent_penalty         = 3        (baseline 3       , delta 0)
+    specialization_backline_blanket_penalty = 10       (baseline 14      , delta -4)
+    specialization_hard_cap                 = 0.62     (baseline 0.62    , delta 0)
+    specialization_local_cluster_penalty    = 5        (baseline 5       , delta 0)
+    specialization_local_radius             = 2        (baseline 2       , delta 0)
+    specialization_local_soft_limit         = 3        (baseline 3       , delta 0)
+    specialization_max_penalty              = 30       (baseline 30      , delta 0)
+    specialization_min_tiles                = 9        (baseline 9       , delta 0)
+    specialization_path_penalty             = 16       (baseline 10      , delta +6)
+    specialization_safe_phase_penalty       = 12       (baseline 12      , delta 0)
+    specialization_soft_cap                 = 0.45     (baseline 0.45    , delta 0)
+    tile_upgrade_min_score                  = 64       (baseline 64      , delta 0)
+    upgrade_priority_margin                 = 8        (baseline 9       , delta -1)
+  Checkpoint Scores: {"12":41.4468634336678,"32":45.8521255426699,"60":36.7473360156057,"90":33.7605132352165}
+
+5) rand_2  score=38.3943
+  Category Scores:
+    role_balance = 9.7627
+    specialization_quality = 37.8972
+    objective_progress = 49.5165
+    economy = 62.9542
+    board_shape = 91.0373
+    anti_pathology = 57.1442
+  Tactical Metrics:
+    ally_obstruction_penalty = 0.1115
+    opening_claim_latency_penalty = 0.3112
+    flank_productivity = 0.5004
+  Changed Parameters vs Baseline:
+    basic_claim_frontline_bonus             = 20       (baseline 22      , delta -2)
+    basic_claim_goal_bonus                  = 14       (baseline 8       , delta +6)
+    basic_claim_opening_bonus               = 16       (baseline 12      , delta +4)
+    defense_local_ratio_soft_cap            = 0.42     (baseline 0.38    , delta +0.04)
+    flank_pressure_bonus                    = 12       (baseline 14      , delta -2)
+    flank_stalemate_break_bonus             = 12       (baseline 8       , delta +4)
+    gather_safe_min_enemy_distance          = 5        (baseline 4       , delta +1)
+    objective_backfill_penalty              = 32       (baseline 28      , delta +4)
+    objective_progress_weight               = 24       (baseline 22      , delta +2)
+    ranged_saturation_max_penalty           = 34       (baseline 38      , delta -4)
+    resource_near_threat_penalty            = 11       (baseline 8       , delta +3)
+    specialization_backline_blanket_penalty = 12       (baseline 14      , delta -2)
+    specialization_path_penalty             = 16       (baseline 10      , delta +6)
+    changed_count = 13 / 44
+  Effective Parameters (full):
+    basic_claim_frontline_bonus             = 20       (baseline 22      , delta -2)
+    basic_claim_goal_bonus                  = 14       (baseline 8       , delta +6)
+    basic_claim_opening_bonus               = 16       (baseline 12      , delta +4)
+    defense_local_ratio_hard_cap            = 0.55     (baseline 0.55    , delta 0)
+    defense_local_ratio_soft_cap            = 0.42     (baseline 0.38    , delta +0.04)
+    defense_nearby_soft_limit               = 2        (baseline 2       , delta 0)
+    engaged_upgrade_energy_threshold        = 16       (baseline 16      , delta 0)
+    flank_pressure_bonus                    = 12       (baseline 14      , delta -2)
+    flank_stalemate_break_bonus             = 12       (baseline 8       , delta +4)
+    gather_conversion_resource_max_dist     = 2        (baseline 2       , delta 0)
+    gather_safe_min_enemy_distance          = 5        (baseline 4       , delta +1)
+    max_tile_upgrades_per_turn              = 2        (baseline 2       , delta 0)
+    non_engaged_upgrade_energy_threshold    = 18       (baseline 18      , delta 0)
+    objective_backfill_penalty              = 32       (baseline 28      , delta +4)
+    objective_progress_weight               = 24       (baseline 22      , delta +2)
+    objective_upgrade_distance_max          = 14       (baseline 14      , delta 0)
+    objective_upgrade_enemy_distance_max    = 10       (baseline 10      , delta 0)
+    ranged_backline_penalty                 = 14       (baseline 14      , delta 0)
+    ranged_frontline_penalty                = 28       (baseline 28      , delta 0)
+    ranged_saturation_hard_cap              = 0.52     (baseline 0.52    , delta 0)
+    ranged_saturation_max_penalty           = 34       (baseline 38      , delta -4)
+    ranged_saturation_min_tiles             = 8        (baseline 8       , delta 0)
+    ranged_saturation_soft_cap              = 0.32     (baseline 0.32    , delta 0)
+    resource_approaching_phase_bonus        = 4        (baseline 4       , delta 0)
+    resource_gather_focus_bonus             = 14       (baseline 14      , delta 0)
+    resource_low_threat_bonus               = 6        (baseline 6       , delta 0)
+    resource_near_threat_penalty            = 11       (baseline 8       , delta +3)
+    resource_node_hold_bonus                = 14       (baseline 14      , delta 0)
+    resource_objective_max_distance         = 9        (baseline 9       , delta 0)
+    resource_objective_step_weight          = 4        (baseline 4       , delta 0)
+    resource_safe_phase_bonus               = 8        (baseline 8       , delta 0)
+    specialization_adjacent_penalty         = 3        (baseline 3       , delta 0)
+    specialization_backline_blanket_penalty = 12       (baseline 14      , delta -2)
+    specialization_hard_cap                 = 0.62     (baseline 0.62    , delta 0)
+    specialization_local_cluster_penalty    = 5        (baseline 5       , delta 0)
+    specialization_local_radius             = 2        (baseline 2       , delta 0)
+    specialization_local_soft_limit         = 3        (baseline 3       , delta 0)
+    specialization_max_penalty              = 30       (baseline 30      , delta 0)
+    specialization_min_tiles                = 9        (baseline 9       , delta 0)
+    specialization_path_penalty             = 16       (baseline 10      , delta +6)
+    specialization_safe_phase_penalty       = 12       (baseline 12      , delta 0)
+    specialization_soft_cap                 = 0.45     (baseline 0.45    , delta 0)
+    tile_upgrade_min_score                  = 64       (baseline 64      , delta 0)
+    upgrade_priority_margin                 = 9        (baseline 9       , delta 0)
+  Checkpoint Scores: {"12":40.6898217670011,"32":47.2277700810131,"60":39.1981727201247,"90":28.3530848070941}
+
+PERFORMANCE AUDIT
+- ai_decision: total=192.026s | pct=98.5183% | avg/candidate=38.4052s | avg/simulation=12.8017s
+- turn_resolution: total=2.228s | pct=1.1431% | avg/candidate=0.4456s | avg/simulation=0.1485s
+- metric_scoring: total=0.485s | pct=0.2488% | avg/candidate=0.097s | avg/simulation=0.0323s
+- scenario_setup: total=0.013s | pct=0.0067% | avg/candidate=0.0026s | avg/simulation=0.0009s
+- reporting_artifacts: total=0.001s | pct=0.0005% | avg/candidate=0.0002s | avg/simulation=0.0001s
+- candidate_setup: total=0s | pct=0% | avg/candidate=0s | avg/simulation=0s
+
+Recommendations:
+- Best candidate is effectively tied with baseline; keep current constants and collect more scenarios.

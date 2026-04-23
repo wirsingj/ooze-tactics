@@ -1,0 +1,68 @@
+[gd_scene load_steps=6 format=3]
+
+[sub_resource type="StandardMaterial3D" id="1_mat_stone"]
+albedo_color = Color(0.2, 0.205, 0.22, 1)
+roughness = 0.77
+metallic = 0
+
+[sub_resource type="BoxMesh" id="2_mesh_leg"]
+size = Vector3(0.44, 0.96, 0.42)
+
+[sub_resource type="BoxMesh" id="3_mesh_lintel"]
+size = Vector3(0.94, 0.34, 0.4)
+
+[sub_resource type="PrismMesh" id="4_mesh_break"]
+left_to_right = 0.56
+size = Vector3(0.44, 0.42, 0.34)
+
+[sub_resource type="SphereMesh" id="5_mesh_rubble"]
+radius = 0.18
+height = 0.24
+radial_segments = 8
+rings = 4
+
+[node name="BlockerFamily_BrokenArch" type="Node3D"]
+
+[node name="LegLeft" type="MeshInstance3D" parent="."]
+mesh = SubResource("2_mesh_leg")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(-0.32, 0.48, 0)
+rotation_degrees = Vector3(0, 6, 0)
+
+[node name="LegRight" type="MeshInstance3D" parent="."]
+mesh = SubResource("2_mesh_leg")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(0.32, 0.44, -0.04)
+rotation_degrees = Vector3(0, -9, 0)
+scale = Vector3(0.92, 0.84, 0.88)
+
+[node name="Lintel" type="MeshInstance3D" parent="."]
+mesh = SubResource("3_mesh_lintel")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(0.05, 0.84, 0.06)
+rotation_degrees = Vector3(0, 18, 0)
+
+[node name="BreakShard" type="MeshInstance3D" parent="."]
+mesh = SubResource("4_mesh_break")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(-0.22, 0.76, -0.12)
+rotation_degrees = Vector3(0, -28, 0)
+
+[node name="Rubble" type="MeshInstance3D" parent="."]
+mesh = SubResource("5_mesh_rubble")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(0.4, 0.14, 0.1)
+scale = Vector3(1.2, 0.66, 0.98)
+
+[node name="RubbleB" type="MeshInstance3D" parent="."]
+mesh = SubResource("5_mesh_rubble")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(-0.44, 0.1, -0.08)
+scale = Vector3(0.96, 0.58, 0.9)
+
+[node name="BreakShardB" type="MeshInstance3D" parent="."]
+mesh = SubResource("4_mesh_break")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(0.24, 0.66, 0.2)
+rotation_degrees = Vector3(0, 32, 0)
+scale = Vector3(0.68, 0.74, 0.62)

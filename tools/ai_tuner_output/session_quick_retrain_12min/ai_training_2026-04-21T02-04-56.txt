@@ -1,0 +1,64 @@
+OOZE AI TRAINING REPORT
+Generated: 2026-04-21T02:04:56
+Passes: 2  Stop: time_budget  Elapsed: 14.05 min
+Score: start=46.1763 final=40.8272 delta=-5.349
+
+PASS SUMMARIES
+Pass 1: baseline=46.18 best=preset_upgrade_vertical_investment 42.70
+  accepted=none
+  reject: preset_upgrade_vertical_investment: score improvement below threshold
+  reject: preset_melee_defense_breach: score improvement below threshold
+
+Pass 2: baseline=40.83 best=preset_goal_rush 41.02
+  accepted=none
+  reject: preset_goal_rush: small gain seen but consistency hits 1/2
+  reject: preset_resource_contest: score improvement below threshold
+
+APPLIED PARAMETER CHANGES
+  none
+
+FINAL BASELINE SNAPSHOT
+  basic_claim_frontline_bonus = 22
+  basic_claim_goal_bonus = 8
+  basic_claim_opening_bonus = 12
+  defense_local_ratio_hard_cap = 0.55
+  defense_local_ratio_soft_cap = 0.38
+  defense_nearby_soft_limit = 2
+  engaged_upgrade_energy_threshold = 16
+  flank_pressure_bonus = 14
+  flank_stalemate_break_bonus = 8
+  gather_conversion_resource_max_dist = 2
+  gather_safe_min_enemy_distance = 5
+  max_tile_upgrades_per_turn = 2
+  non_engaged_upgrade_energy_threshold = 18
+  objective_backfill_penalty = 28
+  objective_progress_weight = 22
+  objective_upgrade_distance_max = 14
+  objective_upgrade_enemy_distance_max = 10
+  ranged_backline_penalty = 14
+  ranged_frontline_penalty = 28
+  ranged_saturation_hard_cap = 0.52
+  ranged_saturation_max_penalty = 38
+  ranged_saturation_min_tiles = 8
+  ranged_saturation_soft_cap = 0.32
+  resource_approaching_phase_bonus = 4
+  resource_gather_focus_bonus = 16
+  resource_low_threat_bonus = 6
+  resource_near_threat_penalty = 9
+  resource_node_hold_bonus = 14
+  resource_objective_max_distance = 9
+  resource_objective_step_weight = 5
+  resource_safe_phase_bonus = 12
+  specialization_adjacent_penalty = 3
+  specialization_backline_blanket_penalty = 14
+  specialization_hard_cap = 0.62
+  specialization_local_cluster_penalty = 5
+  specialization_local_radius = 2
+  specialization_local_soft_limit = 3
+  specialization_max_penalty = 30
+  specialization_min_tiles = 9
+  specialization_path_penalty = 10
+  specialization_safe_phase_penalty = 16
+  specialization_soft_cap = 0.45
+  tile_upgrade_min_score = 64
+  upgrade_priority_margin = 9

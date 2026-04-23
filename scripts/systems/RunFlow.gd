@@ -8,6 +8,9 @@ const NORMAL_ENEMY_ENERGY: int = 9
 const DEV_PLAYER_ENERGY: int = 500
 const DEV_DEFAULT_TEAM_SIZE: int = 1
 const DEV_MAX_TEAM_SIZE: int = 4
+const SETTINGS_PATH: String = "user://settings.cfg"
+const GRAPHICS_STYLE_2D: String = "2d"
+const GRAPHICS_STYLE_3D: String = "3d"
 
 const UPGRADE_POOL: Array = [
 	{
@@ -88,6 +91,10 @@ var result_next_scene: String = "res://scenes/MainMenu.tscn"
 var result_button_text: String = "Continue"
 var result_auto_advance: bool = false
 var result_delay_seconds: float = 1.4
+var graphics_style: String = GRAPHICS_STYLE_3D
+
+func _ready() -> void:
+	_load_user_settings()
 
 func begin_run() -> void:
 	run_active = true
@@ -208,6 +215,35 @@ func _clear_result() -> void:
 	result_button_text = "Continue"
 	result_auto_advance = false
 	result_delay_seconds = 0.0
+
+func get_graphics_style() -> String:
+	if graphics_style == GRAPHICS_STYLE_2D:
+		return GRAPHICS_STYLE_2D
+	return GRAPHICS_STYLE_3D
+
+func is_graphics_style_3d() -> bool:
+	return get_graphics_style() == GRAPHICS_STYLE_3D
+
+func set_graphics_style(style: String) -> void:
+	var normalized: String = GRAPHICS_STYLE_3D
+	if String(style).to_lower() == GRAPHICS_STYLE_2D:
+		normalized = GRAPHICS_STYLE_2D
+	graphics_style = normalized
+	_save_user_settings()
+
+func _load_user_settings() -> void:
+	var cfg: ConfigFile = ConfigFile.new()
+	var err: int = cfg.load(SETTINGS_PATH)
+	if err != OK:
+		graphics_style = GRAPHICS_STYLE_3D
+		return
+	var stored: String = String(cfg.get_value("video", "graphics_style", GRAPHICS_STYLE_3D)).to_lower()
+	graphics_style = GRAPHICS_STYLE_2D if stored == GRAPHICS_STYLE_2D else GRAPHICS_STYLE_3D
+
+func _save_user_settings() -> void:
+	var cfg: ConfigFile = ConfigFile.new()
+	cfg.set_value("video", "graphics_style", get_graphics_style())
+	cfg.save(SETTINGS_PATH)
 
 func should_offer_upgrade_after_victory(level_index: int, spectator_mode: bool = false) -> bool:
 	if spectator_mode:

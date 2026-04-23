@@ -1,0 +1,64 @@
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="StandardMaterial3D" id="1_mat_stone"]
+albedo_color = Color(0.185, 0.19, 0.205, 1)
+roughness = 0.81
+metallic = 0
+
+[sub_resource type="SphereMesh" id="2_mesh_boulder"]
+radius = 0.34
+height = 0.5
+radial_segments = 9
+rings = 6
+
+[sub_resource type="SphereMesh" id="3_mesh_small"]
+radius = 0.2
+height = 0.28
+radial_segments = 8
+rings = 5
+
+[sub_resource type="CapsuleMesh" id="4_mesh_capsule"]
+radius = 0.17
+height = 0.5
+radial_segments = 8
+rings = 6
+
+[node name="BlockerFamily_BoulderNest" type="Node3D"]
+
+[node name="BoulderA" type="MeshInstance3D" parent="."]
+mesh = SubResource("2_mesh_boulder")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(-0.22, 0.24, 0.02)
+scale = Vector3(1.04, 0.88, 0.98)
+
+[node name="BoulderB" type="MeshInstance3D" parent="."]
+mesh = SubResource("2_mesh_boulder")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(0.2, 0.21, -0.1)
+scale = Vector3(0.82, 0.72, 0.78)
+
+[node name="BoulderC" type="MeshInstance3D" parent="."]
+mesh = SubResource("3_mesh_small")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(0.34, 0.12, 0.16)
+scale = Vector3(0.9, 0.7, 1.1)
+
+[node name="CapsuleShard" type="MeshInstance3D" parent="."]
+mesh = SubResource("4_mesh_capsule")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(-0.42, 0.28, -0.08)
+rotation_degrees = Vector3(6, 24, 22)
+scale = Vector3(0.74, 0.9, 0.7)
+
+[node name="CapsuleShardB" type="MeshInstance3D" parent="."]
+mesh = SubResource("4_mesh_capsule")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(0.02, 0.3, 0.24)
+rotation_degrees = Vector3(-2, -16, -18)
+scale = Vector3(0.62, 0.84, 0.58)
+
+[node name="Pebble" type="MeshInstance3D" parent="."]
+mesh = SubResource("3_mesh_small")
+surface_material_override/0 = SubResource("1_mat_stone")
+position = Vector3(-0.18, 0.08, -0.22)
+scale = Vector3(0.66, 0.5, 0.64)

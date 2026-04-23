@@ -11,10 +11,11 @@ const MENU_FONT_PATH: String = "res://assets/fonts/PressStart2P-Regular.ttf"
 
 @onready var background: TextureRect = $Background
 @onready var top_spacer: Control = $Center/VBox/TopSpacer
-@onready var start_button: Button = $Center/VBox/ButtonsRow/StartButton
-@onready var dev_start_button: Button = $Center/VBox/ButtonsRow/DevStartButton
-@onready var settings_button: Button = $Center/VBox/ButtonsRow/SettingsButton
-@onready var exit_button: Button = $Center/VBox/ButtonsRow/ExitButton
+@onready var buttons_panel: PanelContainer = $Center/VBox/ButtonsPanel
+@onready var start_button: Button = $Center/VBox/ButtonsPanel/ButtonsRow/StartButton
+@onready var dev_start_button: Button = $Center/VBox/ButtonsPanel/ButtonsRow/DevStartButton
+@onready var settings_button: Button = $Center/VBox/ButtonsPanel/ButtonsRow/SettingsButton
+@onready var exit_button: Button = $Center/VBox/ButtonsPanel/ButtonsRow/ExitButton
 
 @onready var dev_overlay: ColorRect = $DevOverlay
 @onready var player_team_spin: SpinBox = $DevOverlay/DevPanelCenter/DevPanel/DevMargin/DevVBox/TeamRow/PlayerTeamSize
@@ -72,6 +73,20 @@ func _apply_menu_theme() -> void:
 	theme.set_color("font_color", "CheckBox", Color(0.95, 0.94, 0.87))
 
 	self.theme = theme
+	if buttons_panel != null:
+		var panel_style := StyleBoxFlat.new()
+		panel_style.bg_color = Color(0.02, 0.02, 0.03, 0.50)
+		panel_style.border_color = Color(0.78, 0.58, 0.24, 0.72)
+		panel_style.set_border_width_all(2)
+		panel_style.corner_radius_top_left = 8
+		panel_style.corner_radius_top_right = 8
+		panel_style.corner_radius_bottom_left = 8
+		panel_style.corner_radius_bottom_right = 8
+		panel_style.set_content_margin(SIDE_LEFT, 10.0)
+		panel_style.set_content_margin(SIDE_TOP, 10.0)
+		panel_style.set_content_margin(SIDE_RIGHT, 10.0)
+		panel_style.set_content_margin(SIDE_BOTTOM, 10.0)
+		buttons_panel.add_theme_stylebox_override("panel", panel_style)
 	for button in [start_button, dev_start_button, settings_button, exit_button, dev_confirm_button, dev_cancel_button]:
 		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.add_theme_font_size_override("font_size", 14)
@@ -79,9 +94,9 @@ func _apply_menu_theme() -> void:
 func _update_layout_for_window() -> void:
 	if top_spacer == null:
 		return
-	# Keep the horizontal row directly under the logo area on common 16:9 sizes.
+	# Keep button panel below the title and in the lower third on most window sizes.
 	var h: float = size.y
-	top_spacer.custom_minimum_size.y = clampf(h * 0.52, 250.0, 620.0)
+	top_spacer.custom_minimum_size.y = clampf(h * 0.58, 260.0, 680.0)
 
 func _make_stylebox(texture_path: String, margin: int, content: int) -> StyleBoxTexture:
 	var style := StyleBoxTexture.new()

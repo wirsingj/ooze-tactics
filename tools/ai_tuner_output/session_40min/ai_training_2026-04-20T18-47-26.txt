@@ -1,0 +1,62 @@
+OOZE AI TRAINING REPORT
+Generated: 2026-04-20T18:47:26
+Passes: 3  Stop: plateau  Elapsed: 34.69 min
+Score: start=43.3077 final=43.3077 delta=0
+
+PASS SUMMARIES
+Pass 1: baseline=43.31 best=grid_1 43.45
+  accepted=none
+  reject: grid_1: score improvement below threshold
+  reject: rand_3: score improvement below threshold
+
+Pass 2: baseline=43.31 best=grid_1 43.45
+  accepted=none
+  reject: grid_1: score improvement below threshold
+
+Pass 3: baseline=43.31 best=grid_1 43.45
+  accepted=none
+  reject: grid_1: score improvement below threshold
+
+APPLIED PARAMETER CHANGES
+  none
+
+FINAL BASELINE SNAPSHOT
+  defense_local_ratio_hard_cap = 0.55
+  defense_local_ratio_soft_cap = 0.4
+  defense_nearby_soft_limit = 2
+  engaged_upgrade_energy_threshold = 16
+  gather_conversion_resource_max_dist = 2
+  gather_safe_min_enemy_distance = 4
+  max_tile_upgrades_per_turn = 2
+  non_engaged_upgrade_energy_threshold = 18
+  objective_backfill_penalty = 32
+  objective_progress_weight = 22
+  objective_upgrade_distance_max = 14
+  objective_upgrade_enemy_distance_max = 10
+  ranged_backline_penalty = 14
+  ranged_frontline_penalty = 28
+  ranged_saturation_hard_cap = 0.52
+  ranged_saturation_max_penalty = 36
+  ranged_saturation_min_tiles = 8
+  ranged_saturation_soft_cap = 0.34
+  resource_approaching_phase_bonus = 4
+  resource_gather_focus_bonus = 12
+  resource_low_threat_bonus = 6
+  resource_near_threat_penalty = 10
+  resource_node_hold_bonus = 14
+  resource_objective_max_distance = 9
+  resource_objective_step_weight = 4
+  resource_safe_phase_bonus = 10
+  specialization_adjacent_penalty = 3
+  specialization_backline_blanket_penalty = 12
+  specialization_hard_cap = 0.62
+  specialization_local_cluster_penalty = 5
+  specialization_local_radius = 2
+  specialization_local_soft_limit = 3
+  specialization_max_penalty = 30
+  specialization_min_tiles = 9
+  specialization_path_penalty = 12
+  specialization_safe_phase_penalty = 14
+  specialization_soft_cap = 0.45
+  tile_upgrade_min_score = 66
+  upgrade_priority_margin = 10

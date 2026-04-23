@@ -1,0 +1,764 @@
+{
+	"applied_parameter_changes": {
+
+	},
+	"baseline_path": "res://config/ooze_ai_baseline.json",
+	"config_used": {
+		"checkpoint_weights": {
+			"12": 0.9,
+			"32": 1.25,
+			"60": 1.15,
+			"90": 0.9
+		},
+		"checkpoints": [
+			12.0,
+			32.0,
+			60.0,
+			90.0
+		],
+		"fixed_overrides": {
+
+		},
+		"output_dir": "res://tools/ai_tuner_output/session_quick_retrain_12min",
+		"runs_per_seed": 1.0,
+		"scenarios": [
+			{
+				"door_hp": 32.0,
+				"enemies_allied": true,
+				"enemy_team_size": 2.0,
+				"level_index": 3.0,
+				"name": "spectator_2v2_wide_chamber",
+				"outcome_check_interval": 6.0,
+				"player_team_size": 2.0,
+				"scenario_type": "fast",
+				"seeds": [
+					1337.0,
+					2024.0
+				],
+				"stop_at_last_checkpoint": true,
+				"template_ids": [
+					"room_wide_chamber"
+				],
+				"turn_limit": 96.0
+			},
+			{
+				"door_hp": 32.0,
+				"enemies_allied": true,
+				"enemy_team_size": 2.0,
+				"level_index": 3.0,
+				"name": "spectator_2v2_twist_forks",
+				"outcome_check_interval": 6.0,
+				"player_team_size": 2.0,
+				"scenario_type": "fast",
+				"seeds": [
+					1777.0,
+					2999.0
+				],
+				"stop_at_last_checkpoint": true,
+				"template_ids": [
+					"room_twist_forks"
+				],
+				"turn_limit": 96.0
+			},
+			{
+				"door_hp": 32.0,
+				"enemies_allied": true,
+				"enemy_team_size": 2.0,
+				"level_index": 3.0,
+				"name": "spectator_2v2_broken_spine_outcome",
+				"outcome_check_interval": 6.0,
+				"player_team_size": 2.0,
+				"scenario_type": "outcome",
+				"seeds": [
+					3001.0
+				],
+				"stop_at_last_checkpoint": false,
+				"template_ids": [
+					"room_broken_spine"
+				],
+				"turn_limit": 160.0
+			}
+		],
+		"search": {
+			"grid_parameters": {
+				"ranged_saturation_soft_cap": [
+					0.32,
+					0.34,
+					0.36,
+					0.38
+				],
+				"resource_safe_phase_bonus": [
+					8.0,
+					10.0,
+					12.0
+				],
+				"specialization_safe_phase_penalty": [
+					12.0,
+					14.0,
+					16.0
+				],
+				"tile_upgrade_min_score": [
+					64.0,
+					66.0,
+					68.0
+				]
+			},
+			"max_grid_candidates": 3.0,
+			"max_total_candidates": 12.0,
+			"preset_candidates": [
+				{
+					"id": "preset_forward_ranged_pressure",
+					"label": "Preset Forward Ranged Pressure",
+					"overrides": {
+						"basic_claim_frontline_bonus": 20.0,
+						"objective_progress_weight": 24.0,
+						"ranged_backline_penalty": 10.0,
+						"ranged_frontline_penalty": 22.0,
+						"ranged_saturation_hard_cap": 0.58,
+						"ranged_saturation_max_penalty": 32.0,
+						"ranged_saturation_soft_cap": 0.38
+					}
+				},
+				{
+					"id": "preset_upgrade_vertical_investment",
+					"label": "Preset Upgrade Vertical Investment",
+					"overrides": {
+						"engaged_upgrade_energy_threshold": 14.0,
+						"max_tile_upgrades_per_turn": 3.0,
+						"non_engaged_upgrade_energy_threshold": 16.0,
+						"specialization_backline_blanket_penalty": 16.0,
+						"specialization_path_penalty": 14.0,
+						"tile_upgrade_min_score": 60.0,
+						"upgrade_priority_margin": 7.0
+					}
+				},
+				{
+					"id": "preset_melee_defense_breach",
+					"label": "Preset Melee Defense Breach",
+					"overrides": {
+						"basic_claim_frontline_bonus": 24.0,
+						"defense_local_ratio_hard_cap": 0.58,
+						"defense_local_ratio_soft_cap": 0.42,
+						"flank_stalemate_break_bonus": 16.0,
+						"objective_progress_weight": 26.0,
+						"ranged_backline_penalty": 16.0,
+						"ranged_frontline_penalty": 32.0
+					}
+				},
+				{
+					"id": "preset_breakout_claim",
+					"label": "Preset Breakout Claim",
+					"overrides": {
+						"basic_claim_frontline_bonus": 24.0,
+						"basic_claim_opening_bonus": 16.0,
+						"flank_pressure_bonus": 18.0,
+						"flank_stalemate_break_bonus": 14.0,
+						"objective_backfill_penalty": 24.0,
+						"specialization_path_penalty": 14.0
+					}
+				},
+				{
+					"id": "preset_goal_rush",
+					"label": "Preset Goal Rush",
+					"overrides": {
+						"basic_claim_frontline_bonus": 22.0,
+						"basic_claim_goal_bonus": 18.0,
+						"objective_backfill_penalty": 36.0,
+						"objective_progress_weight": 28.0,
+						"resource_objective_max_distance": 7.0,
+						"resource_objective_step_weight": 3.0,
+						"upgrade_priority_margin": 8.0
+					}
+				},
+				{
+					"id": "preset_wall_aware_pathing",
+					"label": "Preset Wall Aware Pathing",
+					"overrides": {
+						"basic_claim_frontline_bonus": 26.0,
+						"basic_claim_opening_bonus": 18.0,
+						"flank_pressure_bonus": 18.0,
+						"flank_stalemate_break_bonus": 18.0,
+						"objective_backfill_penalty": 34.0,
+						"specialization_backline_blanket_penalty": 16.0,
+						"specialization_path_penalty": 16.0
+					}
+				},
+				{
+					"id": "preset_resource_contest",
+					"label": "Preset Resource Contest",
+					"overrides": {
+						"gather_safe_min_enemy_distance": 5.0,
+						"resource_gather_focus_bonus": 16.0,
+						"resource_near_threat_penalty": 9.0,
+						"resource_objective_step_weight": 5.0,
+						"resource_safe_phase_bonus": 12.0,
+						"specialization_safe_phase_penalty": 16.0
+					}
+				}
+			],
+			"random_iterations": 8.0,
+			"random_mutation": {
+				"all_keys_probability": 0.08,
+				"max_keys_per_candidate": 6.0,
+				"min_keys_per_candidate": 2.0
+			},
+			"random_parameters": {
+				"basic_claim_frontline_bonus": {
+					"max": 24.0,
+					"min": 8.0,
+					"step": 2.0
+				},
+				"basic_claim_goal_bonus": {
+					"max": 18.0,
+					"min": 6.0,
+					"step": 2.0
+				},
+				"basic_claim_opening_bonus": {
+					"max": 18.0,
+					"min": 6.0,
+					"step": 2.0
+				},
+				"defense_local_ratio_hard_cap": {
+					"float": true,
+					"max": 0.62,
+					"min": 0.52,
+					"step": 0.02
+				},
+				"defense_local_ratio_soft_cap": {
+					"float": true,
+					"max": 0.44,
+					"min": 0.38,
+					"step": 0.02
+				},
+				"engaged_upgrade_energy_threshold": {
+					"max": 20.0,
+					"min": 12.0,
+					"step": 1.0
+				},
+				"flank_pressure_bonus": {
+					"max": 20.0,
+					"min": 8.0,
+					"step": 2.0
+				},
+				"flank_stalemate_break_bonus": {
+					"max": 18.0,
+					"min": 6.0,
+					"step": 2.0
+				},
+				"gather_safe_min_enemy_distance": {
+					"choices": [
+						4.0,
+						5.0
+					]
+				},
+				"max_tile_upgrades_per_turn": {
+					"choices": [
+						1.0,
+						2.0,
+						3.0
+					]
+				},
+				"non_engaged_upgrade_energy_threshold": {
+					"max": 22.0,
+					"min": 14.0,
+					"step": 1.0
+				},
+				"objective_backfill_penalty": {
+					"max": 36.0,
+					"min": 28.0,
+					"step": 2.0
+				},
+				"objective_progress_weight": {
+					"max": 26.0,
+					"min": 20.0,
+					"step": 1.0
+				},
+				"ranged_backline_penalty": {
+					"max": 18.0,
+					"min": 8.0,
+					"step": 2.0
+				},
+				"ranged_frontline_penalty": {
+					"max": 34.0,
+					"min": 18.0,
+					"step": 2.0
+				},
+				"ranged_saturation_hard_cap": {
+					"float": true,
+					"max": 0.62,
+					"min": 0.48,
+					"step": 0.02
+				},
+				"ranged_saturation_max_penalty": {
+					"max": 42.0,
+					"min": 28.0,
+					"step": 2.0
+				},
+				"ranged_saturation_soft_cap": {
+					"float": true,
+					"max": 0.42,
+					"min": 0.3,
+					"step": 0.02
+				},
+				"resource_gather_focus_bonus": {
+					"max": 14.0,
+					"min": 10.0,
+					"step": 1.0
+				},
+				"resource_near_threat_penalty": {
+					"max": 12.0,
+					"min": 8.0,
+					"step": 1.0
+				},
+				"resource_objective_max_distance": {
+					"max": 12.0,
+					"min": 7.0,
+					"step": 1.0
+				},
+				"resource_objective_step_weight": {
+					"max": 5.0,
+					"min": 3.0,
+					"step": 1.0
+				},
+				"specialization_backline_blanket_penalty": {
+					"max": 16.0,
+					"min": 10.0,
+					"step": 2.0
+				},
+				"specialization_path_penalty": {
+					"max": 16.0,
+					"min": 10.0,
+					"step": 2.0
+				},
+				"tile_upgrade_min_score": {
+					"max": 72.0,
+					"min": 58.0,
+					"step": 2.0
+				},
+				"upgrade_priority_margin": {
+					"max": 12.0,
+					"min": 8.0,
+					"step": 1.0
+				}
+			},
+			"random_seed": 1337.0
+		},
+		"top_n": 5.0,
+		"training": {
+			"acceptance": {
+				"consistency_required_passes": 2.0,
+				"exploratory_key_gain": 0.3,
+				"exploratory_max_score_drop": 0.06,
+				"exploratory_plateau_passes": 2.0,
+				"max_economy_drop": 2.5,
+				"max_objective_drop": 2.0,
+				"max_role_balance_drop": 2.0,
+				"max_specialization_drop": 2.0,
+				"small_accept_score_delta": 0.1
+			},
+			"baseline_config_path": "res://config/ooze_ai_baseline.json",
+			"enabled": true,
+			"initial_seconds_per_actor_turn": 0.22,
+			"initial_seconds_per_simulation": 4.0,
+			"max_effective_passes": 4.0,
+			"max_passes": 10.0,
+			"min_accept_score_delta": 0.2,
+			"min_candidates_per_pass": 1.0,
+			"min_pass_minutes": 3.0,
+			"overrun_tolerance_seconds": 60.0,
+			"pass_count_conservatism": 1.5,
+			"pass_profiles": {
+				"min_random_iterations": 1.0,
+				"pass1_grid_scale": 2.0,
+				"pass1_random_scale": 2.8,
+				"refine_grid_scale": 0.9,
+				"refine_random_scale": 0.55
+			},
+			"plateau_passes": 4.0,
+			"scenario_mix": {
+				"fast_scenario_ratio": 0.75,
+				"min_outcome_scenarios": 1.0
+			},
+			"time_budget_minutes": 12.0
+		}
+	},
+	"effective_pass_count": 2,
+	"effective_pass_weights": [
+		0.571428571428572,
+		0.428571428571429
+	],
+	"elapsed_ms": 843106,
+	"final_baseline_score": 40.8272461963984,
+	"final_baseline_snapshot": {
+		"basic_claim_frontline_bonus": 22.0,
+		"basic_claim_goal_bonus": 8.0,
+		"basic_claim_opening_bonus": 12.0,
+		"defense_local_ratio_hard_cap": 0.55,
+		"defense_local_ratio_soft_cap": 0.38,
+		"defense_nearby_soft_limit": 2.0,
+		"engaged_upgrade_energy_threshold": 16.0,
+		"flank_pressure_bonus": 14.0,
+		"flank_stalemate_break_bonus": 8.0,
+		"gather_conversion_resource_max_dist": 2.0,
+		"gather_safe_min_enemy_distance": 5.0,
+		"max_tile_upgrades_per_turn": 2.0,
+		"non_engaged_upgrade_energy_threshold": 18.0,
+		"objective_backfill_penalty": 28.0,
+		"objective_progress_weight": 22.0,
+		"objective_upgrade_distance_max": 14.0,
+		"objective_upgrade_enemy_distance_max": 10.0,
+		"ranged_backline_penalty": 14.0,
+		"ranged_frontline_penalty": 28.0,
+		"ranged_saturation_hard_cap": 0.52,
+		"ranged_saturation_max_penalty": 38.0,
+		"ranged_saturation_min_tiles": 8.0,
+		"ranged_saturation_soft_cap": 0.32,
+		"resource_approaching_phase_bonus": 4.0,
+		"resource_gather_focus_bonus": 16.0,
+		"resource_low_threat_bonus": 6.0,
+		"resource_near_threat_penalty": 9.0,
+		"resource_node_hold_bonus": 14.0,
+		"resource_objective_max_distance": 9.0,
+		"resource_objective_step_weight": 5.0,
+		"resource_safe_phase_bonus": 12.0,
+		"specialization_adjacent_penalty": 3.0,
+		"specialization_backline_blanket_penalty": 14.0,
+		"specialization_hard_cap": 0.62,
+		"specialization_local_cluster_penalty": 5.0,
+		"specialization_local_radius": 2.0,
+		"specialization_local_soft_limit": 3.0,
+		"specialization_max_penalty": 30.0,
+		"specialization_min_tiles": 9.0,
+		"specialization_path_penalty": 10.0,
+		"specialization_safe_phase_penalty": 16.0,
+		"specialization_soft_cap": 0.45,
+		"tile_upgrade_min_score": 64.0,
+		"upgrade_priority_margin": 9.0
+	},
+	"final_eval": {
+		"ok": false,
+		"skipped": "budget"
+	},
+	"generated_at": "2026-04-21T02:04:56",
+	"mode": "multi_pass_training",
+	"ok": true,
+	"pass_reports": [
+		{
+			"accept_reason": "",
+			"accepted": false,
+			"accepted_candidate_id": "",
+			"accepted_category_deltas": {
+
+			},
+			"accepted_score": 46.1762838764555,
+			"baseline_category_scores": {
+				"anti_pathology": 62.0487368144599,
+				"board_shape": 91.5291724242727,
+				"economy": 55.2133358134921,
+				"objective_progress": 50.5850504599591,
+				"role_balance": 10.1976805981742,
+				"specialization_quality": 37.8301763578803
+			},
+			"baseline_score_before": 46.1762838764555,
+			"best_candidate_id": "preset_upgrade_vertical_investment",
+			"best_candidate_score": 42.7033264096517,
+			"best_category_deltas": {
+				"anti_pathology": -4.13261053479702,
+				"board_shape": 0.0937437969633805,
+				"economy": 6.56915674603174,
+				"objective_progress": 3.18087517279088,
+				"role_balance": 0.913689195056103,
+				"specialization_quality": 0.182922953355551
+			},
+			"pass_index": 1,
+			"rejection_reasons": [
+				"preset_upgrade_vertical_investment: score improvement below threshold",
+				"preset_melee_defense_breach: score improvement below threshold",
+				"preset_forward_ranged_pressure: score improvement below threshold",
+				"preset_breakout_claim: score improvement below threshold"
+			],
+			"runtime_stats": {
+				"budget_stop": false,
+				"budget_stop_reason": "",
+				"elapsed_seconds": 193.587,
+				"estimated_pass_seconds": 374.0,
+				"evaluated_actor_turns": 1704.0,
+				"evaluated_candidate_count": 5,
+				"evaluated_fast_actor_turns": 900.0,
+				"evaluated_fast_simulation_count": 10,
+				"evaluated_outcome_actor_turns": 804.0,
+				"evaluated_outcome_simulation_count": 5,
+				"evaluated_simulation_count": 15,
+				"fast_elapsed_seconds": 91.8,
+				"outcome_elapsed_seconds": 101.764,
+				"performance": {
+					"categories": [
+						{
+							"avg_per_candidate_seconds": 38.1584,
+							"avg_per_simulation_seconds": 12.7194666666667,
+							"category": "ai_decision",
+							"pct_of_runtime": 98.5562047038283,
+							"total_seconds": 190.792
+						},
+						{
+							"avg_per_candidate_seconds": 0.435399999999989,
+							"avg_per_simulation_seconds": 0.14513333333333,
+							"category": "turn_resolution",
+							"pct_of_runtime": 1.12455898381603,
+							"total_seconds": 2.17699999999995
+						},
+						{
+							"avg_per_candidate_seconds": 0.0898000000000001,
+							"avg_per_simulation_seconds": 0.0299333333333334,
+							"category": "metric_scoring",
+							"pct_of_runtime": 0.231937061889487,
+							"total_seconds": 0.449
+						},
+						{
+							"avg_per_candidate_seconds": 0.004,
+							"avg_per_simulation_seconds": 0.00133333333333333,
+							"category": "reporting_artifacts",
+							"pct_of_runtime": 0.0103312722445206,
+							"total_seconds": 0.02
+						},
+						{
+							"avg_per_candidate_seconds": 0.002,
+							"avg_per_simulation_seconds": 0.000666666666666667,
+							"category": "scenario_setup",
+							"pct_of_runtime": 0.00516563612226028,
+							"total_seconds": 0.01
+						},
+						{
+							"avg_per_candidate_seconds": 0.0,
+							"avg_per_simulation_seconds": 0.0,
+							"category": "candidate_setup",
+							"pct_of_runtime": 0.0,
+							"total_seconds": 0.0
+						}
+					],
+					"evaluated_candidates": 5,
+					"evaluated_simulations": 15,
+					"measured_seconds": 193.448,
+					"top_bottlenecks": [
+						{
+							"avg_per_candidate_seconds": 38.1584,
+							"avg_per_simulation_seconds": 12.7194666666667,
+							"category": "ai_decision",
+							"pct_of_runtime": 98.5562047038283,
+							"total_seconds": 190.792
+						},
+						{
+							"avg_per_candidate_seconds": 0.435399999999989,
+							"avg_per_simulation_seconds": 0.14513333333333,
+							"category": "turn_resolution",
+							"pct_of_runtime": 1.12455898381603,
+							"total_seconds": 2.17699999999995
+						},
+						{
+							"avg_per_candidate_seconds": 0.0898000000000001,
+							"avg_per_simulation_seconds": 0.0299333333333334,
+							"category": "metric_scoring",
+							"pct_of_runtime": 0.231937061889487,
+							"total_seconds": 0.449
+						}
+					],
+					"total_runtime_seconds": 193.587
+				},
+				"planned_actor_turns": 1700.0,
+				"planned_candidate_count": 10,
+				"planned_fast_actor_turns": 900.0,
+				"planned_fast_simulation_count": 10,
+				"planned_outcome_actor_turns": 800.0,
+				"planned_outcome_simulation_count": 5,
+				"planned_simulation_count": 15
+			}
+		},
+		{
+			"accept_reason": "",
+			"accepted": false,
+			"accepted_candidate_id": "",
+			"accepted_category_deltas": {
+
+			},
+			"accepted_score": 40.8272461963984,
+			"baseline_category_scores": {
+				"anti_pathology": 60.554247289759,
+				"board_shape": 92.1582124958138,
+				"economy": 53.5608746279762,
+				"objective_progress": 42.195369313375,
+				"role_balance": 11.8071905096456,
+				"specialization_quality": 43.2858130537157
+			},
+			"baseline_score_before": 40.8272461963984,
+			"best_candidate_id": "preset_goal_rush",
+			"best_candidate_score": 41.0231044820482,
+			"best_category_deltas": {
+				"anti_pathology": -1.20765310239967,
+				"board_shape": 0.475155476406272,
+				"economy": 10.2232528521825,
+				"objective_progress": 5.37088910614257,
+				"role_balance": -1.85393054425753,
+				"specialization_quality": -0.820734205274782
+			},
+			"pass_index": 2,
+			"rejection_reasons": [
+				"preset_goal_rush: small gain seen but consistency hits 1/2",
+				"preset_resource_contest: score improvement below threshold",
+				"grid_8: score improvement below threshold",
+				"grid_10: score improvement below threshold",
+				"preset_forward_ranged_pressure: score improvement below threshold",
+				"preset_melee_defense_breach: score improvement below threshold",
+				"grid_9: score improvement below threshold",
+				"preset_upgrade_vertical_investment: score improvement below threshold",
+				"preset_breakout_claim: score improvement below threshold",
+				"preset_wall_aware_pathing: score improvement below threshold"
+			],
+			"runtime_stats": {
+				"budget_stop": false,
+				"budget_stop_reason": "",
+				"elapsed_seconds": 649.456,
+				"estimated_pass_seconds": 425.8914,
+				"evaluated_actor_turns": 5706.0,
+				"evaluated_candidate_count": 11,
+				"evaluated_fast_actor_turns": 3960.0,
+				"evaluated_fast_simulation_count": 44,
+				"evaluated_outcome_actor_turns": 1746.0,
+				"evaluated_outcome_simulation_count": 11,
+				"evaluated_simulation_count": 55,
+				"fast_elapsed_seconds": 424.549,
+				"outcome_elapsed_seconds": 224.87,
+				"performance": {
+					"categories": [
+						{
+							"avg_per_candidate_seconds": 58.1936363636362,
+							"avg_per_simulation_seconds": 11.6387272727272,
+							"category": "ai_decision",
+							"pct_of_runtime": 98.5640289719393,
+							"total_seconds": 640.129999999998
+						},
+						{
+							"avg_per_candidate_seconds": 0.641636363636359,
+							"avg_per_simulation_seconds": 0.128327272727272,
+							"category": "turn_resolution",
+							"pct_of_runtime": 1.0867556847577,
+							"total_seconds": 7.05799999999994
+						},
+						{
+							"avg_per_candidate_seconds": 0.155727272727272,
+							"avg_per_simulation_seconds": 0.0311454545454545,
+							"category": "metric_scoring",
+							"pct_of_runtime": 0.263759207706141,
+							"total_seconds": 1.713
+						},
+						{
+							"avg_per_candidate_seconds": 0.00372727272727273,
+							"avg_per_simulation_seconds": 0.000745454545454545,
+							"category": "reporting_artifacts",
+							"pct_of_runtime": 0.006312975782809,
+							"total_seconds": 0.041
+						},
+						{
+							"avg_per_candidate_seconds": 0.00281818181818182,
+							"avg_per_simulation_seconds": 0.000563636363636364,
+							"category": "scenario_setup",
+							"pct_of_runtime": 0.00477322559187998,
+							"total_seconds": 0.031
+						},
+						{
+							"avg_per_candidate_seconds": 0.0,
+							"avg_per_simulation_seconds": 0.0,
+							"category": "candidate_setup",
+							"pct_of_runtime": 0.0,
+							"total_seconds": 0.0
+						}
+					],
+					"evaluated_candidates": 11,
+					"evaluated_simulations": 55,
+					"measured_seconds": 648.972999999998,
+					"top_bottlenecks": [
+						{
+							"avg_per_candidate_seconds": 58.1936363636362,
+							"avg_per_simulation_seconds": 11.6387272727272,
+							"category": "ai_decision",
+							"pct_of_runtime": 98.5640289719393,
+							"total_seconds": 640.129999999998
+						},
+						{
+							"avg_per_candidate_seconds": 0.641636363636359,
+							"avg_per_simulation_seconds": 0.128327272727272,
+							"category": "turn_resolution",
+							"pct_of_runtime": 1.0867556847577,
+							"total_seconds": 7.05799999999994
+						},
+						{
+							"avg_per_candidate_seconds": 0.155727272727272,
+							"avg_per_simulation_seconds": 0.0311454545454545,
+							"category": "metric_scoring",
+							"pct_of_runtime": 0.263759207706141,
+							"total_seconds": 1.713
+						}
+					],
+					"total_runtime_seconds": 649.456
+				},
+				"planned_actor_turns": 5720.0,
+				"planned_candidate_count": 22,
+				"planned_fast_actor_turns": 3960.0,
+				"planned_fast_simulation_count": 44,
+				"planned_outcome_actor_turns": 1760.0,
+				"planned_outcome_simulation_count": 11,
+				"planned_simulation_count": 55
+			}
+		}
+	],
+	"passes_run": 2,
+	"runtime_metrics": {
+		"completed_actor_turns": 7410.0,
+		"completed_candidates": 16,
+		"completed_fast_actor_turns": 4860.0,
+		"completed_fast_simulations": 54,
+		"completed_outcome_actor_turns": 2550.0,
+		"completed_outcome_simulations": 16,
+		"completed_simulations": 70,
+		"elapsed_seconds": 843.043,
+		"fast_elapsed_seconds": 516.349,
+		"outcome_elapsed_seconds": 326.634,
+		"seconds_per_actor_turn": 0.113770985155196,
+		"seconds_per_candidate": 52.6901875,
+		"seconds_per_fast_simulation": 9.56201851851852,
+		"seconds_per_outcome_simulation": 20.414625,
+		"seconds_per_simulation": 12.0434714285714
+	},
+	"starting_baseline_score": 46.1762838764555,
+	"stop_reason": "time_budget",
+	"total_improvement": -5.34903768005705,
+	"training_settings": {
+		"baseline_config_path": "res://config/ooze_ai_baseline.json",
+		"consistency_required_passes": 2,
+		"exploratory_key_gain": 0.3,
+		"exploratory_max_score_drop": 0.06,
+		"exploratory_plateau_passes": 2,
+		"fast_scenario_ratio": 0.75,
+		"initial_seconds_per_actor_turn": 0.22,
+		"initial_seconds_per_simulation": 4.0,
+		"max_economy_drop": 2.5,
+		"max_effective_passes": 4,
+		"max_objective_drop": 2.0,
+		"max_passes": 10,
+		"max_role_balance_drop": 2.0,
+		"max_specialization_drop": 2.0,
+		"min_accept_score_delta": 0.2,
+		"min_candidates_per_pass": 1.0,
+		"min_outcome_scenarios": 1,
+		"min_pass_minutes": 3.0,
+		"min_random_iterations": 1,
+		"overrun_tolerance_seconds": 60.0,
+		"pass1_grid_scale": 2.0,
+		"pass1_random_scale": 2.8,
+		"pass_count_conservatism": 1.5,
+		"plateau_passes": 4,
+		"refine_grid_scale": 0.9,
+		"refine_random_scale": 0.55,
+		"small_accept_score_delta": 0.1,
+		"time_budget_minutes": 12.0
+	}
+}

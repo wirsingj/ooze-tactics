@@ -1,0 +1,4094 @@
+{
+	"all_candidates": [
+		{
+			"ai_profile": {
+				"avg_usec_per_turn": {
+					"candidate_generation": 13385.9375,
+					"choose_total": 65239.4861111111,
+					"conversion_scoring": 3895.39583333333,
+					"enemy_proximity_calculations": 18299.8680555556,
+					"flank_opening_ally_scoring": 8486.65277777778,
+					"full_board_scan": 46708.0833333333,
+					"objective_distance_calculations": 2299.47916666667,
+					"placement_scoring": 46730.9583333333,
+					"strategy_evaluation": 2446.88888888889,
+					"support_calculations": 4058.08333333333,
+					"upgrade_scoring": 6800.23611111111
+				},
+				"choose_total_usec": 9394486.0,
+				"counts": {
+					"candidate_generation": 183564,
+					"choose_total": 144,
+					"conversion_scoring": 400,
+					"enemy_proximity_calculations": 363886,
+					"enemy_proximity_calls": 363886,
+					"flank_opening_ally_calls": 12936,
+					"flank_opening_ally_scoring": 12936,
+					"full_board_scan": 386,
+					"full_board_tiles_scanned": 208440,
+					"objective_distance_calculations": 27534,
+					"objective_distance_calls": 27390,
+					"placement_scoring": 432,
+					"strategy_evaluation": 144,
+					"strategy_intent_CONSOLIDATE_ADVANTAGE": 18,
+					"strategy_intent_HEART_DEFENSE": 22,
+					"strategy_intent_MAIN_PUSH": 16,
+					"strategy_intent_RECOVER_ECONOMY": 66,
+					"strategy_intent_RESOURCE_CONTEST": 22,
+					"support_calculation_calls": 18280,
+					"support_calculations": 18280,
+					"upgrade_scoring": 610
+				},
+				"dominant_strategy_intent": "RECOVER_ECONOMY",
+				"percent_of_choose_total": {
+					"candidate_generation": 20.5181528824461,
+					"choose_total": 100.0,
+					"conversion_scoring": 5.97091740836061,
+					"enemy_proximity_calculations": 28.0502946089866,
+					"flank_opening_ally_scoring": 13.0084604948051,
+					"full_board_scan": 71.5948057190143,
+					"objective_distance_calculations": 3.52467394171432,
+					"placement_scoring": 71.6298688400834,
+					"strategy_evaluation": 3.75062563295107,
+					"support_calculations": 6.22028709181109,
+					"upgrade_scoring": 10.4234973579183
+				},
+				"simulation_count": 2,
+				"strategy_intent_counts": {
+					"CONSOLIDATE_ADVANTAGE": 18,
+					"HEART_DEFENSE": 22,
+					"MAIN_PUSH": 16,
+					"RECOVER_ECONOMY": 66,
+					"RESOURCE_CONTEST": 22
+				},
+				"totals_seconds": {
+					"candidate_generation": 1.927575,
+					"choose_total": 9.394486,
+					"conversion_scoring": 0.560937,
+					"enemy_proximity_calculations": 2.635181,
+					"flank_opening_ally_scoring": 1.222078,
+					"full_board_scan": 6.725964,
+					"objective_distance_calculations": 0.331125,
+					"placement_scoring": 6.729258,
+					"strategy_evaluation": 0.352352,
+					"support_calculations": 0.584364,
+					"upgrade_scoring": 0.979234
+				},
+				"totals_usec": {
+					"candidate_generation": 1927575.0,
+					"choose_total": 9394486.0,
+					"conversion_scoring": 560937.0,
+					"enemy_proximity_calculations": 2635181.0,
+					"flank_opening_ally_scoring": 1222078.0,
+					"full_board_scan": 6725964.0,
+					"objective_distance_calculations": 331125.0,
+					"placement_scoring": 6729258.0,
+					"strategy_evaluation": 352352.0,
+					"support_calculations": 584364.0,
+					"upgrade_scoring": 979234.0
+				},
+				"turns": 144
+			},
+			"changed_params": [],
+			"diff_vs_baseline": {
+				"basic_claim_frontline_bonus": {
+					"baseline": 22.0,
+					"candidate": 22.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"basic_claim_goal_bonus": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"basic_claim_opening_bonus": {
+					"baseline": 12.0,
+					"candidate": 12.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"defense_local_ratio_hard_cap": {
+					"baseline": 0.55,
+					"candidate": 0.55,
+					"changed": false,
+					"delta": 0.0
+				},
+				"defense_local_ratio_soft_cap": {
+					"baseline": 0.38,
+					"candidate": 0.38,
+					"changed": false,
+					"delta": 0.0
+				},
+				"defense_nearby_soft_limit": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"engaged_upgrade_energy_threshold": {
+					"baseline": 16.0,
+					"candidate": 16.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"flank_pressure_bonus": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"flank_stalemate_break_bonus": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"gather_conversion_resource_max_dist": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"gather_safe_min_enemy_distance": {
+					"baseline": 4.0,
+					"candidate": 4.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"max_tile_upgrades_per_turn": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"non_engaged_upgrade_energy_threshold": {
+					"baseline": 18.0,
+					"candidate": 18.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_backfill_penalty": {
+					"baseline": 28.0,
+					"candidate": 28.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_progress_weight": {
+					"baseline": 22.0,
+					"candidate": 22.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_upgrade_distance_max": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_upgrade_enemy_distance_max": {
+					"baseline": 10.0,
+					"candidate": 10.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_backline_penalty": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_frontline_penalty": {
+					"baseline": 28.0,
+					"candidate": 28.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_hard_cap": {
+					"baseline": 0.52,
+					"candidate": 0.52,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_max_penalty": {
+					"baseline": 38.0,
+					"candidate": 38.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_min_tiles": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_soft_cap": {
+					"baseline": 0.32,
+					"candidate": 0.32,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_approaching_phase_bonus": {
+					"baseline": 4.0,
+					"candidate": 4.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_gather_focus_bonus": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_low_threat_bonus": {
+					"baseline": 6.0,
+					"candidate": 6.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_near_threat_penalty": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_node_hold_bonus": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_objective_max_distance": {
+					"baseline": 9.0,
+					"candidate": 9.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_objective_step_weight": {
+					"baseline": 4.0,
+					"candidate": 4.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_safe_phase_bonus": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_adjacent_penalty": {
+					"baseline": 3.0,
+					"candidate": 3.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_backline_blanket_penalty": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_hard_cap": {
+					"baseline": 0.62,
+					"candidate": 0.62,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_local_cluster_penalty": {
+					"baseline": 5.0,
+					"candidate": 5.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_local_radius": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_local_soft_limit": {
+					"baseline": 3.0,
+					"candidate": 3.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_max_penalty": {
+					"baseline": 30.0,
+					"candidate": 30.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_min_tiles": {
+					"baseline": 9.0,
+					"candidate": 9.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_path_penalty": {
+					"baseline": 10.0,
+					"candidate": 10.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_safe_phase_penalty": {
+					"baseline": 12.0,
+					"candidate": 12.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_soft_cap": {
+					"baseline": 0.45,
+					"candidate": 0.45,
+					"changed": false,
+					"delta": 0.0
+				},
+				"tile_upgrade_min_score": {
+					"baseline": 64.0,
+					"candidate": 64.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"upgrade_priority_margin": {
+					"baseline": 9.0,
+					"candidate": 9.0,
+					"changed": false,
+					"delta": 0.0
+				}
+			},
+			"effective_params": {
+				"basic_claim_frontline_bonus": 22.0,
+				"basic_claim_goal_bonus": 8.0,
+				"basic_claim_opening_bonus": 12.0,
+				"defense_local_ratio_hard_cap": 0.55,
+				"defense_local_ratio_soft_cap": 0.38,
+				"defense_nearby_soft_limit": 2.0,
+				"engaged_upgrade_energy_threshold": 16.0,
+				"flank_pressure_bonus": 14.0,
+				"flank_stalemate_break_bonus": 8.0,
+				"gather_conversion_resource_max_dist": 2.0,
+				"gather_safe_min_enemy_distance": 4.0,
+				"max_tile_upgrades_per_turn": 2.0,
+				"non_engaged_upgrade_energy_threshold": 18.0,
+				"objective_backfill_penalty": 28.0,
+				"objective_progress_weight": 22.0,
+				"objective_upgrade_distance_max": 14.0,
+				"objective_upgrade_enemy_distance_max": 10.0,
+				"ranged_backline_penalty": 14.0,
+				"ranged_frontline_penalty": 28.0,
+				"ranged_saturation_hard_cap": 0.52,
+				"ranged_saturation_max_penalty": 38.0,
+				"ranged_saturation_min_tiles": 8.0,
+				"ranged_saturation_soft_cap": 0.32,
+				"resource_approaching_phase_bonus": 4.0,
+				"resource_gather_focus_bonus": 14.0,
+				"resource_low_threat_bonus": 6.0,
+				"resource_near_threat_penalty": 8.0,
+				"resource_node_hold_bonus": 14.0,
+				"resource_objective_max_distance": 9.0,
+				"resource_objective_step_weight": 4.0,
+				"resource_safe_phase_bonus": 8.0,
+				"specialization_adjacent_penalty": 3.0,
+				"specialization_backline_blanket_penalty": 14.0,
+				"specialization_hard_cap": 0.62,
+				"specialization_local_cluster_penalty": 5.0,
+				"specialization_local_radius": 2.0,
+				"specialization_local_soft_limit": 3.0,
+				"specialization_max_penalty": 30.0,
+				"specialization_min_tiles": 9.0,
+				"specialization_path_penalty": 10.0,
+				"specialization_safe_phase_penalty": 12.0,
+				"specialization_soft_cap": 0.45,
+				"tile_upgrade_min_score": 64.0,
+				"upgrade_priority_margin": 9.0
+			},
+			"id": "baseline",
+			"label": "Baseline",
+			"overrides": {
+
+			},
+			"pathology_counts": {
+				"ally_obstruction": 0.0,
+				"backline_specialized": 19.702380952381,
+				"exposed_ranged": 0.0,
+				"flank_drift": 1.55952380952381,
+				"frontline_gather": 0.0,
+				"high_fail_rate": 0.0,
+				"opening_claim_latency": 0.542449974954178,
+				"resource_neglect": 0.0
+			},
+			"runs": [
+				{
+					"ai_profile": {
+						"active_strategy_context": {
+							"avg_ally_touches": 0.0,
+							"boxed": false,
+							"engaged": false,
+							"gather_count": 3,
+							"heart_threat_level": 0,
+							"hp_advantage": false,
+							"income": 6,
+							"low_threat": true,
+							"objective_dist": 99,
+							"resource_need": false,
+							"stall_level": 0
+						},
+						"active_strategy_intent": "MAIN_PUSH",
+						"avg_choose_usec_per_turn": 62717.125,
+						"choose_total_usec": 4515633.0,
+						"counts": {
+							"candidate_generation": 91782,
+							"choose_total": 72,
+							"conversion_scoring": 200,
+							"enemy_proximity_calculations": 181943,
+							"enemy_proximity_calls": 181943,
+							"flank_opening_ally_calls": 6468,
+							"flank_opening_ally_scoring": 6468,
+							"full_board_scan": 193,
+							"full_board_tiles_scanned": 104220,
+							"objective_distance_calculations": 13767,
+							"objective_distance_calls": 13695,
+							"placement_scoring": 216,
+							"strategy_evaluation": 72,
+							"strategy_intent_CONSOLIDATE_ADVANTAGE": 9,
+							"strategy_intent_HEART_DEFENSE": 11,
+							"strategy_intent_MAIN_PUSH": 8,
+							"strategy_intent_RECOVER_ECONOMY": 33,
+							"strategy_intent_RESOURCE_CONTEST": 11,
+							"support_calculation_calls": 9140,
+							"support_calculations": 9140,
+							"upgrade_scoring": 305
+						},
+						"enabled": true,
+						"totals_seconds": {
+							"candidate_generation": 0.933445,
+							"choose_total": 4.515633,
+							"conversion_scoring": 0.27198,
+							"enemy_proximity_calculations": 1.259479,
+							"flank_opening_ally_scoring": 0.588622,
+							"full_board_scan": 3.242951,
+							"objective_distance_calculations": 0.159019,
+							"placement_scoring": 3.244597,
+							"strategy_evaluation": 0.167116,
+							"support_calculations": 0.281324,
+							"upgrade_scoring": 0.464262
+						},
+						"totals_usec": {
+							"candidate_generation": 933445.0,
+							"choose_total": 4515633.0,
+							"conversion_scoring": 271980.0,
+							"enemy_proximity_calculations": 1259479.0,
+							"flank_opening_ally_scoring": 588622.0,
+							"full_board_scan": 3242951.0,
+							"objective_distance_calculations": 159019.0,
+							"placement_scoring": 3244597.0,
+							"strategy_evaluation": 167116.0,
+							"support_calculations": 281324.0,
+							"upgrade_scoring": 464262.0
+						},
+						"turns": 72
+					},
+					"checkpoints": {
+						"12": {
+							"category_scores": {
+								"anti_pathology": 51.5532732732733,
+								"board_shape": 79.8858858858859,
+								"economy": 100.0,
+								"objective_progress": 46.7342342342342,
+								"role_balance": 0.0,
+								"specialization_quality": 3.04432432432432
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 10.2083333333333,
+								"backline_specialized_ratio": 1.0,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.0195195195195195,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 0,
+									"gather": 0,
+									"melee": 0,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.189189189189189,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.4375,
+									"resource_control": 0.125,
+									"resource_progress": 0.1875
+								},
+								"opening_claim_latency_penalty": 0.0,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 5,
+									"exposed_ranged": 0,
+									"flank_drift": 1.5,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 0.0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.135135135135135,
+								"supported_ratio": 0.810810810810811,
+								"tier_counts": {
+									"1": 5,
+									"2": 0,
+									"3": 0
+								},
+								"total_tiles": 37,
+								"turn": 12,
+								"type_counts": {
+									"basic": 32,
+									"defense": 0,
+									"gather": 1,
+									"melee": 4,
+									"ranged": 0
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 5,
+								"exposed_ranged": 0,
+								"flank_drift": 1.5,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.0,
+								"resource_neglect": 0
+							},
+							"total_score": 42.9314024024024,
+							"turn": 12
+						},
+						"32": {
+							"category_scores": {
+								"anti_pathology": 84.4990027676492,
+								"board_shape": 94.2938574938575,
+								"economy": 100.0,
+								"objective_progress": 61.0135135135135,
+								"role_balance": 17.0181818181818,
+								"specialization_quality": 54.9818181818182
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 8.484375,
+								"backline_specialized_ratio": 0.2,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.959459459459459,
+								"frontline_counts": {
+									"basic": 3,
+									"defense": 1,
+									"gather": 0,
+									"melee": 4,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.109090909090909,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.4375,
+									"resource_control": 0.25,
+									"resource_progress": 0.1875
+								},
+								"opening_claim_latency_penalty": 0.394499846241708,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 5,
+									"exposed_ranged": 0,
+									"flank_drift": 0.0,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 0.394499846241708,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.454545454545455,
+								"supported_ratio": 0.890909090909091,
+								"tier_counts": {
+									"1": 24,
+									"2": 1,
+									"3": 0
+								},
+								"total_tiles": 55,
+								"turn": 32,
+								"type_counts": {
+									"basic": 30,
+									"defense": 6,
+									"gather": 2,
+									"melee": 16,
+									"ranged": 1
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 5,
+								"exposed_ranged": 0,
+								"flank_drift": 0.0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.394499846241708,
+								"resource_neglect": 0
+							},
+							"total_score": 63.8832098590745,
+							"turn": 32
+						},
+						"60": {
+							"category_scores": {
+								"anti_pathology": 75.0635109870756,
+								"board_shape": 90.0787376972348,
+								"economy": 100.0,
+								"objective_progress": 63.5505389782846,
+								"role_balance": 22.9621621621622,
+								"specialization_quality": 18.4642827442827
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 7.71666666666667,
+								"backline_specialized_ratio": 0.346153846153846,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.712544914857054,
+								"frontline_counts": {
+									"basic": 9,
+									"defense": 7,
+									"gather": 0,
+									"melee": 6,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.135135135135135,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.25,
+									"military_progress": 0.4375,
+									"resource_control": 0.25,
+									"resource_progress": 0.1875
+								},
+								"opening_claim_latency_penalty": 0.577668193025713,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 18,
+									"exposed_ranged": 0,
+									"flank_drift": 2.8,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 0.577668193025713,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.702702702702703,
+								"supported_ratio": 0.864864864864865,
+								"tier_counts": {
+									"1": 51,
+									"2": 1,
+									"3": 0
+								},
+								"total_tiles": 74,
+								"turn": 60,
+								"type_counts": {
+									"basic": 22,
+									"defense": 20,
+									"gather": 2,
+									"melee": 27,
+									"ranged": 3
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 18,
+								"exposed_ranged": 0,
+								"flank_drift": 2.8,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.577668193025713,
+								"resource_neglect": 0
+							},
+							"total_score": 58.1332201119627,
+							"turn": 60
+						},
+						"90": {
+							"category_scores": {
+								"anti_pathology": 29.4086549347773,
+								"board_shape": 89.8617647058824,
+								"economy": 100.0,
+								"objective_progress": 60.7176470588235,
+								"role_balance": 22.3,
+								"specialization_quality": 0.0
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 8.01388888888889,
+								"backline_specialized_ratio": 1.0,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.0389705882352941,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 0,
+									"gather": 0,
+									"melee": 0,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.075,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 1.0,
+									"military_progress": 0.0,
+									"resource_control": 0.75,
+									"resource_progress": -0.125
+								},
+								"opening_claim_latency_penalty": 1.24538518336205,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 57,
+									"exposed_ranged": 0,
+									"flank_drift": 2.2,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 1.24538518336205,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.7125,
+								"supported_ratio": 0.925,
+								"tier_counts": {
+									"1": 56,
+									"2": 1,
+									"3": 0
+								},
+								"total_tiles": 80,
+								"turn": 90,
+								"type_counts": {
+									"basic": 23,
+									"defense": 23,
+									"gather": 3,
+									"melee": 28,
+									"ranged": 3
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 57,
+								"exposed_ranged": 0,
+								"flank_drift": 2.2,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 1.24538518336205,
+								"resource_neglect": 0
+							},
+							"total_score": 46.4954923209451,
+							"turn": 90
+						}
+					},
+					"final_objective": {
+						"door_progress": 0.0,
+						"heart_destroy_progress": 1.0,
+						"military_progress": 0.0,
+						"resource_control": 0.75,
+						"resource_progress": -0.125
+					},
+					"final_turn": 72,
+					"outcome": {
+						"reason": "all_player_team_hearts_destroyed",
+						"status": "loss"
+					},
+					"ran_to_outcome_window": false,
+					"runtime_seconds": 4.594,
+					"scenario": "spectator_1v1_wide_chamber",
+					"scenario_type": "fast",
+					"seed": 1337
+				},
+				{
+					"ai_profile": {
+						"active_strategy_context": {
+							"avg_ally_touches": 0.0,
+							"boxed": false,
+							"engaged": false,
+							"gather_count": 3,
+							"heart_threat_level": 0,
+							"hp_advantage": false,
+							"income": 6,
+							"low_threat": true,
+							"objective_dist": 99,
+							"resource_need": false,
+							"stall_level": 0
+						},
+						"active_strategy_intent": "MAIN_PUSH",
+						"avg_choose_usec_per_turn": 67761.8472222222,
+						"choose_total_usec": 4878853.0,
+						"counts": {
+							"candidate_generation": 91782,
+							"choose_total": 72,
+							"conversion_scoring": 200,
+							"enemy_proximity_calculations": 181943,
+							"enemy_proximity_calls": 181943,
+							"flank_opening_ally_calls": 6468,
+							"flank_opening_ally_scoring": 6468,
+							"full_board_scan": 193,
+							"full_board_tiles_scanned": 104220,
+							"objective_distance_calculations": 13767,
+							"objective_distance_calls": 13695,
+							"placement_scoring": 216,
+							"strategy_evaluation": 72,
+							"strategy_intent_CONSOLIDATE_ADVANTAGE": 9,
+							"strategy_intent_HEART_DEFENSE": 11,
+							"strategy_intent_MAIN_PUSH": 8,
+							"strategy_intent_RECOVER_ECONOMY": 33,
+							"strategy_intent_RESOURCE_CONTEST": 11,
+							"support_calculation_calls": 9140,
+							"support_calculations": 9140,
+							"upgrade_scoring": 305
+						},
+						"enabled": true,
+						"totals_seconds": {
+							"candidate_generation": 0.99413,
+							"choose_total": 4.878853,
+							"conversion_scoring": 0.288957,
+							"enemy_proximity_calculations": 1.375702,
+							"flank_opening_ally_scoring": 0.633456,
+							"full_board_scan": 3.483013,
+							"objective_distance_calculations": 0.172106,
+							"placement_scoring": 3.484661,
+							"strategy_evaluation": 0.185236,
+							"support_calculations": 0.30304,
+							"upgrade_scoring": 0.514972
+						},
+						"totals_usec": {
+							"candidate_generation": 994130.0,
+							"choose_total": 4878853.0,
+							"conversion_scoring": 288957.0,
+							"enemy_proximity_calculations": 1375702.0,
+							"flank_opening_ally_scoring": 633456.0,
+							"full_board_scan": 3483013.0,
+							"objective_distance_calculations": 172106.0,
+							"placement_scoring": 3484661.0,
+							"strategy_evaluation": 185236.0,
+							"support_calculations": 303040.0,
+							"upgrade_scoring": 514972.0
+						},
+						"turns": 72
+					},
+					"checkpoints": {
+						"12": {
+							"category_scores": {
+								"anti_pathology": 51.5532732732733,
+								"board_shape": 79.8858858858859,
+								"economy": 100.0,
+								"objective_progress": 46.7342342342342,
+								"role_balance": 0.0,
+								"specialization_quality": 3.04432432432432
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 10.2083333333333,
+								"backline_specialized_ratio": 1.0,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.0195195195195195,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 0,
+									"gather": 0,
+									"melee": 0,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.189189189189189,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.4375,
+									"resource_control": 0.125,
+									"resource_progress": 0.1875
+								},
+								"opening_claim_latency_penalty": 0.0,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 5,
+									"exposed_ranged": 0,
+									"flank_drift": 1.5,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 0.0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.135135135135135,
+								"supported_ratio": 0.810810810810811,
+								"tier_counts": {
+									"1": 5,
+									"2": 0,
+									"3": 0
+								},
+								"total_tiles": 37,
+								"turn": 12,
+								"type_counts": {
+									"basic": 32,
+									"defense": 0,
+									"gather": 1,
+									"melee": 4,
+									"ranged": 0
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 5,
+								"exposed_ranged": 0,
+								"flank_drift": 1.5,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.0,
+								"resource_neglect": 0
+							},
+							"total_score": 42.9314024024024,
+							"turn": 12
+						},
+						"32": {
+							"category_scores": {
+								"anti_pathology": 84.4990027676492,
+								"board_shape": 94.2938574938575,
+								"economy": 100.0,
+								"objective_progress": 61.0135135135135,
+								"role_balance": 17.0181818181818,
+								"specialization_quality": 54.9818181818182
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 8.484375,
+								"backline_specialized_ratio": 0.2,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.959459459459459,
+								"frontline_counts": {
+									"basic": 3,
+									"defense": 1,
+									"gather": 0,
+									"melee": 4,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.109090909090909,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.4375,
+									"resource_control": 0.25,
+									"resource_progress": 0.1875
+								},
+								"opening_claim_latency_penalty": 0.394499846241708,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 5,
+									"exposed_ranged": 0,
+									"flank_drift": 0.0,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 0.394499846241708,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.454545454545455,
+								"supported_ratio": 0.890909090909091,
+								"tier_counts": {
+									"1": 24,
+									"2": 1,
+									"3": 0
+								},
+								"total_tiles": 55,
+								"turn": 32,
+								"type_counts": {
+									"basic": 30,
+									"defense": 6,
+									"gather": 2,
+									"melee": 16,
+									"ranged": 1
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 5,
+								"exposed_ranged": 0,
+								"flank_drift": 0.0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.394499846241708,
+								"resource_neglect": 0
+							},
+							"total_score": 63.8832098590745,
+							"turn": 32
+						},
+						"60": {
+							"category_scores": {
+								"anti_pathology": 75.0635109870756,
+								"board_shape": 90.0787376972348,
+								"economy": 100.0,
+								"objective_progress": 63.5505389782846,
+								"role_balance": 22.9621621621622,
+								"specialization_quality": 18.4642827442827
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 7.71666666666667,
+								"backline_specialized_ratio": 0.346153846153846,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.712544914857054,
+								"frontline_counts": {
+									"basic": 9,
+									"defense": 7,
+									"gather": 0,
+									"melee": 6,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.135135135135135,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.25,
+									"military_progress": 0.4375,
+									"resource_control": 0.25,
+									"resource_progress": 0.1875
+								},
+								"opening_claim_latency_penalty": 0.577668193025713,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 18,
+									"exposed_ranged": 0,
+									"flank_drift": 2.8,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 0.577668193025713,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.702702702702703,
+								"supported_ratio": 0.864864864864865,
+								"tier_counts": {
+									"1": 51,
+									"2": 1,
+									"3": 0
+								},
+								"total_tiles": 74,
+								"turn": 60,
+								"type_counts": {
+									"basic": 22,
+									"defense": 20,
+									"gather": 2,
+									"melee": 27,
+									"ranged": 3
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 18,
+								"exposed_ranged": 0,
+								"flank_drift": 2.8,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.577668193025713,
+								"resource_neglect": 0
+							},
+							"total_score": 58.1332201119627,
+							"turn": 60
+						},
+						"90": {
+							"category_scores": {
+								"anti_pathology": 29.4086549347773,
+								"board_shape": 89.8617647058824,
+								"economy": 100.0,
+								"objective_progress": 60.7176470588235,
+								"role_balance": 22.3,
+								"specialization_quality": 0.0
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 8.01388888888889,
+								"backline_specialized_ratio": 1.0,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.0389705882352941,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 0,
+									"gather": 0,
+									"melee": 0,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.075,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 1.0,
+									"military_progress": 0.0,
+									"resource_control": 0.75,
+									"resource_progress": -0.125
+								},
+								"opening_claim_latency_penalty": 1.24538518336205,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 57,
+									"exposed_ranged": 0,
+									"flank_drift": 2.2,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 1.24538518336205,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.7125,
+								"supported_ratio": 0.925,
+								"tier_counts": {
+									"1": 56,
+									"2": 1,
+									"3": 0
+								},
+								"total_tiles": 80,
+								"turn": 90,
+								"type_counts": {
+									"basic": 23,
+									"defense": 23,
+									"gather": 3,
+									"melee": 28,
+									"ranged": 3
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 57,
+								"exposed_ranged": 0,
+								"flank_drift": 2.2,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 1.24538518336205,
+								"resource_neglect": 0
+							},
+							"total_score": 46.4954923209451,
+							"turn": 90
+						}
+					},
+					"final_objective": {
+						"door_progress": 0.0,
+						"heart_destroy_progress": 1.0,
+						"military_progress": 0.0,
+						"resource_control": 0.75,
+						"resource_progress": -0.125
+					},
+					"final_turn": 72,
+					"outcome": {
+						"reason": "all_player_team_hearts_destroyed",
+						"status": "loss"
+					},
+					"ran_to_outcome_window": true,
+					"runtime_seconds": 4.961,
+					"scenario": "spectator_1v1_wide_chamber_outcome",
+					"scenario_type": "outcome",
+					"seed": 1337
+				}
+			],
+			"runtime_breakdown": {
+				"fast": {
+					"actor_turns": 72.0,
+					"elapsed_seconds": 4.594,
+					"simulations": 1
+				},
+				"outcome": {
+					"actor_turns": 72.0,
+					"elapsed_seconds": 4.961,
+					"simulations": 1
+				}
+			},
+			"score": 61.0848620722888,
+			"score_by_category": {
+				"anti_pathology": 63.05060154332,
+				"board_shape": 89.1025608932698,
+				"economy": 100.0,
+				"objective_progress": 58.5849297334931,
+				"role_balance": 16.1307651807652,
+				"specialization_quality": 22.071688041688
+			},
+			"score_by_checkpoint": {
+				"12": 42.9314024024024,
+				"32": 63.8832098590745,
+				"60": 58.1332201119627,
+				"90": 46.4954923209451
+			},
+			"tactical_metrics": {
+				"ally_obstruction_penalty": 0.0,
+				"flank_productivity": 0.493188588902207,
+				"opening_claim_latency_penalty": 0.542449974954178
+			}
+		}
+	],
+	"baseline": {
+		"ai_profile": {
+			"avg_usec_per_turn": {
+				"candidate_generation": 13385.9375,
+				"choose_total": 65239.4861111111,
+				"conversion_scoring": 3895.39583333333,
+				"enemy_proximity_calculations": 18299.8680555556,
+				"flank_opening_ally_scoring": 8486.65277777778,
+				"full_board_scan": 46708.0833333333,
+				"objective_distance_calculations": 2299.47916666667,
+				"placement_scoring": 46730.9583333333,
+				"strategy_evaluation": 2446.88888888889,
+				"support_calculations": 4058.08333333333,
+				"upgrade_scoring": 6800.23611111111
+			},
+			"choose_total_usec": 9394486.0,
+			"counts": {
+				"candidate_generation": 183564,
+				"choose_total": 144,
+				"conversion_scoring": 400,
+				"enemy_proximity_calculations": 363886,
+				"enemy_proximity_calls": 363886,
+				"flank_opening_ally_calls": 12936,
+				"flank_opening_ally_scoring": 12936,
+				"full_board_scan": 386,
+				"full_board_tiles_scanned": 208440,
+				"objective_distance_calculations": 27534,
+				"objective_distance_calls": 27390,
+				"placement_scoring": 432,
+				"strategy_evaluation": 144,
+				"strategy_intent_CONSOLIDATE_ADVANTAGE": 18,
+				"strategy_intent_HEART_DEFENSE": 22,
+				"strategy_intent_MAIN_PUSH": 16,
+				"strategy_intent_RECOVER_ECONOMY": 66,
+				"strategy_intent_RESOURCE_CONTEST": 22,
+				"support_calculation_calls": 18280,
+				"support_calculations": 18280,
+				"upgrade_scoring": 610
+			},
+			"dominant_strategy_intent": "RECOVER_ECONOMY",
+			"percent_of_choose_total": {
+				"candidate_generation": 20.5181528824461,
+				"choose_total": 100.0,
+				"conversion_scoring": 5.97091740836061,
+				"enemy_proximity_calculations": 28.0502946089866,
+				"flank_opening_ally_scoring": 13.0084604948051,
+				"full_board_scan": 71.5948057190143,
+				"objective_distance_calculations": 3.52467394171432,
+				"placement_scoring": 71.6298688400834,
+				"strategy_evaluation": 3.75062563295107,
+				"support_calculations": 6.22028709181109,
+				"upgrade_scoring": 10.4234973579183
+			},
+			"simulation_count": 2,
+			"strategy_intent_counts": {
+				"CONSOLIDATE_ADVANTAGE": 18,
+				"HEART_DEFENSE": 22,
+				"MAIN_PUSH": 16,
+				"RECOVER_ECONOMY": 66,
+				"RESOURCE_CONTEST": 22
+			},
+			"totals_seconds": {
+				"candidate_generation": 1.927575,
+				"choose_total": 9.394486,
+				"conversion_scoring": 0.560937,
+				"enemy_proximity_calculations": 2.635181,
+				"flank_opening_ally_scoring": 1.222078,
+				"full_board_scan": 6.725964,
+				"objective_distance_calculations": 0.331125,
+				"placement_scoring": 6.729258,
+				"strategy_evaluation": 0.352352,
+				"support_calculations": 0.584364,
+				"upgrade_scoring": 0.979234
+			},
+			"totals_usec": {
+				"candidate_generation": 1927575.0,
+				"choose_total": 9394486.0,
+				"conversion_scoring": 560937.0,
+				"enemy_proximity_calculations": 2635181.0,
+				"flank_opening_ally_scoring": 1222078.0,
+				"full_board_scan": 6725964.0,
+				"objective_distance_calculations": 331125.0,
+				"placement_scoring": 6729258.0,
+				"strategy_evaluation": 352352.0,
+				"support_calculations": 584364.0,
+				"upgrade_scoring": 979234.0
+			},
+			"turns": 144
+		},
+		"changed_params": [],
+		"diff_vs_baseline": {
+			"basic_claim_frontline_bonus": {
+				"baseline": 22.0,
+				"candidate": 22.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"basic_claim_goal_bonus": {
+				"baseline": 8.0,
+				"candidate": 8.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"basic_claim_opening_bonus": {
+				"baseline": 12.0,
+				"candidate": 12.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"defense_local_ratio_hard_cap": {
+				"baseline": 0.55,
+				"candidate": 0.55,
+				"changed": false,
+				"delta": 0.0
+			},
+			"defense_local_ratio_soft_cap": {
+				"baseline": 0.38,
+				"candidate": 0.38,
+				"changed": false,
+				"delta": 0.0
+			},
+			"defense_nearby_soft_limit": {
+				"baseline": 2.0,
+				"candidate": 2.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"engaged_upgrade_energy_threshold": {
+				"baseline": 16.0,
+				"candidate": 16.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"flank_pressure_bonus": {
+				"baseline": 14.0,
+				"candidate": 14.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"flank_stalemate_break_bonus": {
+				"baseline": 8.0,
+				"candidate": 8.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"gather_conversion_resource_max_dist": {
+				"baseline": 2.0,
+				"candidate": 2.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"gather_safe_min_enemy_distance": {
+				"baseline": 4.0,
+				"candidate": 4.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"max_tile_upgrades_per_turn": {
+				"baseline": 2.0,
+				"candidate": 2.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"non_engaged_upgrade_energy_threshold": {
+				"baseline": 18.0,
+				"candidate": 18.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"objective_backfill_penalty": {
+				"baseline": 28.0,
+				"candidate": 28.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"objective_progress_weight": {
+				"baseline": 22.0,
+				"candidate": 22.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"objective_upgrade_distance_max": {
+				"baseline": 14.0,
+				"candidate": 14.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"objective_upgrade_enemy_distance_max": {
+				"baseline": 10.0,
+				"candidate": 10.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"ranged_backline_penalty": {
+				"baseline": 14.0,
+				"candidate": 14.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"ranged_frontline_penalty": {
+				"baseline": 28.0,
+				"candidate": 28.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"ranged_saturation_hard_cap": {
+				"baseline": 0.52,
+				"candidate": 0.52,
+				"changed": false,
+				"delta": 0.0
+			},
+			"ranged_saturation_max_penalty": {
+				"baseline": 38.0,
+				"candidate": 38.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"ranged_saturation_min_tiles": {
+				"baseline": 8.0,
+				"candidate": 8.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"ranged_saturation_soft_cap": {
+				"baseline": 0.32,
+				"candidate": 0.32,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_approaching_phase_bonus": {
+				"baseline": 4.0,
+				"candidate": 4.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_gather_focus_bonus": {
+				"baseline": 14.0,
+				"candidate": 14.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_low_threat_bonus": {
+				"baseline": 6.0,
+				"candidate": 6.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_near_threat_penalty": {
+				"baseline": 8.0,
+				"candidate": 8.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_node_hold_bonus": {
+				"baseline": 14.0,
+				"candidate": 14.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_objective_max_distance": {
+				"baseline": 9.0,
+				"candidate": 9.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_objective_step_weight": {
+				"baseline": 4.0,
+				"candidate": 4.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"resource_safe_phase_bonus": {
+				"baseline": 8.0,
+				"candidate": 8.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_adjacent_penalty": {
+				"baseline": 3.0,
+				"candidate": 3.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_backline_blanket_penalty": {
+				"baseline": 14.0,
+				"candidate": 14.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_hard_cap": {
+				"baseline": 0.62,
+				"candidate": 0.62,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_local_cluster_penalty": {
+				"baseline": 5.0,
+				"candidate": 5.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_local_radius": {
+				"baseline": 2.0,
+				"candidate": 2.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_local_soft_limit": {
+				"baseline": 3.0,
+				"candidate": 3.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_max_penalty": {
+				"baseline": 30.0,
+				"candidate": 30.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_min_tiles": {
+				"baseline": 9.0,
+				"candidate": 9.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_path_penalty": {
+				"baseline": 10.0,
+				"candidate": 10.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_safe_phase_penalty": {
+				"baseline": 12.0,
+				"candidate": 12.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"specialization_soft_cap": {
+				"baseline": 0.45,
+				"candidate": 0.45,
+				"changed": false,
+				"delta": 0.0
+			},
+			"tile_upgrade_min_score": {
+				"baseline": 64.0,
+				"candidate": 64.0,
+				"changed": false,
+				"delta": 0.0
+			},
+			"upgrade_priority_margin": {
+				"baseline": 9.0,
+				"candidate": 9.0,
+				"changed": false,
+				"delta": 0.0
+			}
+		},
+		"effective_params": {
+			"basic_claim_frontline_bonus": 22.0,
+			"basic_claim_goal_bonus": 8.0,
+			"basic_claim_opening_bonus": 12.0,
+			"defense_local_ratio_hard_cap": 0.55,
+			"defense_local_ratio_soft_cap": 0.38,
+			"defense_nearby_soft_limit": 2.0,
+			"engaged_upgrade_energy_threshold": 16.0,
+			"flank_pressure_bonus": 14.0,
+			"flank_stalemate_break_bonus": 8.0,
+			"gather_conversion_resource_max_dist": 2.0,
+			"gather_safe_min_enemy_distance": 4.0,
+			"max_tile_upgrades_per_turn": 2.0,
+			"non_engaged_upgrade_energy_threshold": 18.0,
+			"objective_backfill_penalty": 28.0,
+			"objective_progress_weight": 22.0,
+			"objective_upgrade_distance_max": 14.0,
+			"objective_upgrade_enemy_distance_max": 10.0,
+			"ranged_backline_penalty": 14.0,
+			"ranged_frontline_penalty": 28.0,
+			"ranged_saturation_hard_cap": 0.52,
+			"ranged_saturation_max_penalty": 38.0,
+			"ranged_saturation_min_tiles": 8.0,
+			"ranged_saturation_soft_cap": 0.32,
+			"resource_approaching_phase_bonus": 4.0,
+			"resource_gather_focus_bonus": 14.0,
+			"resource_low_threat_bonus": 6.0,
+			"resource_near_threat_penalty": 8.0,
+			"resource_node_hold_bonus": 14.0,
+			"resource_objective_max_distance": 9.0,
+			"resource_objective_step_weight": 4.0,
+			"resource_safe_phase_bonus": 8.0,
+			"specialization_adjacent_penalty": 3.0,
+			"specialization_backline_blanket_penalty": 14.0,
+			"specialization_hard_cap": 0.62,
+			"specialization_local_cluster_penalty": 5.0,
+			"specialization_local_radius": 2.0,
+			"specialization_local_soft_limit": 3.0,
+			"specialization_max_penalty": 30.0,
+			"specialization_min_tiles": 9.0,
+			"specialization_path_penalty": 10.0,
+			"specialization_safe_phase_penalty": 12.0,
+			"specialization_soft_cap": 0.45,
+			"tile_upgrade_min_score": 64.0,
+			"upgrade_priority_margin": 9.0
+		},
+		"id": "baseline",
+		"label": "Baseline",
+		"overrides": {
+
+		},
+		"pathology_counts": {
+			"ally_obstruction": 0.0,
+			"backline_specialized": 19.702380952381,
+			"exposed_ranged": 0.0,
+			"flank_drift": 1.55952380952381,
+			"frontline_gather": 0.0,
+			"high_fail_rate": 0.0,
+			"opening_claim_latency": 0.542449974954178,
+			"resource_neglect": 0.0
+		},
+		"runs": [
+			{
+				"ai_profile": {
+					"active_strategy_context": {
+						"avg_ally_touches": 0.0,
+						"boxed": false,
+						"engaged": false,
+						"gather_count": 3,
+						"heart_threat_level": 0,
+						"hp_advantage": false,
+						"income": 6,
+						"low_threat": true,
+						"objective_dist": 99,
+						"resource_need": false,
+						"stall_level": 0
+					},
+					"active_strategy_intent": "MAIN_PUSH",
+					"avg_choose_usec_per_turn": 62717.125,
+					"choose_total_usec": 4515633.0,
+					"counts": {
+						"candidate_generation": 91782,
+						"choose_total": 72,
+						"conversion_scoring": 200,
+						"enemy_proximity_calculations": 181943,
+						"enemy_proximity_calls": 181943,
+						"flank_opening_ally_calls": 6468,
+						"flank_opening_ally_scoring": 6468,
+						"full_board_scan": 193,
+						"full_board_tiles_scanned": 104220,
+						"objective_distance_calculations": 13767,
+						"objective_distance_calls": 13695,
+						"placement_scoring": 216,
+						"strategy_evaluation": 72,
+						"strategy_intent_CONSOLIDATE_ADVANTAGE": 9,
+						"strategy_intent_HEART_DEFENSE": 11,
+						"strategy_intent_MAIN_PUSH": 8,
+						"strategy_intent_RECOVER_ECONOMY": 33,
+						"strategy_intent_RESOURCE_CONTEST": 11,
+						"support_calculation_calls": 9140,
+						"support_calculations": 9140,
+						"upgrade_scoring": 305
+					},
+					"enabled": true,
+					"totals_seconds": {
+						"candidate_generation": 0.933445,
+						"choose_total": 4.515633,
+						"conversion_scoring": 0.27198,
+						"enemy_proximity_calculations": 1.259479,
+						"flank_opening_ally_scoring": 0.588622,
+						"full_board_scan": 3.242951,
+						"objective_distance_calculations": 0.159019,
+						"placement_scoring": 3.244597,
+						"strategy_evaluation": 0.167116,
+						"support_calculations": 0.281324,
+						"upgrade_scoring": 0.464262
+					},
+					"totals_usec": {
+						"candidate_generation": 933445.0,
+						"choose_total": 4515633.0,
+						"conversion_scoring": 271980.0,
+						"enemy_proximity_calculations": 1259479.0,
+						"flank_opening_ally_scoring": 588622.0,
+						"full_board_scan": 3242951.0,
+						"objective_distance_calculations": 159019.0,
+						"placement_scoring": 3244597.0,
+						"strategy_evaluation": 167116.0,
+						"support_calculations": 281324.0,
+						"upgrade_scoring": 464262.0
+					},
+					"turns": 72
+				},
+				"checkpoints": {
+					"12": {
+						"category_scores": {
+							"anti_pathology": 51.5532732732733,
+							"board_shape": 79.8858858858859,
+							"economy": 100.0,
+							"objective_progress": 46.7342342342342,
+							"role_balance": 0.0,
+							"specialization_quality": 3.04432432432432
+						},
+						"metrics": {
+							"ally_obstruction_penalty": 0.0,
+							"avg_energy": 10.2083333333333,
+							"backline_specialized_ratio": 1.0,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"flank_productivity": 0.0195195195195195,
+							"frontline_counts": {
+								"basic": 0,
+								"defense": 0,
+								"gather": 0,
+								"melee": 0,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 0,
+							"low_support_ratio": 0.189189189189189,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.0,
+								"military_progress": 0.4375,
+								"resource_control": 0.125,
+								"resource_progress": 0.1875
+							},
+							"opening_claim_latency_penalty": 0.0,
+							"pass_rate": 0.0,
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 5,
+								"exposed_ranged": 0,
+								"flank_drift": 1.5,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.0,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.135135135135135,
+							"supported_ratio": 0.810810810810811,
+							"tier_counts": {
+								"1": 5,
+								"2": 0,
+								"3": 0
+							},
+							"total_tiles": 37,
+							"turn": 12,
+							"type_counts": {
+								"basic": 32,
+								"defense": 0,
+								"gather": 1,
+								"melee": 4,
+								"ranged": 0
+							}
+						},
+						"pathology": {
+							"ally_obstruction": 0.0,
+							"backline_specialized": 5,
+							"exposed_ranged": 0,
+							"flank_drift": 1.5,
+							"frontline_gather": 0,
+							"high_fail_rate": 0,
+							"opening_claim_latency": 0.0,
+							"resource_neglect": 0
+						},
+						"total_score": 42.9314024024024,
+						"turn": 12
+					},
+					"32": {
+						"category_scores": {
+							"anti_pathology": 84.4990027676492,
+							"board_shape": 94.2938574938575,
+							"economy": 100.0,
+							"objective_progress": 61.0135135135135,
+							"role_balance": 17.0181818181818,
+							"specialization_quality": 54.9818181818182
+						},
+						"metrics": {
+							"ally_obstruction_penalty": 0.0,
+							"avg_energy": 8.484375,
+							"backline_specialized_ratio": 0.2,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"flank_productivity": 0.959459459459459,
+							"frontline_counts": {
+								"basic": 3,
+								"defense": 1,
+								"gather": 0,
+								"melee": 4,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 0,
+							"low_support_ratio": 0.109090909090909,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.0,
+								"military_progress": 0.4375,
+								"resource_control": 0.25,
+								"resource_progress": 0.1875
+							},
+							"opening_claim_latency_penalty": 0.394499846241708,
+							"pass_rate": 0.0,
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 5,
+								"exposed_ranged": 0,
+								"flank_drift": 0.0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.394499846241708,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.454545454545455,
+							"supported_ratio": 0.890909090909091,
+							"tier_counts": {
+								"1": 24,
+								"2": 1,
+								"3": 0
+							},
+							"total_tiles": 55,
+							"turn": 32,
+							"type_counts": {
+								"basic": 30,
+								"defense": 6,
+								"gather": 2,
+								"melee": 16,
+								"ranged": 1
+							}
+						},
+						"pathology": {
+							"ally_obstruction": 0.0,
+							"backline_specialized": 5,
+							"exposed_ranged": 0,
+							"flank_drift": 0.0,
+							"frontline_gather": 0,
+							"high_fail_rate": 0,
+							"opening_claim_latency": 0.394499846241708,
+							"resource_neglect": 0
+						},
+						"total_score": 63.8832098590745,
+						"turn": 32
+					},
+					"60": {
+						"category_scores": {
+							"anti_pathology": 75.0635109870756,
+							"board_shape": 90.0787376972348,
+							"economy": 100.0,
+							"objective_progress": 63.5505389782846,
+							"role_balance": 22.9621621621622,
+							"specialization_quality": 18.4642827442827
+						},
+						"metrics": {
+							"ally_obstruction_penalty": 0.0,
+							"avg_energy": 7.71666666666667,
+							"backline_specialized_ratio": 0.346153846153846,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"flank_productivity": 0.712544914857054,
+							"frontline_counts": {
+								"basic": 9,
+								"defense": 7,
+								"gather": 0,
+								"melee": 6,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 0,
+							"low_support_ratio": 0.135135135135135,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.25,
+								"military_progress": 0.4375,
+								"resource_control": 0.25,
+								"resource_progress": 0.1875
+							},
+							"opening_claim_latency_penalty": 0.577668193025713,
+							"pass_rate": 0.0,
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 18,
+								"exposed_ranged": 0,
+								"flank_drift": 2.8,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.577668193025713,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.702702702702703,
+							"supported_ratio": 0.864864864864865,
+							"tier_counts": {
+								"1": 51,
+								"2": 1,
+								"3": 0
+							},
+							"total_tiles": 74,
+							"turn": 60,
+							"type_counts": {
+								"basic": 22,
+								"defense": 20,
+								"gather": 2,
+								"melee": 27,
+								"ranged": 3
+							}
+						},
+						"pathology": {
+							"ally_obstruction": 0.0,
+							"backline_specialized": 18,
+							"exposed_ranged": 0,
+							"flank_drift": 2.8,
+							"frontline_gather": 0,
+							"high_fail_rate": 0,
+							"opening_claim_latency": 0.577668193025713,
+							"resource_neglect": 0
+						},
+						"total_score": 58.1332201119627,
+						"turn": 60
+					},
+					"90": {
+						"category_scores": {
+							"anti_pathology": 29.4086549347773,
+							"board_shape": 89.8617647058824,
+							"economy": 100.0,
+							"objective_progress": 60.7176470588235,
+							"role_balance": 22.3,
+							"specialization_quality": 0.0
+						},
+						"metrics": {
+							"ally_obstruction_penalty": 0.0,
+							"avg_energy": 8.01388888888889,
+							"backline_specialized_ratio": 1.0,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"flank_productivity": 0.0389705882352941,
+							"frontline_counts": {
+								"basic": 0,
+								"defense": 0,
+								"gather": 0,
+								"melee": 0,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 0,
+							"low_support_ratio": 0.075,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 1.0,
+								"military_progress": 0.0,
+								"resource_control": 0.75,
+								"resource_progress": -0.125
+							},
+							"opening_claim_latency_penalty": 1.24538518336205,
+							"pass_rate": 0.0,
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 57,
+								"exposed_ranged": 0,
+								"flank_drift": 2.2,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 1.24538518336205,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.7125,
+							"supported_ratio": 0.925,
+							"tier_counts": {
+								"1": 56,
+								"2": 1,
+								"3": 0
+							},
+							"total_tiles": 80,
+							"turn": 90,
+							"type_counts": {
+								"basic": 23,
+								"defense": 23,
+								"gather": 3,
+								"melee": 28,
+								"ranged": 3
+							}
+						},
+						"pathology": {
+							"ally_obstruction": 0.0,
+							"backline_specialized": 57,
+							"exposed_ranged": 0,
+							"flank_drift": 2.2,
+							"frontline_gather": 0,
+							"high_fail_rate": 0,
+							"opening_claim_latency": 1.24538518336205,
+							"resource_neglect": 0
+						},
+						"total_score": 46.4954923209451,
+						"turn": 90
+					}
+				},
+				"final_objective": {
+					"door_progress": 0.0,
+					"heart_destroy_progress": 1.0,
+					"military_progress": 0.0,
+					"resource_control": 0.75,
+					"resource_progress": -0.125
+				},
+				"final_turn": 72,
+				"outcome": {
+					"reason": "all_player_team_hearts_destroyed",
+					"status": "loss"
+				},
+				"ran_to_outcome_window": false,
+				"runtime_seconds": 4.594,
+				"scenario": "spectator_1v1_wide_chamber",
+				"scenario_type": "fast",
+				"seed": 1337
+			},
+			{
+				"ai_profile": {
+					"active_strategy_context": {
+						"avg_ally_touches": 0.0,
+						"boxed": false,
+						"engaged": false,
+						"gather_count": 3,
+						"heart_threat_level": 0,
+						"hp_advantage": false,
+						"income": 6,
+						"low_threat": true,
+						"objective_dist": 99,
+						"resource_need": false,
+						"stall_level": 0
+					},
+					"active_strategy_intent": "MAIN_PUSH",
+					"avg_choose_usec_per_turn": 67761.8472222222,
+					"choose_total_usec": 4878853.0,
+					"counts": {
+						"candidate_generation": 91782,
+						"choose_total": 72,
+						"conversion_scoring": 200,
+						"enemy_proximity_calculations": 181943,
+						"enemy_proximity_calls": 181943,
+						"flank_opening_ally_calls": 6468,
+						"flank_opening_ally_scoring": 6468,
+						"full_board_scan": 193,
+						"full_board_tiles_scanned": 104220,
+						"objective_distance_calculations": 13767,
+						"objective_distance_calls": 13695,
+						"placement_scoring": 216,
+						"strategy_evaluation": 72,
+						"strategy_intent_CONSOLIDATE_ADVANTAGE": 9,
+						"strategy_intent_HEART_DEFENSE": 11,
+						"strategy_intent_MAIN_PUSH": 8,
+						"strategy_intent_RECOVER_ECONOMY": 33,
+						"strategy_intent_RESOURCE_CONTEST": 11,
+						"support_calculation_calls": 9140,
+						"support_calculations": 9140,
+						"upgrade_scoring": 305
+					},
+					"enabled": true,
+					"totals_seconds": {
+						"candidate_generation": 0.99413,
+						"choose_total": 4.878853,
+						"conversion_scoring": 0.288957,
+						"enemy_proximity_calculations": 1.375702,
+						"flank_opening_ally_scoring": 0.633456,
+						"full_board_scan": 3.483013,
+						"objective_distance_calculations": 0.172106,
+						"placement_scoring": 3.484661,
+						"strategy_evaluation": 0.185236,
+						"support_calculations": 0.30304,
+						"upgrade_scoring": 0.514972
+					},
+					"totals_usec": {
+						"candidate_generation": 994130.0,
+						"choose_total": 4878853.0,
+						"conversion_scoring": 288957.0,
+						"enemy_proximity_calculations": 1375702.0,
+						"flank_opening_ally_scoring": 633456.0,
+						"full_board_scan": 3483013.0,
+						"objective_distance_calculations": 172106.0,
+						"placement_scoring": 3484661.0,
+						"strategy_evaluation": 185236.0,
+						"support_calculations": 303040.0,
+						"upgrade_scoring": 514972.0
+					},
+					"turns": 72
+				},
+				"checkpoints": {
+					"12": {
+						"category_scores": {
+							"anti_pathology": 51.5532732732733,
+							"board_shape": 79.8858858858859,
+							"economy": 100.0,
+							"objective_progress": 46.7342342342342,
+							"role_balance": 0.0,
+							"specialization_quality": 3.04432432432432
+						},
+						"metrics": {
+							"ally_obstruction_penalty": 0.0,
+							"avg_energy": 10.2083333333333,
+							"backline_specialized_ratio": 1.0,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"flank_productivity": 0.0195195195195195,
+							"frontline_counts": {
+								"basic": 0,
+								"defense": 0,
+								"gather": 0,
+								"melee": 0,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 0,
+							"low_support_ratio": 0.189189189189189,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.0,
+								"military_progress": 0.4375,
+								"resource_control": 0.125,
+								"resource_progress": 0.1875
+							},
+							"opening_claim_latency_penalty": 0.0,
+							"pass_rate": 0.0,
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 5,
+								"exposed_ranged": 0,
+								"flank_drift": 1.5,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.0,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.135135135135135,
+							"supported_ratio": 0.810810810810811,
+							"tier_counts": {
+								"1": 5,
+								"2": 0,
+								"3": 0
+							},
+							"total_tiles": 37,
+							"turn": 12,
+							"type_counts": {
+								"basic": 32,
+								"defense": 0,
+								"gather": 1,
+								"melee": 4,
+								"ranged": 0
+							}
+						},
+						"pathology": {
+							"ally_obstruction": 0.0,
+							"backline_specialized": 5,
+							"exposed_ranged": 0,
+							"flank_drift": 1.5,
+							"frontline_gather": 0,
+							"high_fail_rate": 0,
+							"opening_claim_latency": 0.0,
+							"resource_neglect": 0
+						},
+						"total_score": 42.9314024024024,
+						"turn": 12
+					},
+					"32": {
+						"category_scores": {
+							"anti_pathology": 84.4990027676492,
+							"board_shape": 94.2938574938575,
+							"economy": 100.0,
+							"objective_progress": 61.0135135135135,
+							"role_balance": 17.0181818181818,
+							"specialization_quality": 54.9818181818182
+						},
+						"metrics": {
+							"ally_obstruction_penalty": 0.0,
+							"avg_energy": 8.484375,
+							"backline_specialized_ratio": 0.2,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"flank_productivity": 0.959459459459459,
+							"frontline_counts": {
+								"basic": 3,
+								"defense": 1,
+								"gather": 0,
+								"melee": 4,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 0,
+							"low_support_ratio": 0.109090909090909,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.0,
+								"military_progress": 0.4375,
+								"resource_control": 0.25,
+								"resource_progress": 0.1875
+							},
+							"opening_claim_latency_penalty": 0.394499846241708,
+							"pass_rate": 0.0,
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 5,
+								"exposed_ranged": 0,
+								"flank_drift": 0.0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.394499846241708,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.454545454545455,
+							"supported_ratio": 0.890909090909091,
+							"tier_counts": {
+								"1": 24,
+								"2": 1,
+								"3": 0
+							},
+							"total_tiles": 55,
+							"turn": 32,
+							"type_counts": {
+								"basic": 30,
+								"defense": 6,
+								"gather": 2,
+								"melee": 16,
+								"ranged": 1
+							}
+						},
+						"pathology": {
+							"ally_obstruction": 0.0,
+							"backline_specialized": 5,
+							"exposed_ranged": 0,
+							"flank_drift": 0.0,
+							"frontline_gather": 0,
+							"high_fail_rate": 0,
+							"opening_claim_latency": 0.394499846241708,
+							"resource_neglect": 0
+						},
+						"total_score": 63.8832098590745,
+						"turn": 32
+					},
+					"60": {
+						"category_scores": {
+							"anti_pathology": 75.0635109870756,
+							"board_shape": 90.0787376972348,
+							"economy": 100.0,
+							"objective_progress": 63.5505389782846,
+							"role_balance": 22.9621621621622,
+							"specialization_quality": 18.4642827442827
+						},
+						"metrics": {
+							"ally_obstruction_penalty": 0.0,
+							"avg_energy": 7.71666666666667,
+							"backline_specialized_ratio": 0.346153846153846,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"flank_productivity": 0.712544914857054,
+							"frontline_counts": {
+								"basic": 9,
+								"defense": 7,
+								"gather": 0,
+								"melee": 6,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 0,
+							"low_support_ratio": 0.135135135135135,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 0.25,
+								"military_progress": 0.4375,
+								"resource_control": 0.25,
+								"resource_progress": 0.1875
+							},
+							"opening_claim_latency_penalty": 0.577668193025713,
+							"pass_rate": 0.0,
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 18,
+								"exposed_ranged": 0,
+								"flank_drift": 2.8,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.577668193025713,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.702702702702703,
+							"supported_ratio": 0.864864864864865,
+							"tier_counts": {
+								"1": 51,
+								"2": 1,
+								"3": 0
+							},
+							"total_tiles": 74,
+							"turn": 60,
+							"type_counts": {
+								"basic": 22,
+								"defense": 20,
+								"gather": 2,
+								"melee": 27,
+								"ranged": 3
+							}
+						},
+						"pathology": {
+							"ally_obstruction": 0.0,
+							"backline_specialized": 18,
+							"exposed_ranged": 0,
+							"flank_drift": 2.8,
+							"frontline_gather": 0,
+							"high_fail_rate": 0,
+							"opening_claim_latency": 0.577668193025713,
+							"resource_neglect": 0
+						},
+						"total_score": 58.1332201119627,
+						"turn": 60
+					},
+					"90": {
+						"category_scores": {
+							"anti_pathology": 29.4086549347773,
+							"board_shape": 89.8617647058824,
+							"economy": 100.0,
+							"objective_progress": 60.7176470588235,
+							"role_balance": 22.3,
+							"specialization_quality": 0.0
+						},
+						"metrics": {
+							"ally_obstruction_penalty": 0.0,
+							"avg_energy": 8.01388888888889,
+							"backline_specialized_ratio": 1.0,
+							"exposed_ranged_tiles": 0,
+							"fail_rate": 0.0,
+							"flank_productivity": 0.0389705882352941,
+							"frontline_counts": {
+								"basic": 0,
+								"defense": 0,
+								"gather": 0,
+								"melee": 0,
+								"ranged": 0
+							},
+							"frontline_gather_tiles": 0,
+							"low_support_ratio": 0.075,
+							"objective": {
+								"door_progress": 0.0,
+								"heart_destroy_progress": 1.0,
+								"military_progress": 0.0,
+								"resource_control": 0.75,
+								"resource_progress": -0.125
+							},
+							"opening_claim_latency_penalty": 1.24538518336205,
+							"pass_rate": 0.0,
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 57,
+								"exposed_ranged": 0,
+								"flank_drift": 2.2,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 1.24538518336205,
+								"resource_neglect": 0
+							},
+							"resource_gather_tiles": 1,
+							"specialized_ratio": 0.7125,
+							"supported_ratio": 0.925,
+							"tier_counts": {
+								"1": 56,
+								"2": 1,
+								"3": 0
+							},
+							"total_tiles": 80,
+							"turn": 90,
+							"type_counts": {
+								"basic": 23,
+								"defense": 23,
+								"gather": 3,
+								"melee": 28,
+								"ranged": 3
+							}
+						},
+						"pathology": {
+							"ally_obstruction": 0.0,
+							"backline_specialized": 57,
+							"exposed_ranged": 0,
+							"flank_drift": 2.2,
+							"frontline_gather": 0,
+							"high_fail_rate": 0,
+							"opening_claim_latency": 1.24538518336205,
+							"resource_neglect": 0
+						},
+						"total_score": 46.4954923209451,
+						"turn": 90
+					}
+				},
+				"final_objective": {
+					"door_progress": 0.0,
+					"heart_destroy_progress": 1.0,
+					"military_progress": 0.0,
+					"resource_control": 0.75,
+					"resource_progress": -0.125
+				},
+				"final_turn": 72,
+				"outcome": {
+					"reason": "all_player_team_hearts_destroyed",
+					"status": "loss"
+				},
+				"ran_to_outcome_window": true,
+				"runtime_seconds": 4.961,
+				"scenario": "spectator_1v1_wide_chamber_outcome",
+				"scenario_type": "outcome",
+				"seed": 1337
+			}
+		],
+		"runtime_breakdown": {
+			"fast": {
+				"actor_turns": 72.0,
+				"elapsed_seconds": 4.594,
+				"simulations": 1
+			},
+			"outcome": {
+				"actor_turns": 72.0,
+				"elapsed_seconds": 4.961,
+				"simulations": 1
+			}
+		},
+		"score": 61.0848620722888,
+		"score_by_category": {
+			"anti_pathology": 63.05060154332,
+			"board_shape": 89.1025608932698,
+			"economy": 100.0,
+			"objective_progress": 58.5849297334931,
+			"role_balance": 16.1307651807652,
+			"specialization_quality": 22.071688041688
+		},
+		"score_by_checkpoint": {
+			"12": 42.9314024024024,
+			"32": 63.8832098590745,
+			"60": 58.1332201119627,
+			"90": 46.4954923209451
+		},
+		"tactical_metrics": {
+			"ally_obstruction_penalty": 0.0,
+			"flank_productivity": 0.493188588902207,
+			"opening_claim_latency_penalty": 0.542449974954178
+		}
+	},
+	"baseline_effective_params": {
+		"basic_claim_frontline_bonus": 22.0,
+		"basic_claim_goal_bonus": 8.0,
+		"basic_claim_opening_bonus": 12.0,
+		"defense_local_ratio_hard_cap": 0.55,
+		"defense_local_ratio_soft_cap": 0.38,
+		"defense_nearby_soft_limit": 2.0,
+		"engaged_upgrade_energy_threshold": 16.0,
+		"flank_pressure_bonus": 14.0,
+		"flank_stalemate_break_bonus": 8.0,
+		"gather_conversion_resource_max_dist": 2.0,
+		"gather_safe_min_enemy_distance": 4.0,
+		"max_tile_upgrades_per_turn": 2.0,
+		"non_engaged_upgrade_energy_threshold": 18.0,
+		"objective_backfill_penalty": 28.0,
+		"objective_progress_weight": 22.0,
+		"objective_upgrade_distance_max": 14.0,
+		"objective_upgrade_enemy_distance_max": 10.0,
+		"ranged_backline_penalty": 14.0,
+		"ranged_frontline_penalty": 28.0,
+		"ranged_saturation_hard_cap": 0.52,
+		"ranged_saturation_max_penalty": 38.0,
+		"ranged_saturation_min_tiles": 8.0,
+		"ranged_saturation_soft_cap": 0.32,
+		"resource_approaching_phase_bonus": 4.0,
+		"resource_gather_focus_bonus": 14.0,
+		"resource_low_threat_bonus": 6.0,
+		"resource_near_threat_penalty": 8.0,
+		"resource_node_hold_bonus": 14.0,
+		"resource_objective_max_distance": 9.0,
+		"resource_objective_step_weight": 4.0,
+		"resource_safe_phase_bonus": 8.0,
+		"specialization_adjacent_penalty": 3.0,
+		"specialization_backline_blanket_penalty": 14.0,
+		"specialization_hard_cap": 0.62,
+		"specialization_local_cluster_penalty": 5.0,
+		"specialization_local_radius": 2.0,
+		"specialization_local_soft_limit": 3.0,
+		"specialization_max_penalty": 30.0,
+		"specialization_min_tiles": 9.0,
+		"specialization_path_penalty": 10.0,
+		"specialization_safe_phase_penalty": 12.0,
+		"specialization_soft_cap": 0.45,
+		"tile_upgrade_min_score": 64.0,
+		"upgrade_priority_margin": 9.0
+	},
+	"candidate_count": 1,
+	"candidate_pool_count": 1,
+	"checkpoint_weights": {
+		"12": 0.9,
+		"32": 1.25,
+		"60": 1.15,
+		"90": 0.9
+	},
+	"checkpoints": [
+		12,
+		32,
+		60,
+		90
+	],
+	"config_used": {
+		"checkpoint_weights": {
+			"12": 0.9,
+			"32": 1.25,
+			"60": 1.15,
+			"90": 0.9
+		},
+		"checkpoints": [
+			12.0,
+			32.0,
+			60.0,
+			90.0
+		],
+		"fixed_overrides": {
+
+		},
+		"output_dir": "res://tools/ai_tuner_output/ai_strategy_1v1_smoke",
+		"runs_per_seed": 1.0,
+		"scenarios": [
+			{
+				"door_hp": 32.0,
+				"enemies_allied": true,
+				"enemy_team_size": 1.0,
+				"level_index": 3.0,
+				"name": "spectator_1v1_wide_chamber",
+				"outcome_check_interval": 6.0,
+				"player_team_size": 1.0,
+				"scenario_type": "fast",
+				"seeds": [
+					1337.0
+				],
+				"stop_at_last_checkpoint": true,
+				"template_ids": [
+					"room_wide_chamber"
+				],
+				"turn_limit": 96.0
+			}
+		],
+		"search": {
+			"grid_parameters": {
+
+			},
+			"max_grid_candidates": 1.0,
+			"max_total_candidates": 1,
+			"random_iterations": 0,
+			"random_parameters": {
+
+			},
+			"random_seed": 1337.0
+		},
+		"top_n": 3.0,
+		"training": {
+			"enabled": false
+		}
+	},
+	"cull_stage": {
+		"budget_stop": false,
+		"budget_stop_reason": "",
+		"elapsed_seconds": 0.0,
+		"enabled": false,
+		"evaluated_candidate_count": 0,
+		"kept_candidate_count": 1,
+		"planned_candidate_count": 0,
+		"settings": {
+			"checkpoint_count": 2,
+			"enabled": true,
+			"fast_only": true,
+			"keep_ratio": 0.22,
+			"max_keep": 48,
+			"max_runs_per_seed": 1,
+			"max_scenarios": 2,
+			"max_seeds_per_scenario": 1,
+			"min_candidates": 16,
+			"min_keep": 10
+		},
+		"workload": {
+
+		}
+	},
+	"finalist_count": 1,
+	"generated_at": "2026-04-21T00:18:05",
+	"ok": true,
+	"parameter_keys": [
+		"basic_claim_frontline_bonus",
+		"basic_claim_goal_bonus",
+		"basic_claim_opening_bonus",
+		"defense_local_ratio_hard_cap",
+		"defense_local_ratio_soft_cap",
+		"defense_nearby_soft_limit",
+		"engaged_upgrade_energy_threshold",
+		"flank_pressure_bonus",
+		"flank_stalemate_break_bonus",
+		"gather_conversion_resource_max_dist",
+		"gather_safe_min_enemy_distance",
+		"max_tile_upgrades_per_turn",
+		"non_engaged_upgrade_energy_threshold",
+		"objective_backfill_penalty",
+		"objective_progress_weight",
+		"objective_upgrade_distance_max",
+		"objective_upgrade_enemy_distance_max",
+		"ranged_backline_penalty",
+		"ranged_frontline_penalty",
+		"ranged_saturation_hard_cap",
+		"ranged_saturation_max_penalty",
+		"ranged_saturation_min_tiles",
+		"ranged_saturation_soft_cap",
+		"resource_approaching_phase_bonus",
+		"resource_gather_focus_bonus",
+		"resource_low_threat_bonus",
+		"resource_near_threat_penalty",
+		"resource_node_hold_bonus",
+		"resource_objective_max_distance",
+		"resource_objective_step_weight",
+		"resource_safe_phase_bonus",
+		"specialization_adjacent_penalty",
+		"specialization_backline_blanket_penalty",
+		"specialization_hard_cap",
+		"specialization_local_cluster_penalty",
+		"specialization_local_radius",
+		"specialization_local_soft_limit",
+		"specialization_max_penalty",
+		"specialization_min_tiles",
+		"specialization_path_penalty",
+		"specialization_safe_phase_penalty",
+		"specialization_soft_cap",
+		"tile_upgrade_min_score",
+		"upgrade_priority_margin"
+	],
+	"performance": {
+		"categories": [
+			{
+				"avg_per_candidate_seconds": 9.38499999999999,
+				"avg_per_simulation_seconds": 4.6925,
+				"category": "ai_decision",
+				"pct_of_runtime": 98.0259034886149,
+				"total_seconds": 9.38499999999999
+			},
+			{
+				"avg_per_candidate_seconds": 0.125,
+				"avg_per_simulation_seconds": 0.0625,
+				"category": "turn_resolution",
+				"pct_of_runtime": 1.30561938583664,
+				"total_seconds": 0.125
+			},
+			{
+				"avg_per_candidate_seconds": 0.03,
+				"avg_per_simulation_seconds": 0.015,
+				"category": "metric_scoring",
+				"pct_of_runtime": 0.313348652600794,
+				"total_seconds": 0.03
+			},
+			{
+				"avg_per_candidate_seconds": 0.001,
+				"avg_per_simulation_seconds": 0.0005,
+				"category": "scenario_setup",
+				"pct_of_runtime": 0.0104449550866931,
+				"total_seconds": 0.001
+			},
+			{
+				"avg_per_candidate_seconds": 0.001,
+				"avg_per_simulation_seconds": 0.0005,
+				"category": "reporting_artifacts",
+				"pct_of_runtime": 0.0104449550866931,
+				"total_seconds": 0.001
+			},
+			{
+				"avg_per_candidate_seconds": 0.0,
+				"avg_per_simulation_seconds": 0.0,
+				"category": "candidate_setup",
+				"pct_of_runtime": 0.0,
+				"total_seconds": 0.0
+			}
+		],
+		"evaluated_candidates": 1,
+		"evaluated_simulations": 2,
+		"measured_seconds": 9.54199999999999,
+		"top_bottlenecks": [
+			{
+				"avg_per_candidate_seconds": 9.38499999999999,
+				"avg_per_simulation_seconds": 4.6925,
+				"category": "ai_decision",
+				"pct_of_runtime": 98.0259034886149,
+				"total_seconds": 9.38499999999999
+			},
+			{
+				"avg_per_candidate_seconds": 0.125,
+				"avg_per_simulation_seconds": 0.0625,
+				"category": "turn_resolution",
+				"pct_of_runtime": 1.30561938583664,
+				"total_seconds": 0.125
+			},
+			{
+				"avg_per_candidate_seconds": 0.03,
+				"avg_per_simulation_seconds": 0.015,
+				"category": "metric_scoring",
+				"pct_of_runtime": 0.313348652600794,
+				"total_seconds": 0.03
+			}
+		],
+		"total_runtime_seconds": 9.574
+	},
+	"planned_candidate_count": 1,
+	"recommendations": [
+		"Best candidate is effectively tied with baseline; keep current constants and collect more scenarios."
+	],
+	"runtime_stats": {
+		"budget_stop": false,
+		"budget_stop_reason": "",
+		"elapsed_seconds": 9.574,
+		"estimated_pass_seconds": 46.2,
+		"evaluated_actor_turns": 144.0,
+		"evaluated_candidate_count": 1,
+		"evaluated_fast_actor_turns": 72.0,
+		"evaluated_fast_simulation_count": 1,
+		"evaluated_outcome_actor_turns": 72.0,
+		"evaluated_outcome_simulation_count": 1,
+		"evaluated_simulation_count": 2,
+		"fast_elapsed_seconds": 4.594,
+		"outcome_elapsed_seconds": 4.961,
+		"performance": {
+			"categories": [
+				{
+					"avg_per_candidate_seconds": 9.38499999999999,
+					"avg_per_simulation_seconds": 4.6925,
+					"category": "ai_decision",
+					"pct_of_runtime": 98.0259034886149,
+					"total_seconds": 9.38499999999999
+				},
+				{
+					"avg_per_candidate_seconds": 0.125,
+					"avg_per_simulation_seconds": 0.0625,
+					"category": "turn_resolution",
+					"pct_of_runtime": 1.30561938583664,
+					"total_seconds": 0.125
+				},
+				{
+					"avg_per_candidate_seconds": 0.03,
+					"avg_per_simulation_seconds": 0.015,
+					"category": "metric_scoring",
+					"pct_of_runtime": 0.313348652600794,
+					"total_seconds": 0.03
+				},
+				{
+					"avg_per_candidate_seconds": 0.001,
+					"avg_per_simulation_seconds": 0.0005,
+					"category": "scenario_setup",
+					"pct_of_runtime": 0.0104449550866931,
+					"total_seconds": 0.001
+				},
+				{
+					"avg_per_candidate_seconds": 0.001,
+					"avg_per_simulation_seconds": 0.0005,
+					"category": "reporting_artifacts",
+					"pct_of_runtime": 0.0104449550866931,
+					"total_seconds": 0.001
+				},
+				{
+					"avg_per_candidate_seconds": 0.0,
+					"avg_per_simulation_seconds": 0.0,
+					"category": "candidate_setup",
+					"pct_of_runtime": 0.0,
+					"total_seconds": 0.0
+				}
+			],
+			"evaluated_candidates": 1,
+			"evaluated_simulations": 2,
+			"measured_seconds": 9.54199999999999,
+			"top_bottlenecks": [
+				{
+					"avg_per_candidate_seconds": 9.38499999999999,
+					"avg_per_simulation_seconds": 4.6925,
+					"category": "ai_decision",
+					"pct_of_runtime": 98.0259034886149,
+					"total_seconds": 9.38499999999999
+				},
+				{
+					"avg_per_candidate_seconds": 0.125,
+					"avg_per_simulation_seconds": 0.0625,
+					"category": "turn_resolution",
+					"pct_of_runtime": 1.30561938583664,
+					"total_seconds": 0.125
+				},
+				{
+					"avg_per_candidate_seconds": 0.03,
+					"avg_per_simulation_seconds": 0.015,
+					"category": "metric_scoring",
+					"pct_of_runtime": 0.313348652600794,
+					"total_seconds": 0.03
+				}
+			],
+			"total_runtime_seconds": 9.574
+		},
+		"planned_actor_turns": 210.0,
+		"planned_candidate_count": 2,
+		"planned_fast_actor_turns": 90.0,
+		"planned_fast_simulation_count": 1,
+		"planned_outcome_actor_turns": 120.0,
+		"planned_outcome_simulation_count": 1,
+		"planned_simulation_count": 2
+	},
+	"scenario_count": 2,
+	"scenario_mix": {
+		"fast_scenario_ratio": 0.75,
+		"min_outcome_scenarios": 1
+	},
+	"scenario_runs_per_candidate": {
+		"fast_runs": 1,
+		"outcome_runs": 1,
+		"total_runs": 2
+	},
+	"template_ids": [
+		"room_wide_chamber",
+		"room_broken_spine",
+		"room_twist_forks"
+	],
+	"top_candidates": [
+		{
+			"ai_profile": {
+				"avg_usec_per_turn": {
+					"candidate_generation": 13385.9375,
+					"choose_total": 65239.4861111111,
+					"conversion_scoring": 3895.39583333333,
+					"enemy_proximity_calculations": 18299.8680555556,
+					"flank_opening_ally_scoring": 8486.65277777778,
+					"full_board_scan": 46708.0833333333,
+					"objective_distance_calculations": 2299.47916666667,
+					"placement_scoring": 46730.9583333333,
+					"strategy_evaluation": 2446.88888888889,
+					"support_calculations": 4058.08333333333,
+					"upgrade_scoring": 6800.23611111111
+				},
+				"choose_total_usec": 9394486.0,
+				"counts": {
+					"candidate_generation": 183564,
+					"choose_total": 144,
+					"conversion_scoring": 400,
+					"enemy_proximity_calculations": 363886,
+					"enemy_proximity_calls": 363886,
+					"flank_opening_ally_calls": 12936,
+					"flank_opening_ally_scoring": 12936,
+					"full_board_scan": 386,
+					"full_board_tiles_scanned": 208440,
+					"objective_distance_calculations": 27534,
+					"objective_distance_calls": 27390,
+					"placement_scoring": 432,
+					"strategy_evaluation": 144,
+					"strategy_intent_CONSOLIDATE_ADVANTAGE": 18,
+					"strategy_intent_HEART_DEFENSE": 22,
+					"strategy_intent_MAIN_PUSH": 16,
+					"strategy_intent_RECOVER_ECONOMY": 66,
+					"strategy_intent_RESOURCE_CONTEST": 22,
+					"support_calculation_calls": 18280,
+					"support_calculations": 18280,
+					"upgrade_scoring": 610
+				},
+				"dominant_strategy_intent": "RECOVER_ECONOMY",
+				"percent_of_choose_total": {
+					"candidate_generation": 20.5181528824461,
+					"choose_total": 100.0,
+					"conversion_scoring": 5.97091740836061,
+					"enemy_proximity_calculations": 28.0502946089866,
+					"flank_opening_ally_scoring": 13.0084604948051,
+					"full_board_scan": 71.5948057190143,
+					"objective_distance_calculations": 3.52467394171432,
+					"placement_scoring": 71.6298688400834,
+					"strategy_evaluation": 3.75062563295107,
+					"support_calculations": 6.22028709181109,
+					"upgrade_scoring": 10.4234973579183
+				},
+				"simulation_count": 2,
+				"strategy_intent_counts": {
+					"CONSOLIDATE_ADVANTAGE": 18,
+					"HEART_DEFENSE": 22,
+					"MAIN_PUSH": 16,
+					"RECOVER_ECONOMY": 66,
+					"RESOURCE_CONTEST": 22
+				},
+				"totals_seconds": {
+					"candidate_generation": 1.927575,
+					"choose_total": 9.394486,
+					"conversion_scoring": 0.560937,
+					"enemy_proximity_calculations": 2.635181,
+					"flank_opening_ally_scoring": 1.222078,
+					"full_board_scan": 6.725964,
+					"objective_distance_calculations": 0.331125,
+					"placement_scoring": 6.729258,
+					"strategy_evaluation": 0.352352,
+					"support_calculations": 0.584364,
+					"upgrade_scoring": 0.979234
+				},
+				"totals_usec": {
+					"candidate_generation": 1927575.0,
+					"choose_total": 9394486.0,
+					"conversion_scoring": 560937.0,
+					"enemy_proximity_calculations": 2635181.0,
+					"flank_opening_ally_scoring": 1222078.0,
+					"full_board_scan": 6725964.0,
+					"objective_distance_calculations": 331125.0,
+					"placement_scoring": 6729258.0,
+					"strategy_evaluation": 352352.0,
+					"support_calculations": 584364.0,
+					"upgrade_scoring": 979234.0
+				},
+				"turns": 144
+			},
+			"changed_params": [],
+			"diff_vs_baseline": {
+				"basic_claim_frontline_bonus": {
+					"baseline": 22.0,
+					"candidate": 22.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"basic_claim_goal_bonus": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"basic_claim_opening_bonus": {
+					"baseline": 12.0,
+					"candidate": 12.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"defense_local_ratio_hard_cap": {
+					"baseline": 0.55,
+					"candidate": 0.55,
+					"changed": false,
+					"delta": 0.0
+				},
+				"defense_local_ratio_soft_cap": {
+					"baseline": 0.38,
+					"candidate": 0.38,
+					"changed": false,
+					"delta": 0.0
+				},
+				"defense_nearby_soft_limit": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"engaged_upgrade_energy_threshold": {
+					"baseline": 16.0,
+					"candidate": 16.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"flank_pressure_bonus": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"flank_stalemate_break_bonus": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"gather_conversion_resource_max_dist": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"gather_safe_min_enemy_distance": {
+					"baseline": 4.0,
+					"candidate": 4.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"max_tile_upgrades_per_turn": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"non_engaged_upgrade_energy_threshold": {
+					"baseline": 18.0,
+					"candidate": 18.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_backfill_penalty": {
+					"baseline": 28.0,
+					"candidate": 28.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_progress_weight": {
+					"baseline": 22.0,
+					"candidate": 22.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_upgrade_distance_max": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"objective_upgrade_enemy_distance_max": {
+					"baseline": 10.0,
+					"candidate": 10.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_backline_penalty": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_frontline_penalty": {
+					"baseline": 28.0,
+					"candidate": 28.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_hard_cap": {
+					"baseline": 0.52,
+					"candidate": 0.52,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_max_penalty": {
+					"baseline": 38.0,
+					"candidate": 38.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_min_tiles": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"ranged_saturation_soft_cap": {
+					"baseline": 0.32,
+					"candidate": 0.32,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_approaching_phase_bonus": {
+					"baseline": 4.0,
+					"candidate": 4.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_gather_focus_bonus": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_low_threat_bonus": {
+					"baseline": 6.0,
+					"candidate": 6.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_near_threat_penalty": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_node_hold_bonus": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_objective_max_distance": {
+					"baseline": 9.0,
+					"candidate": 9.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_objective_step_weight": {
+					"baseline": 4.0,
+					"candidate": 4.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"resource_safe_phase_bonus": {
+					"baseline": 8.0,
+					"candidate": 8.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_adjacent_penalty": {
+					"baseline": 3.0,
+					"candidate": 3.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_backline_blanket_penalty": {
+					"baseline": 14.0,
+					"candidate": 14.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_hard_cap": {
+					"baseline": 0.62,
+					"candidate": 0.62,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_local_cluster_penalty": {
+					"baseline": 5.0,
+					"candidate": 5.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_local_radius": {
+					"baseline": 2.0,
+					"candidate": 2.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_local_soft_limit": {
+					"baseline": 3.0,
+					"candidate": 3.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_max_penalty": {
+					"baseline": 30.0,
+					"candidate": 30.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_min_tiles": {
+					"baseline": 9.0,
+					"candidate": 9.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_path_penalty": {
+					"baseline": 10.0,
+					"candidate": 10.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_safe_phase_penalty": {
+					"baseline": 12.0,
+					"candidate": 12.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"specialization_soft_cap": {
+					"baseline": 0.45,
+					"candidate": 0.45,
+					"changed": false,
+					"delta": 0.0
+				},
+				"tile_upgrade_min_score": {
+					"baseline": 64.0,
+					"candidate": 64.0,
+					"changed": false,
+					"delta": 0.0
+				},
+				"upgrade_priority_margin": {
+					"baseline": 9.0,
+					"candidate": 9.0,
+					"changed": false,
+					"delta": 0.0
+				}
+			},
+			"effective_params": {
+				"basic_claim_frontline_bonus": 22.0,
+				"basic_claim_goal_bonus": 8.0,
+				"basic_claim_opening_bonus": 12.0,
+				"defense_local_ratio_hard_cap": 0.55,
+				"defense_local_ratio_soft_cap": 0.38,
+				"defense_nearby_soft_limit": 2.0,
+				"engaged_upgrade_energy_threshold": 16.0,
+				"flank_pressure_bonus": 14.0,
+				"flank_stalemate_break_bonus": 8.0,
+				"gather_conversion_resource_max_dist": 2.0,
+				"gather_safe_min_enemy_distance": 4.0,
+				"max_tile_upgrades_per_turn": 2.0,
+				"non_engaged_upgrade_energy_threshold": 18.0,
+				"objective_backfill_penalty": 28.0,
+				"objective_progress_weight": 22.0,
+				"objective_upgrade_distance_max": 14.0,
+				"objective_upgrade_enemy_distance_max": 10.0,
+				"ranged_backline_penalty": 14.0,
+				"ranged_frontline_penalty": 28.0,
+				"ranged_saturation_hard_cap": 0.52,
+				"ranged_saturation_max_penalty": 38.0,
+				"ranged_saturation_min_tiles": 8.0,
+				"ranged_saturation_soft_cap": 0.32,
+				"resource_approaching_phase_bonus": 4.0,
+				"resource_gather_focus_bonus": 14.0,
+				"resource_low_threat_bonus": 6.0,
+				"resource_near_threat_penalty": 8.0,
+				"resource_node_hold_bonus": 14.0,
+				"resource_objective_max_distance": 9.0,
+				"resource_objective_step_weight": 4.0,
+				"resource_safe_phase_bonus": 8.0,
+				"specialization_adjacent_penalty": 3.0,
+				"specialization_backline_blanket_penalty": 14.0,
+				"specialization_hard_cap": 0.62,
+				"specialization_local_cluster_penalty": 5.0,
+				"specialization_local_radius": 2.0,
+				"specialization_local_soft_limit": 3.0,
+				"specialization_max_penalty": 30.0,
+				"specialization_min_tiles": 9.0,
+				"specialization_path_penalty": 10.0,
+				"specialization_safe_phase_penalty": 12.0,
+				"specialization_soft_cap": 0.45,
+				"tile_upgrade_min_score": 64.0,
+				"upgrade_priority_margin": 9.0
+			},
+			"id": "baseline",
+			"label": "Baseline",
+			"overrides": {
+
+			},
+			"pathology_counts": {
+				"ally_obstruction": 0.0,
+				"backline_specialized": 19.702380952381,
+				"exposed_ranged": 0.0,
+				"flank_drift": 1.55952380952381,
+				"frontline_gather": 0.0,
+				"high_fail_rate": 0.0,
+				"opening_claim_latency": 0.542449974954178,
+				"resource_neglect": 0.0
+			},
+			"runs": [
+				{
+					"ai_profile": {
+						"active_strategy_context": {
+							"avg_ally_touches": 0.0,
+							"boxed": false,
+							"engaged": false,
+							"gather_count": 3,
+							"heart_threat_level": 0,
+							"hp_advantage": false,
+							"income": 6,
+							"low_threat": true,
+							"objective_dist": 99,
+							"resource_need": false,
+							"stall_level": 0
+						},
+						"active_strategy_intent": "MAIN_PUSH",
+						"avg_choose_usec_per_turn": 62717.125,
+						"choose_total_usec": 4515633.0,
+						"counts": {
+							"candidate_generation": 91782,
+							"choose_total": 72,
+							"conversion_scoring": 200,
+							"enemy_proximity_calculations": 181943,
+							"enemy_proximity_calls": 181943,
+							"flank_opening_ally_calls": 6468,
+							"flank_opening_ally_scoring": 6468,
+							"full_board_scan": 193,
+							"full_board_tiles_scanned": 104220,
+							"objective_distance_calculations": 13767,
+							"objective_distance_calls": 13695,
+							"placement_scoring": 216,
+							"strategy_evaluation": 72,
+							"strategy_intent_CONSOLIDATE_ADVANTAGE": 9,
+							"strategy_intent_HEART_DEFENSE": 11,
+							"strategy_intent_MAIN_PUSH": 8,
+							"strategy_intent_RECOVER_ECONOMY": 33,
+							"strategy_intent_RESOURCE_CONTEST": 11,
+							"support_calculation_calls": 9140,
+							"support_calculations": 9140,
+							"upgrade_scoring": 305
+						},
+						"enabled": true,
+						"totals_seconds": {
+							"candidate_generation": 0.933445,
+							"choose_total": 4.515633,
+							"conversion_scoring": 0.27198,
+							"enemy_proximity_calculations": 1.259479,
+							"flank_opening_ally_scoring": 0.588622,
+							"full_board_scan": 3.242951,
+							"objective_distance_calculations": 0.159019,
+							"placement_scoring": 3.244597,
+							"strategy_evaluation": 0.167116,
+							"support_calculations": 0.281324,
+							"upgrade_scoring": 0.464262
+						},
+						"totals_usec": {
+							"candidate_generation": 933445.0,
+							"choose_total": 4515633.0,
+							"conversion_scoring": 271980.0,
+							"enemy_proximity_calculations": 1259479.0,
+							"flank_opening_ally_scoring": 588622.0,
+							"full_board_scan": 3242951.0,
+							"objective_distance_calculations": 159019.0,
+							"placement_scoring": 3244597.0,
+							"strategy_evaluation": 167116.0,
+							"support_calculations": 281324.0,
+							"upgrade_scoring": 464262.0
+						},
+						"turns": 72
+					},
+					"checkpoints": {
+						"12": {
+							"category_scores": {
+								"anti_pathology": 51.5532732732733,
+								"board_shape": 79.8858858858859,
+								"economy": 100.0,
+								"objective_progress": 46.7342342342342,
+								"role_balance": 0.0,
+								"specialization_quality": 3.04432432432432
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 10.2083333333333,
+								"backline_specialized_ratio": 1.0,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.0195195195195195,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 0,
+									"gather": 0,
+									"melee": 0,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.189189189189189,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.4375,
+									"resource_control": 0.125,
+									"resource_progress": 0.1875
+								},
+								"opening_claim_latency_penalty": 0.0,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 5,
+									"exposed_ranged": 0,
+									"flank_drift": 1.5,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 0.0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.135135135135135,
+								"supported_ratio": 0.810810810810811,
+								"tier_counts": {
+									"1": 5,
+									"2": 0,
+									"3": 0
+								},
+								"total_tiles": 37,
+								"turn": 12,
+								"type_counts": {
+									"basic": 32,
+									"defense": 0,
+									"gather": 1,
+									"melee": 4,
+									"ranged": 0
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 5,
+								"exposed_ranged": 0,
+								"flank_drift": 1.5,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.0,
+								"resource_neglect": 0
+							},
+							"total_score": 42.9314024024024,
+							"turn": 12
+						},
+						"32": {
+							"category_scores": {
+								"anti_pathology": 84.4990027676492,
+								"board_shape": 94.2938574938575,
+								"economy": 100.0,
+								"objective_progress": 61.0135135135135,
+								"role_balance": 17.0181818181818,
+								"specialization_quality": 54.9818181818182
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 8.484375,
+								"backline_specialized_ratio": 0.2,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.959459459459459,
+								"frontline_counts": {
+									"basic": 3,
+									"defense": 1,
+									"gather": 0,
+									"melee": 4,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.109090909090909,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.4375,
+									"resource_control": 0.25,
+									"resource_progress": 0.1875
+								},
+								"opening_claim_latency_penalty": 0.394499846241708,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 5,
+									"exposed_ranged": 0,
+									"flank_drift": 0.0,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 0.394499846241708,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.454545454545455,
+								"supported_ratio": 0.890909090909091,
+								"tier_counts": {
+									"1": 24,
+									"2": 1,
+									"3": 0
+								},
+								"total_tiles": 55,
+								"turn": 32,
+								"type_counts": {
+									"basic": 30,
+									"defense": 6,
+									"gather": 2,
+									"melee": 16,
+									"ranged": 1
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 5,
+								"exposed_ranged": 0,
+								"flank_drift": 0.0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.394499846241708,
+								"resource_neglect": 0
+							},
+							"total_score": 63.8832098590745,
+							"turn": 32
+						},
+						"60": {
+							"category_scores": {
+								"anti_pathology": 75.0635109870756,
+								"board_shape": 90.0787376972348,
+								"economy": 100.0,
+								"objective_progress": 63.5505389782846,
+								"role_balance": 22.9621621621622,
+								"specialization_quality": 18.4642827442827
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 7.71666666666667,
+								"backline_specialized_ratio": 0.346153846153846,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.712544914857054,
+								"frontline_counts": {
+									"basic": 9,
+									"defense": 7,
+									"gather": 0,
+									"melee": 6,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.135135135135135,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.25,
+									"military_progress": 0.4375,
+									"resource_control": 0.25,
+									"resource_progress": 0.1875
+								},
+								"opening_claim_latency_penalty": 0.577668193025713,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 18,
+									"exposed_ranged": 0,
+									"flank_drift": 2.8,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 0.577668193025713,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.702702702702703,
+								"supported_ratio": 0.864864864864865,
+								"tier_counts": {
+									"1": 51,
+									"2": 1,
+									"3": 0
+								},
+								"total_tiles": 74,
+								"turn": 60,
+								"type_counts": {
+									"basic": 22,
+									"defense": 20,
+									"gather": 2,
+									"melee": 27,
+									"ranged": 3
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 18,
+								"exposed_ranged": 0,
+								"flank_drift": 2.8,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.577668193025713,
+								"resource_neglect": 0
+							},
+							"total_score": 58.1332201119627,
+							"turn": 60
+						},
+						"90": {
+							"category_scores": {
+								"anti_pathology": 29.4086549347773,
+								"board_shape": 89.8617647058824,
+								"economy": 100.0,
+								"objective_progress": 60.7176470588235,
+								"role_balance": 22.3,
+								"specialization_quality": 0.0
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 8.01388888888889,
+								"backline_specialized_ratio": 1.0,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.0389705882352941,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 0,
+									"gather": 0,
+									"melee": 0,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.075,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 1.0,
+									"military_progress": 0.0,
+									"resource_control": 0.75,
+									"resource_progress": -0.125
+								},
+								"opening_claim_latency_penalty": 1.24538518336205,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 57,
+									"exposed_ranged": 0,
+									"flank_drift": 2.2,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 1.24538518336205,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.7125,
+								"supported_ratio": 0.925,
+								"tier_counts": {
+									"1": 56,
+									"2": 1,
+									"3": 0
+								},
+								"total_tiles": 80,
+								"turn": 90,
+								"type_counts": {
+									"basic": 23,
+									"defense": 23,
+									"gather": 3,
+									"melee": 28,
+									"ranged": 3
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 57,
+								"exposed_ranged": 0,
+								"flank_drift": 2.2,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 1.24538518336205,
+								"resource_neglect": 0
+							},
+							"total_score": 46.4954923209451,
+							"turn": 90
+						}
+					},
+					"final_objective": {
+						"door_progress": 0.0,
+						"heart_destroy_progress": 1.0,
+						"military_progress": 0.0,
+						"resource_control": 0.75,
+						"resource_progress": -0.125
+					},
+					"final_turn": 72,
+					"outcome": {
+						"reason": "all_player_team_hearts_destroyed",
+						"status": "loss"
+					},
+					"ran_to_outcome_window": false,
+					"runtime_seconds": 4.594,
+					"scenario": "spectator_1v1_wide_chamber",
+					"scenario_type": "fast",
+					"seed": 1337
+				},
+				{
+					"ai_profile": {
+						"active_strategy_context": {
+							"avg_ally_touches": 0.0,
+							"boxed": false,
+							"engaged": false,
+							"gather_count": 3,
+							"heart_threat_level": 0,
+							"hp_advantage": false,
+							"income": 6,
+							"low_threat": true,
+							"objective_dist": 99,
+							"resource_need": false,
+							"stall_level": 0
+						},
+						"active_strategy_intent": "MAIN_PUSH",
+						"avg_choose_usec_per_turn": 67761.8472222222,
+						"choose_total_usec": 4878853.0,
+						"counts": {
+							"candidate_generation": 91782,
+							"choose_total": 72,
+							"conversion_scoring": 200,
+							"enemy_proximity_calculations": 181943,
+							"enemy_proximity_calls": 181943,
+							"flank_opening_ally_calls": 6468,
+							"flank_opening_ally_scoring": 6468,
+							"full_board_scan": 193,
+							"full_board_tiles_scanned": 104220,
+							"objective_distance_calculations": 13767,
+							"objective_distance_calls": 13695,
+							"placement_scoring": 216,
+							"strategy_evaluation": 72,
+							"strategy_intent_CONSOLIDATE_ADVANTAGE": 9,
+							"strategy_intent_HEART_DEFENSE": 11,
+							"strategy_intent_MAIN_PUSH": 8,
+							"strategy_intent_RECOVER_ECONOMY": 33,
+							"strategy_intent_RESOURCE_CONTEST": 11,
+							"support_calculation_calls": 9140,
+							"support_calculations": 9140,
+							"upgrade_scoring": 305
+						},
+						"enabled": true,
+						"totals_seconds": {
+							"candidate_generation": 0.99413,
+							"choose_total": 4.878853,
+							"conversion_scoring": 0.288957,
+							"enemy_proximity_calculations": 1.375702,
+							"flank_opening_ally_scoring": 0.633456,
+							"full_board_scan": 3.483013,
+							"objective_distance_calculations": 0.172106,
+							"placement_scoring": 3.484661,
+							"strategy_evaluation": 0.185236,
+							"support_calculations": 0.30304,
+							"upgrade_scoring": 0.514972
+						},
+						"totals_usec": {
+							"candidate_generation": 994130.0,
+							"choose_total": 4878853.0,
+							"conversion_scoring": 288957.0,
+							"enemy_proximity_calculations": 1375702.0,
+							"flank_opening_ally_scoring": 633456.0,
+							"full_board_scan": 3483013.0,
+							"objective_distance_calculations": 172106.0,
+							"placement_scoring": 3484661.0,
+							"strategy_evaluation": 185236.0,
+							"support_calculations": 303040.0,
+							"upgrade_scoring": 514972.0
+						},
+						"turns": 72
+					},
+					"checkpoints": {
+						"12": {
+							"category_scores": {
+								"anti_pathology": 51.5532732732733,
+								"board_shape": 79.8858858858859,
+								"economy": 100.0,
+								"objective_progress": 46.7342342342342,
+								"role_balance": 0.0,
+								"specialization_quality": 3.04432432432432
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 10.2083333333333,
+								"backline_specialized_ratio": 1.0,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.0195195195195195,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 0,
+									"gather": 0,
+									"melee": 0,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.189189189189189,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.4375,
+									"resource_control": 0.125,
+									"resource_progress": 0.1875
+								},
+								"opening_claim_latency_penalty": 0.0,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 5,
+									"exposed_ranged": 0,
+									"flank_drift": 1.5,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 0.0,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.135135135135135,
+								"supported_ratio": 0.810810810810811,
+								"tier_counts": {
+									"1": 5,
+									"2": 0,
+									"3": 0
+								},
+								"total_tiles": 37,
+								"turn": 12,
+								"type_counts": {
+									"basic": 32,
+									"defense": 0,
+									"gather": 1,
+									"melee": 4,
+									"ranged": 0
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 5,
+								"exposed_ranged": 0,
+								"flank_drift": 1.5,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.0,
+								"resource_neglect": 0
+							},
+							"total_score": 42.9314024024024,
+							"turn": 12
+						},
+						"32": {
+							"category_scores": {
+								"anti_pathology": 84.4990027676492,
+								"board_shape": 94.2938574938575,
+								"economy": 100.0,
+								"objective_progress": 61.0135135135135,
+								"role_balance": 17.0181818181818,
+								"specialization_quality": 54.9818181818182
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 8.484375,
+								"backline_specialized_ratio": 0.2,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.959459459459459,
+								"frontline_counts": {
+									"basic": 3,
+									"defense": 1,
+									"gather": 0,
+									"melee": 4,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.109090909090909,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.0,
+									"military_progress": 0.4375,
+									"resource_control": 0.25,
+									"resource_progress": 0.1875
+								},
+								"opening_claim_latency_penalty": 0.394499846241708,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 5,
+									"exposed_ranged": 0,
+									"flank_drift": 0.0,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 0.394499846241708,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.454545454545455,
+								"supported_ratio": 0.890909090909091,
+								"tier_counts": {
+									"1": 24,
+									"2": 1,
+									"3": 0
+								},
+								"total_tiles": 55,
+								"turn": 32,
+								"type_counts": {
+									"basic": 30,
+									"defense": 6,
+									"gather": 2,
+									"melee": 16,
+									"ranged": 1
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 5,
+								"exposed_ranged": 0,
+								"flank_drift": 0.0,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.394499846241708,
+								"resource_neglect": 0
+							},
+							"total_score": 63.8832098590745,
+							"turn": 32
+						},
+						"60": {
+							"category_scores": {
+								"anti_pathology": 75.0635109870756,
+								"board_shape": 90.0787376972348,
+								"economy": 100.0,
+								"objective_progress": 63.5505389782846,
+								"role_balance": 22.9621621621622,
+								"specialization_quality": 18.4642827442827
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 7.71666666666667,
+								"backline_specialized_ratio": 0.346153846153846,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.712544914857054,
+								"frontline_counts": {
+									"basic": 9,
+									"defense": 7,
+									"gather": 0,
+									"melee": 6,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.135135135135135,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 0.25,
+									"military_progress": 0.4375,
+									"resource_control": 0.25,
+									"resource_progress": 0.1875
+								},
+								"opening_claim_latency_penalty": 0.577668193025713,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 18,
+									"exposed_ranged": 0,
+									"flank_drift": 2.8,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 0.577668193025713,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.702702702702703,
+								"supported_ratio": 0.864864864864865,
+								"tier_counts": {
+									"1": 51,
+									"2": 1,
+									"3": 0
+								},
+								"total_tiles": 74,
+								"turn": 60,
+								"type_counts": {
+									"basic": 22,
+									"defense": 20,
+									"gather": 2,
+									"melee": 27,
+									"ranged": 3
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 18,
+								"exposed_ranged": 0,
+								"flank_drift": 2.8,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 0.577668193025713,
+								"resource_neglect": 0
+							},
+							"total_score": 58.1332201119627,
+							"turn": 60
+						},
+						"90": {
+							"category_scores": {
+								"anti_pathology": 29.4086549347773,
+								"board_shape": 89.8617647058824,
+								"economy": 100.0,
+								"objective_progress": 60.7176470588235,
+								"role_balance": 22.3,
+								"specialization_quality": 0.0
+							},
+							"metrics": {
+								"ally_obstruction_penalty": 0.0,
+								"avg_energy": 8.01388888888889,
+								"backline_specialized_ratio": 1.0,
+								"exposed_ranged_tiles": 0,
+								"fail_rate": 0.0,
+								"flank_productivity": 0.0389705882352941,
+								"frontline_counts": {
+									"basic": 0,
+									"defense": 0,
+									"gather": 0,
+									"melee": 0,
+									"ranged": 0
+								},
+								"frontline_gather_tiles": 0,
+								"low_support_ratio": 0.075,
+								"objective": {
+									"door_progress": 0.0,
+									"heart_destroy_progress": 1.0,
+									"military_progress": 0.0,
+									"resource_control": 0.75,
+									"resource_progress": -0.125
+								},
+								"opening_claim_latency_penalty": 1.24538518336205,
+								"pass_rate": 0.0,
+								"pathology": {
+									"ally_obstruction": 0.0,
+									"backline_specialized": 57,
+									"exposed_ranged": 0,
+									"flank_drift": 2.2,
+									"frontline_gather": 0,
+									"high_fail_rate": 0,
+									"opening_claim_latency": 1.24538518336205,
+									"resource_neglect": 0
+								},
+								"resource_gather_tiles": 1,
+								"specialized_ratio": 0.7125,
+								"supported_ratio": 0.925,
+								"tier_counts": {
+									"1": 56,
+									"2": 1,
+									"3": 0
+								},
+								"total_tiles": 80,
+								"turn": 90,
+								"type_counts": {
+									"basic": 23,
+									"defense": 23,
+									"gather": 3,
+									"melee": 28,
+									"ranged": 3
+								}
+							},
+							"pathology": {
+								"ally_obstruction": 0.0,
+								"backline_specialized": 57,
+								"exposed_ranged": 0,
+								"flank_drift": 2.2,
+								"frontline_gather": 0,
+								"high_fail_rate": 0,
+								"opening_claim_latency": 1.24538518336205,
+								"resource_neglect": 0
+							},
+							"total_score": 46.4954923209451,
+							"turn": 90
+						}
+					},
+					"final_objective": {
+						"door_progress": 0.0,
+						"heart_destroy_progress": 1.0,
+						"military_progress": 0.0,
+						"resource_control": 0.75,
+						"resource_progress": -0.125
+					},
+					"final_turn": 72,
+					"outcome": {
+						"reason": "all_player_team_hearts_destroyed",
+						"status": "loss"
+					},
+					"ran_to_outcome_window": true,
+					"runtime_seconds": 4.961,
+					"scenario": "spectator_1v1_wide_chamber_outcome",
+					"scenario_type": "outcome",
+					"seed": 1337
+				}
+			],
+			"runtime_breakdown": {
+				"fast": {
+					"actor_turns": 72.0,
+					"elapsed_seconds": 4.594,
+					"simulations": 1
+				},
+				"outcome": {
+					"actor_turns": 72.0,
+					"elapsed_seconds": 4.961,
+					"simulations": 1
+				}
+			},
+			"score": 61.0848620722888,
+			"score_by_category": {
+				"anti_pathology": 63.05060154332,
+				"board_shape": 89.1025608932698,
+				"economy": 100.0,
+				"objective_progress": 58.5849297334931,
+				"role_balance": 16.1307651807652,
+				"specialization_quality": 22.071688041688
+			},
+			"score_by_checkpoint": {
+				"12": 42.9314024024024,
+				"32": 63.8832098590745,
+				"60": 58.1332201119627,
+				"90": 46.4954923209451
+			},
+			"tactical_metrics": {
+				"ally_obstruction_penalty": 0.0,
+				"flank_productivity": 0.493188588902207,
+				"opening_claim_latency_penalty": 0.542449974954178
+			}
+		}
+	],
+	"workload": {
+		"candidate_count": 1,
+		"estimated_actor_turns": 210,
+		"evaluated_actor_turns": 144.0,
+		"evaluated_candidate_count": 1,
+		"evaluated_fast_actor_turns": 72.0,
+		"evaluated_fast_simulation_count": 1,
+		"evaluated_outcome_actor_turns": 72.0,
+		"evaluated_outcome_simulation_count": 1,
+		"evaluated_simulation_count": 2,
+		"fast_actor_turns": 90,
+		"fast_simulation_count": 1,
+		"outcome_actor_turns": 120,
+		"outcome_simulation_count": 1,
+		"planned_candidate_count": 2,
+		"simulation_count": 2
+	}
+}
