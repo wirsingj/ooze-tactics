@@ -1,0 +1,103 @@
+{
+  "textures": {
+    "stone_albedo": {
+      "path": "res://assets/world3d/generated/stone_albedo.png",
+      "source_kind": "generated"
+    },
+    "stone_roughness": {
+      "path": "res://assets/world3d/generated/stone_roughness.png",
+      "source_kind": "generated"
+    },
+    "stone_normal": {
+      "path": "res://assets/world3d/generated/stone_normal.png",
+      "source_kind": "generated"
+    },
+    "slime_detail": {
+      "path": "res://assets/world3d/generated/slime_detail.png",
+      "source_kind": "generated"
+    }
+  },
+  "geometry": {
+    "blocker_wall": {
+      "path": "res://assets/meshes/generated/blocker_cluster.glb",
+      "source_kind": "generated",
+      "normalize": {
+        "scale": [1.02, 1.18, 1.02]
+      }
+    },
+    "cave_wall": {
+      "path": "res://assets/meshes/generated/cave_wall_segment.glb",
+      "source_kind": "generated",
+      "normalize": {
+        "scale": [1.04, 1.38, 1.04]
+      }
+    },
+    "cave_corner": {
+      "path": "res://assets/meshes/generated/cave_wall_corner.glb",
+      "source_kind": "generated",
+      "normalize": {
+        "scale": [1.06, 1.36, 1.06]
+      }
+    },
+    "door_arch": {
+      "path": "res://assets/meshes/imported/kenney_door_gate.glb",
+      "source_kind": "imported",
+      "normalize": {
+        "scale": [1.06, 1.34, 1.06]
+      }
+    },
+    "floor_tile_rock": {
+      "path": "res://assets/meshes/generated/floor_tile_rock.glb",
+      "source_kind": "generated",
+      "normalize": {
+        "scale": [1.12, 1.0, 1.12]
+      }
+    },
+    "node_base": {
+      "path": "res://assets/meshes/generated/node_base.glb",
+      "source_kind": "generated",
+      "normalize": {
+        "scale": [1.04, 1.04, 1.04]
+      }
+    },
+    "heart_crystal": {
+      "path": "res://assets/meshes/generated/crystal_hero.glb",
+      "source_kind": "generated",
+      "normalize": {
+        "scale": [0.92, 0.92, 0.92]
+      }
+    },
+    "role_crystal": {
+      "path": "res://assets/meshes/generated/crystal_small.glb",
+      "source_kind": "generated"
+    },
+    "board_edge_trim": {
+      "path": "res://assets/meshes/imported/kenney_board_edge_trim.glb",
+      "source_kind": "imported",
+      "normalize": {
+        "scale": [0.96, 1.0, 0.96]
+      }
+    },
+    "prop_gem": {
+      "path": "res://assets/meshes/imported/kenney_prop_coin.glb",
+      "source_kind": "imported",
+      "normalize": {
+        "scale": [0.44, 0.44, 0.44]
+      }
+    },
+    "prop_scroll": {
+      "path": "res://assets/meshes/imported/kenney_prop_chest.glb",
+      "source_kind": "imported",
+      "normalize": {
+        "scale": [0.32, 0.32, 0.32]
+      }
+    },
+    "prop_rat": {
+      "path": "res://assets/meshes/imported/kenney_prop_rocks.glb",
+      "source_kind": "imported",
+      "normalize": {
+        "scale": [0.24, 0.24, 0.24]
+      }
+    }
+  }
+}

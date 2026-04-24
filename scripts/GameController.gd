@@ -24,6 +24,7 @@ const OOZE_AI_SCRIPT: GDScript = preload("res://scripts/systems/OozeAI.gd")
 const ENEMY_FEEDBACK_SCRIPT: GDScript = preload("res://scripts/systems/EnemyFeedback.gd")
 const WORLD_RENDER_LAYER_SCRIPT: GDScript = preload("res://scripts/ui/WorldRenderLayer.gd")
 const SLIME_LAYER_SHADER: Shader = preload("res://assets/shaders/slime_layer.gdshader")
+const WORLD_3D_RENDERER_SCRIPT_PATH: String = "res://scripts/ui/World3DRenderer.gd"
 const ACTION_BUTTON_HINTS: Dictionary = {
 	"basic": "Basic: cheap expansion tile.",
 	"melee": "Melee: frontline breaker, strongest in contact.",
@@ -105,6 +106,8 @@ var world_slime_layer: WorldRenderLayer = null
 var world_emissive_layer: WorldRenderLayer = null
 var world_overlay_layer: WorldRenderLayer = null
 var world_3d_enabled: bool = true
+var _world_3d_renderer_load_failed: bool = false
+var _world_3d_sync_queued: bool = false
 
 var _button_style_normal: StyleBoxTexture = null
 var _button_style_hover: StyleBoxTexture = null
@@ -116,7 +119,7 @@ var upgrade_choices: Array = []
 @onready var board_region: Control = $CanvasLayer/UI/BoardRegion
 @onready var world_3d_host: SubViewportContainer = $CanvasLayer/UI/BoardRegion/World3DHost
 @onready var world_3d_viewport: SubViewport = $CanvasLayer/UI/BoardRegion/World3DHost/World3DViewport
-@onready var world_3d_root: World3DRenderer = $CanvasLayer/UI/BoardRegion/World3DHost/World3DViewport/World3DRoot
+@onready var world_3d_root: Node3D = $CanvasLayer/UI/BoardRegion/World3DHost/World3DViewport/World3DRoot
 @onready var top_panel: Control = $CanvasLayer/UI/TopPanel
 @onready var right_panel: Control = $CanvasLayer/UI/RightPanel
 @onready var bottom_panel: Control = $CanvasLayer/UI/BottomPanel
@@ -184,7 +187,7 @@ func _process(delta: float) -> void:
 
 	var needs_redraw: bool = false
 	if using_3d and world_3d_root != null:
-		world_3d_root.tick_visual(pacing_delta if pacing_delta > 0.0 else delta)
+		_world_3d_call("tick_visual", [pacing_delta if pacing_delta > 0.0 else delta])
 
 	if pacing_delta > 0.0 and not using_3d:
 		anim_timer += pacing_delta
@@ -360,7 +363,9 @@ func _draw_world_overlay(canvas: Node2D) -> void:
 
 func _queue_world_redraw() -> void:
 	if _use_3d_world():
-		_sync_3d_world()
+		if not _world_3d_sync_queued:
+			_world_3d_sync_queued = true
+			call_deferred("_sync_3d_world_deferred")
 		return
 	if world_background_layer != null:
 		world_background_layer.queue_redraw()
@@ -370,6 +375,10 @@ func _queue_world_redraw() -> void:
 		world_emissive_layer.queue_redraw()
 	if world_overlay_layer != null:
 		world_overlay_layer.queue_redraw()
+
+func _sync_3d_world_deferred() -> void:
+	_world_3d_sync_queued = false
+	_sync_3d_world()
 
 func _setup_3d_presentation() -> void:
 	var using_3d: bool = _use_3d_world()
@@ -383,7 +392,7 @@ func _setup_3d_presentation() -> void:
 			world_3d_viewport.world_3d = World3D.new()
 		world_3d_viewport.transparent_bg = false
 	if using_3d and world_3d_root != null:
-		world_3d_root.configure(renderer)
+		_world_3d_call("configure", [renderer])
 	if world_background_layer != null:
 		world_background_layer.visible = not using_3d
 	if world_slime_layer != null:
@@ -401,21 +410,58 @@ func _sync_graphics_style_from_runflow() -> void:
 	if run_flow.has_method("is_graphics_style_3d"):
 		world_3d_enabled = bool(run_flow.call("is_graphics_style_3d"))
 
+func _ensure_world_3d_renderer_loaded() -> bool:
+	if _world_3d_renderer_load_failed:
+		return false
+	if world_3d_root == null:
+		return false
+	if world_3d_root.has_method("sync_world"):
+		return true
+	var renderer_script: Script = load(WORLD_3D_RENDERER_SCRIPT_PATH) as Script
+	if renderer_script == null:
+		push_warning("Failed to load 3D renderer script: %s" % WORLD_3D_RENDERER_SCRIPT_PATH)
+		_world_3d_renderer_load_failed = true
+		world_3d_enabled = false
+		return false
+	world_3d_root.set_script(renderer_script)
+	if not world_3d_root.has_method("sync_world"):
+		push_warning("3D renderer script did not provide expected API: %s" % WORLD_3D_RENDERER_SCRIPT_PATH)
+		_world_3d_renderer_load_failed = true
+		world_3d_enabled = false
+		return false
+	if world_3d_root.has_method("initialize_runtime_renderer"):
+		world_3d_root.call("initialize_runtime_renderer")
+	return true
+
+func _world_3d_call(method: String, args: Array = []) -> Variant:
+	if world_3d_root == null:
+		return null
+	if not world_3d_root.has_method(method):
+		return null
+	return world_3d_root.callv(method, args)
+
 func _use_3d_world() -> bool:
-	return world_3d_enabled and world_3d_root != null and world_3d_host != null and world_3d_viewport != null
+	if not world_3d_enabled:
+		return false
+	if world_3d_root == null or world_3d_host == null or world_3d_viewport == null:
+		return false
+	return _ensure_world_3d_renderer_loaded()
 
 func _sync_3d_world() -> void:
 	if not _use_3d_world() or state == null:
 		return
-	world_3d_root.sync_world(
-		state,
-		selected_tile,
-		hovered_tile,
-		queued_actions,
-		hover_preview_action,
-		hover_invalid_reason,
-		recent_enemy_actions,
-		anim_frame
+	_world_3d_call(
+		"sync_world",
+		[
+			state,
+			selected_tile,
+			hovered_tile,
+			queued_actions,
+			hover_preview_action,
+			hover_invalid_reason,
+			recent_enemy_actions,
+			anim_frame,
+		]
 	)
 
 func _handle_3d_camera_input(event: InputEvent) -> bool:
@@ -424,12 +470,29 @@ func _handle_3d_camera_input(event: InputEvent) -> bool:
 	var mouse_pos: Vector2 = get_viewport().get_mouse_position()
 	var inside_board: bool = board_clip_rect.has_point(mouse_pos)
 	var board_local: Vector2 = mouse_pos - board_clip_rect.position
-	return world_3d_root.handle_camera_input(event, board_local, inside_board)
+	return bool(_world_3d_call("handle_camera_input", [event, board_local, inside_board]))
+
+func _update_hover_from_mouse(mouse_pos: Vector2) -> void:
+	var next_hover: Vector2i = _mouse_to_tile(mouse_pos)
+	if next_hover == hovered_tile:
+		return
+	hovered_tile = next_hover
+	_recompute_hover_context()
+	_refresh_ui()
+	_queue_world_redraw()
 
 func _clear_pending_left_click() -> void:
 	pending_left_click_active = false
 	pending_left_click_tile = Vector2i(-1, -1)
 	pending_left_click_spectator = false
+
+func clear_turn_pulse_for_capture() -> void:
+	pulse_active = false
+	pulse_batches.clear()
+	pulse_batch_index = -1
+	pulse_batch_timer = 0.0
+	pulse_gap_timer = 0.0
+	pulse_finish_pause = 0.0
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _use_3d_world() and not _is_modal_overlay_open():
@@ -446,10 +509,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if _is_spectator_mode():
 		if event is InputEventMouseMotion:
-			hovered_tile = _mouse_to_tile(get_local_mouse_position())
-			_recompute_hover_context()
-			_refresh_ui()
-			_queue_world_redraw()
+			_update_hover_from_mouse(get_local_mouse_position())
 			return
 		if pulse_active:
 			_clear_pending_left_click()
@@ -464,7 +524,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				else:
 					if not pending_left_click_active or not pending_left_click_spectator:
 						return
-					var consume_drag_release: bool = _use_3d_world() and world_3d_root != null and world_3d_root.should_consume_left_release()
+					var consume_drag_release: bool = _use_3d_world() and bool(_world_3d_call("should_consume_left_release"))
 					var spectate_tile: Vector2i = _mouse_to_tile(get_local_mouse_position())
 					if spectate_tile == Vector2i(-1, -1):
 						spectate_tile = pending_left_click_tile
@@ -477,10 +537,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventMouseMotion:
-		hovered_tile = _mouse_to_tile(get_local_mouse_position())
-		_recompute_hover_context()
-		_refresh_ui()
-		_queue_world_redraw()
+		_update_hover_from_mouse(get_local_mouse_position())
 		return
 
 	if event is InputEventMouseButton and event.pressed:
@@ -496,7 +553,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if release_event.button_index == MOUSE_BUTTON_LEFT:
 			if not pending_left_click_active or pending_left_click_spectator:
 				return
-			var consume_drag_release: bool = _use_3d_world() and world_3d_root != null and world_3d_root.should_consume_left_release()
+			var consume_drag_release: bool = _use_3d_world() and bool(_world_3d_call("should_consume_left_release"))
 			var tile: Vector2i = _mouse_to_tile(get_local_mouse_position())
 			if tile == Vector2i(-1, -1):
 				tile = pending_left_click_tile
@@ -839,7 +896,7 @@ func _start_level() -> void:
 	if _use_3d_world():
 		# Camera reset contract: only explicit new-level startup may request a camera reset.
 		# Turn updates and normal renderer sync paths must preserve user camera state.
-		world_3d_root.reset_startup_contract()
+		_world_3d_call("reset_startup_contract")
 	_update_board_layout(true)
 	_recompute_action_context()
 	_apply_control_mode_state()
@@ -1955,7 +2012,10 @@ func _mouse_to_tile(mouse_pos: Vector2) -> Vector2i:
 		return Vector2i(-1, -1)
 	if _use_3d_world():
 		var viewport_mouse: Vector2 = mouse_pos - board_clip_rect.position
-		return world_3d_root.viewport_to_tile(viewport_mouse)
+		var tile_from_3d: Variant = _world_3d_call("viewport_to_tile", [viewport_mouse])
+		if typeof(tile_from_3d) == TYPE_VECTOR2I:
+			return tile_from_3d
+		return Vector2i(-1, -1)
 	var local: Vector2 = mouse_pos - board_origin
 	if local.x < 0 or local.y < 0:
 		return Vector2i(-1, -1)
@@ -2182,7 +2242,7 @@ func _update_3d_layout(region: Rect2) -> void:
 	var viewport_size: Vector2i = Vector2i(maxi(64, int(round(region.size.x))), maxi(64, int(round(region.size.y))))
 	if world_3d_viewport.size != viewport_size:
 		world_3d_viewport.size = viewport_size
-	world_3d_root.set_viewport_size(viewport_size)
+	_world_3d_call("set_viewport_size", [viewport_size])
 
 func _play_region_rect() -> Rect2:
 	var region: Rect2 = board_region.get_global_rect()
