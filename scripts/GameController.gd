@@ -14,6 +14,7 @@ const TURN_PULSE_BATCH_GAP: float = 0.05
 const TURN_PULSE_END_PAUSE: float = 0.14
 const TURN_PULSE_MAX_TOTAL: float = 2.0
 const TURN_PULSE_MAX_TILES: int = 40
+const ENERGY_FLASH_DURATION: float = 0.55
 const SPECTATOR_STEP_DELAY: float = 0.26
 const MIN_EXPAND_ADJACENT: int = 1
 const PLAY_REGION_PANEL_GAP: float = 8.0
@@ -26,15 +27,23 @@ const WORLD_RENDER_LAYER_SCRIPT: GDScript = preload("res://scripts/ui/WorldRende
 const SLIME_LAYER_SHADER: Shader = preload("res://assets/shaders/slime_layer.gdshader")
 const WORLD_3D_RENDERER_SCRIPT_PATH: String = "res://scripts/ui/World3DRenderer.gd"
 const ACTION_BUTTON_HINTS: Dictionary = {
-	"basic": "Basic: cheap expansion tile.",
-	"melee": "Melee: frontline breaker, strongest in contact.",
-	"ranged": "Ranged: fires from behind, weaker while engaged.",
-	"defense": "Defense: durable frontline holder.",
-	"gather": "Gather: economy tile, strongest on resources.",
+	"basic": "Basic: spread your ooze into empty ground.",
+	"melee": "Melee: acidic limbs that tear through nearby enemies.",
+	"ranged": "Ranged: spitter stalk that pressures from behind.",
+	"defense": "Defense: hardened ooze ridge that holds chokepoints.",
+	"gather": "Gather: digestion pod that extracts extra energy.",
 	"end_turn": "End Turn: resolve staged actions.",
-	"clear_queue": "Clear Queue: remove all staged actions.",
+	"clear_queue": "Clear Queue: remove queued growth.",
 	"menu": "Menu: return-to-menu options.",
 	"dev_upgrade": "Dev Upgrade: open run upgrade picker.",
+}
+const OBJECTIVE_TEXT: String = "Destroy the enemy heart or break the dungeon door"
+const ROLE_INFO: Dictionary = {
+	"basic": {"name": "Basic Ooze", "effect": "Spreads territory. Cheap, fragile, and generates energy with your ooze mass."},
+	"melee": {"name": "Melee Growth", "effect": "Close-range acidic limbs. Best at breaking enemy hearts in contact."},
+	"ranged": {"name": "Ranged Spitter", "effect": "Fires acid from behind your front line. Can pressure hearts and doors."},
+	"defense": {"name": "Defense Ridge", "effect": "Hardened ooze. Holds chokepoints and protects nearby growth."},
+	"gather": {"name": "Gather Pod", "effect": "Digests resources and improves your energy economy."},
 }
 
 var tick_system: TickSystem = TickSystem.new()
@@ -96,6 +105,8 @@ var actor_cycle_index: int = 0
 var actor_round_index: int = 0
 var owner_display_numbers: Dictionary = {}
 var slime_shader_time: float = 0.0
+var energy_flash_timer: float = 0.0
+var energy_flash_delta: int = 0
 
 var board_origin: Vector2 = Vector2(16, 64)
 var board_clip_rect: Rect2 = Rect2(16, 64, 960, 560)
@@ -114,6 +125,12 @@ var _button_style_hover: StyleBoxTexture = null
 var _button_style_pressed: StyleBoxTexture = null
 var _button_style_selected: StyleBoxTexture = null
 var upgrade_choices: Array = []
+var _perf_counters: Dictionary = {}
+var _perf_timings_usec: Dictionary = {}
+var _perf_timing_counts: Dictionary = {}
+var objective_banner_label: Label = null
+var tutorial_prompt_label: Label = null
+var hover_card_label: Label = null
 
 @onready var ui_root: Control = $CanvasLayer/UI
 @onready var board_region: Control = $CanvasLayer/UI/BoardRegion
@@ -173,6 +190,7 @@ func _ready() -> void:
 	_start_level()
 	_update_board_layout(true)
 	_wire_ui()
+	_setup_clarity_overlays()
 	_recompute_action_context()
 	_apply_control_mode_state()
 	_refresh_ui()
@@ -202,9 +220,13 @@ func _process(delta: float) -> void:
 
 	if status_timer > 0.0:
 		status_timer = maxf(0.0, status_timer - delta)
-		if status_timer <= 0.0 and status_message.begins_with("Invalid"):
+		if status_timer <= 0.0:
 			status_message = ""
 			_refresh_ui()
+
+	if energy_flash_timer > 0.0:
+		energy_flash_timer = maxf(0.0, energy_flash_timer - delta)
+		_refresh_energy_label_style()
 
 	if pacing_delta > 0.0 and _update_turn_pulse(pacing_delta):
 		if not using_3d:
@@ -362,9 +384,11 @@ func _draw_world_overlay(canvas: Node2D) -> void:
 	)
 
 func _queue_world_redraw() -> void:
+	_perf_increment("queue_world_redraw_calls")
 	if _use_3d_world():
 		if not _world_3d_sync_queued:
 			_world_3d_sync_queued = true
+			_perf_increment("queue_world_redraw_deferred_syncs")
 			call_deferred("_sync_3d_world_deferred")
 		return
 	if world_background_layer != null:
@@ -450,6 +474,7 @@ func _use_3d_world() -> bool:
 func _sync_3d_world() -> void:
 	if not _use_3d_world() or state == null:
 		return
+	var sync_start_usec: int = _perf_begin()
 	_world_3d_call(
 		"sync_world",
 		[
@@ -463,6 +488,7 @@ func _sync_3d_world() -> void:
 			anim_frame,
 		]
 	)
+	_perf_end("sync_3d_world", sync_start_usec)
 
 func _handle_3d_camera_input(event: InputEvent) -> bool:
 	if not _use_3d_world():
@@ -568,7 +594,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			var outcome: Dictionary = _queue_action_from_click(tile)
 			if not bool(outcome.get("ok", false)):
-				_set_status("Invalid: %s" % String(outcome.get("reason", "unknown")), 2.2)
+				_set_status("Cannot grow there: %s" % _player_reason_text(String(outcome.get("reason", "unknown"))), 2.6)
 			elif not String(outcome.get("message", "")).is_empty():
 				_set_status(String(outcome["message"]), 1.4)
 			_recompute_action_context()
@@ -584,7 +610,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			selected_tile = tile
 			if not _remove_player_action_for_tile(tile):
-				_set_status("No queued action on that tile", 1.4)
+				_set_status("No queued growth on that tile", 1.4)
 			_recompute_action_context()
 			_refresh_ui()
 			_queue_world_redraw()
@@ -867,7 +893,8 @@ func _start_level() -> void:
 	var level_index: int = run_flow.current_level
 	var level_seed: int = run_flow.get_level_seed()
 	var level_options: Dictionary = run_flow.build_level_options()
-	# Runtime currently builds levels from room templates + options only.
+	# Runtime level structure comes from the layout generator (pure data),
+	# with templates used only as source data for that generator.
 	state = generator.build_level(level_index, level_seed, room_templates, [], level_options)
 	state.card_modifiers = run_flow.get_run_modifiers()
 	queued_actions.clear()
@@ -893,6 +920,7 @@ func _start_level() -> void:
 	_initialize_owner_display_numbers()
 	_setup_actor_cycle()
 	_refresh_enemy_intents()
+	_set_status(_level_intro_status(level_options), 5.6 if state.level_index == 5 else 4.0)
 	if _use_3d_world():
 		# Camera reset contract: only explicit new-level startup may request a camera reset.
 		# Turn updates and normal renderer sync paths must preserve user camera state.
@@ -936,7 +964,7 @@ func _queue_place_action(tile: Vector2i, tile_type: String) -> Dictionary:
 				had_same_type = true
 				break
 		if had_same_type:
-			return {"ok": true, "message": "Placement removed"}
+			return {"ok": true, "message": "Spread cancelled"}
 
 	var plan: Dictionary = _build_player_queue_plan()
 	var check: Dictionary = _validate_place_target(tile, tile_type, plan)
@@ -951,7 +979,7 @@ func _queue_place_action(tile: Vector2i, tile_type: String) -> Dictionary:
 		return {"ok": false, "reason": String(apply_check.get("reason", "conflict in turn resolution"))}
 
 	queued_actions.append(candidate)
-	return {"ok": true}
+	return {"ok": true, "message": "Spread %s queued for %d energy" % [_tile_type_label(tile_type), _tile_cost(tile_type)]}
 
 func _queue_convert_action(block: Dictionary, to_type: String) -> Dictionary:
 	if not Combat.TILE_RULES.has(to_type):
@@ -966,7 +994,7 @@ func _queue_convert_action(block: Dictionary, to_type: String) -> Dictionary:
 				had_same_type = true
 				break
 		if had_same_type:
-			return {"ok": true, "message": "Conversion removed"}
+			return {"ok": true, "message": "Evolution cancelled"}
 
 	var plan: Dictionary = _build_player_queue_plan()
 	var check: Dictionary = _validate_convert_target(block, to_type, plan)
@@ -982,7 +1010,12 @@ func _queue_convert_action(block: Dictionary, to_type: String) -> Dictionary:
 		return {"ok": false, "reason": String(apply_check.get("reason", "conflict in turn resolution"))}
 
 	queued_actions.append(candidate)
-	return {"ok": true}
+	var energy_delta: int = int(candidate.get("energy_delta", 0))
+	return {"ok": true, "message": "Evolve %s into %s queued%s" % [
+		_tile_type_label(from_type),
+		_tile_type_label(to_type),
+		(" for %d energy" % energy_delta) if energy_delta > 0 else ""
+	]}
 
 func _queue_upgrade_action(block: Dictionary) -> Dictionary:
 	var block_id: int = int(block["id"])
@@ -994,7 +1027,7 @@ func _queue_upgrade_action(block: Dictionary) -> Dictionary:
 				had_upgrade = true
 				break
 		if had_upgrade:
-			return {"ok": true, "message": "Upgrade removed"}
+			return {"ok": true, "message": "Strengthen cancelled"}
 
 	var plan: Dictionary = _build_player_queue_plan()
 	var check: Dictionary = _validate_upgrade_target(block, plan)
@@ -1011,7 +1044,7 @@ func _queue_upgrade_action(block: Dictionary) -> Dictionary:
 		return {"ok": false, "reason": String(apply_check.get("reason", "conflict in turn resolution"))}
 
 	queued_actions.append(candidate)
-	return {"ok": true, "message": "%s upgraded queued" % tile_type.to_upper()}
+	return {"ok": true, "message": "Strengthen %s queued for %d energy" % [_tile_type_label(tile_type), cost]}
 
 func _remove_player_place_actions_for_tile(tile: Vector2i) -> Array:
 	var removed: Array = []
@@ -1142,11 +1175,15 @@ func _run_next_spectator_turn() -> void:
 	if not _ensure_active_actor_for_spectator_turn():
 		return
 
+	var turn_start_usec: int = _perf_begin()
 	var acting_owner_id: int = active_owner_id
+	var ai_start_usec: int = _perf_begin()
 	var actions: Array = ai.choose_actions(state, acting_owner_id, _min_adjacent_for_owner(acting_owner_id))
+	_perf_end("spectator_ai_choose", ai_start_usec)
 	if actions.is_empty():
 		actions = [{"type": "pass", "owner": acting_owner_id}]
 
+	var resolve_start_usec: int = _perf_begin()
 	var resolution: Dictionary = turn_resolver.resolve_turn(
 		state,
 		actions,
@@ -1154,13 +1191,18 @@ func _run_next_spectator_turn() -> void:
 		_min_adjacent_for_owner(acting_owner_id),
 		_tile_cost("basic")
 	)
+	_perf_end("spectator_turn_resolve", resolve_start_usec)
 	_apply_resolution_result(resolution, acting_owner_id, false)
+	_perf_end("spectator_turn_total", turn_start_usec)
 
 func _apply_resolution_result(resolution: Dictionary, acting_owner: int, include_enemy_feedback: bool) -> void:
+	var apply_start_usec: int = _perf_begin()
 	var previous_state: GameState = state.copy_state() if state != null else null
 	var next_state: GameState = resolution.get("state", state)
 	var report: Dictionary = resolution.get("report", {})
 	var pulse_tiles: Array = _collect_resolution_pulse_tiles(previous_state, next_state, report)
+	var feedback_text: String = _resolution_feedback_text(acting_owner, previous_state, next_state, report)
+	var player_energy_spent: int = _player_energy_spent_from_actions(report)
 
 	state = next_state
 	queued_actions.clear()
@@ -1173,6 +1215,11 @@ func _apply_resolution_result(resolution: Dictionary, acting_owner: int, include
 		_append_enemy_action_summary(recent_enemy_actions, recent_enemy_failed_actions)
 	else:
 		_append_actor_action_summary(acting_owner, report)
+	if not feedback_text.is_empty():
+		_set_status(feedback_text, 1.8)
+		state.last_log.insert(0, feedback_text)
+	if player_energy_spent > 0:
+		_flash_energy(-player_energy_spent)
 
 	_recompute_action_context()
 	_refresh_enemy_intents()
@@ -1188,6 +1235,7 @@ func _apply_resolution_result(resolution: Dictionary, acting_owner: int, include
 
 	_refresh_ui()
 	_queue_world_redraw()
+	_perf_end("apply_resolution_result", apply_start_usec)
 
 func _append_actor_action_summary(owner_id: int, report: Dictionary) -> void:
 	var applied_count: int = 0
@@ -1195,9 +1243,133 @@ func _append_actor_action_summary(owner_id: int, report: Dictionary) -> void:
 		if int(action.get("owner", -1)) == owner_id:
 			applied_count += 1
 	if applied_count > 0:
-		state.last_log.insert(0, "Slime %d acted (%d actions)" % [_owner_display_number(owner_id), applied_count])
+		state.last_log.insert(0, "%s acted (%d growths)" % [_owner_public_name(owner_id), applied_count])
 	else:
-		state.last_log.insert(0, "Slime %d held" % _owner_display_number(owner_id))
+		state.last_log.insert(0, "%s held" % _owner_public_name(owner_id))
+
+func _resolution_feedback_text(acting_owner: int, previous_state: GameState, next_state: GameState, report: Dictionary) -> String:
+	if previous_state == null or next_state == null:
+		return ""
+	var player_spread: int = 0
+	var player_evolved: Array[String] = []
+	var player_upgraded: int = 0
+	for action in report.get("applied_actions", []):
+		if int(action.get("owner", -1)) != GameState.PLAYER_ID:
+			continue
+		match String(action.get("type", "")):
+			"place_tile":
+				player_spread += 1
+			"convert_tile":
+				player_evolved.append(_tile_type_label(String(action.get("to_type", "basic"))))
+			"upgrade_tile":
+				player_upgraded += 1
+
+	var hit_counts: Dictionary = _combat_hit_counts(previous_state, report)
+	var player_hits: int = int(hit_counts.get("player_hits", 0))
+	var enemy_hits: int = int(hit_counts.get("enemy_hits", 0))
+	var door_hits: int = int(hit_counts.get("door_hits", 0))
+	var player_kills: int = _removed_hostile_blocks(previous_state, next_state)
+
+	var beats: Array[String] = []
+	if acting_owner == GameState.PLAYER_ID:
+		if not player_evolved.is_empty():
+			beats.append("Evolved into %s" % String(player_evolved[0]))
+		elif player_upgraded > 0:
+			beats.append("Strength increased")
+		elif player_spread > 0:
+			beats.append("Ooze spreads")
+	if player_hits > 0:
+		beats.append("Your ooze strikes")
+	elif door_hits > 0:
+		beats.append("Acid hammers the dungeon door")
+	if player_kills > 0:
+		beats.append("Enemy ooze dissolves")
+	elif enemy_hits > 0 and acting_owner == GameState.PLAYER_ID:
+		beats.append("Enemy ooze resists")
+	if beats.is_empty() and enemy_hits > 0:
+		beats.append("Enemy ooze strikes back")
+	if beats.is_empty():
+		return ""
+	if beats.size() > 2:
+		beats = beats.slice(0, 2)
+	return ". ".join(beats)
+
+func _combat_hit_counts(previous_state: GameState, report: Dictionary) -> Dictionary:
+	var out: Dictionary = {"player_hits": 0, "enemy_hits": 0, "door_hits": 0}
+	for line_variant in report.get("log", []):
+		var line: String = String(line_variant)
+		var source_id: int = _first_int_after_word(line, "block")
+		if source_id < 0 or not previous_state.blocks.has(source_id):
+			continue
+		var source_owner: int = int(previous_state.blocks[source_id].get("owner", 0))
+		var hit_line: bool = line.find("struck") >= 0 or line.find("shot") >= 0 or line.find("splashed") >= 0
+		if line.find("door") >= 0 and (line.find("hit") >= 0 or line.find("shot") >= 0):
+			if source_owner == GameState.PLAYER_ID:
+				out["door_hits"] = int(out["door_hits"]) + 1
+			continue
+		if not hit_line:
+			continue
+		if source_owner == GameState.PLAYER_ID:
+			out["player_hits"] = int(out["player_hits"]) + 1
+		elif previous_state.are_hostile(GameState.PLAYER_ID, source_owner):
+			out["enemy_hits"] = int(out["enemy_hits"]) + 1
+	return out
+
+func _first_int_after_word(text: String, word: String) -> int:
+	var marker: String = "%s " % word
+	var start: int = text.find(marker)
+	if start < 0:
+		return -1
+	start += marker.length()
+	var digits: String = ""
+	for i in range(start, text.length()):
+		var ch: String = text.substr(i, 1)
+		var code: int = ch.unicode_at(0)
+		if code < 48 or code > 57:
+			break
+		digits += ch
+	return int(digits) if not digits.is_empty() else -1
+
+func _removed_hostile_blocks(previous_state: GameState, next_state: GameState) -> int:
+	var removed: int = 0
+	for block_id_variant in previous_state.blocks.keys():
+		var block_id: int = int(block_id_variant)
+		if next_state.blocks.has(block_id):
+			continue
+		var block: Dictionary = previous_state.blocks[block_id]
+		var owner_id: int = int(block.get("owner", 0))
+		if previous_state.are_hostile(GameState.PLAYER_ID, owner_id):
+			removed += 1
+	return removed
+
+func _player_energy_spent_from_actions(report: Dictionary) -> int:
+	var spent: int = 0
+	for action in report.get("applied_actions", []):
+		if int(action.get("owner", -1)) != GameState.PLAYER_ID:
+			continue
+		match String(action.get("type", "")):
+			"place_tile", "upgrade_tile":
+				spent += maxi(0, int(action.get("cost", 0)))
+			"convert_tile":
+				spent += maxi(0, int(action.get("energy_delta", 0)))
+	return spent
+
+func _flash_energy(delta: int) -> void:
+	if delta == 0:
+		return
+	energy_flash_delta = delta
+	energy_flash_timer = ENERGY_FLASH_DURATION
+	_refresh_energy_label_style()
+
+func _refresh_energy_label_style() -> void:
+	if energy_label == null:
+		return
+	if energy_flash_timer <= 0.0:
+		energy_label.add_theme_color_override("font_color", Color(1.0, 0.96, 0.78, 1.0))
+		return
+	var t: float = clampf(energy_flash_timer / ENERGY_FLASH_DURATION, 0.0, 1.0)
+	var flash_color: Color = Color(1.0, 0.68, 0.34, 1.0) if energy_flash_delta < 0 else Color(0.62, 1.0, 0.68, 1.0)
+	energy_label.add_theme_color_override("font_color", Color(1.0, 0.96, 0.78, 1.0).lerp(flash_color, t))
 
 func _collect_resolution_pulse_tiles(previous_state: GameState, next_state: GameState, report: Dictionary) -> Array:
 	var ordered: Array = []
@@ -1215,11 +1387,10 @@ func _collect_resolution_pulse_tiles(previous_state: GameState, next_state: Game
 		if not next_state.blocks.has(block_id):
 			_append_unique_tile(ordered, seen, prev_tile)
 			continue
-		if bool(prev_block.get("is_heart", false)):
-			var prev_hp: int = int(prev_block.get("hp", 0))
-			var next_hp: int = int(next_state.blocks[block_id].get("hp", prev_hp))
-			if next_hp < prev_hp:
-				_append_unique_tile(ordered, seen, prev_tile)
+		var prev_hp: int = int(prev_block.get("hp", 0))
+		var next_hp: int = int(next_state.blocks[block_id].get("hp", prev_hp))
+		if next_hp < prev_hp:
+			_append_unique_tile(ordered, seen, prev_tile)
 
 	if next_state.door_hp < previous_state.door_hp:
 		_append_unique_tile(ordered, seen, next_state.door_tile)
@@ -1333,6 +1504,8 @@ func _update_turn_pulse(delta: float) -> bool:
 		pending_ui_refresh = false
 		_refresh_ui()
 		_queue_world_redraw()
+	if pending_outcome.is_empty() and _offer_pending_loot_upgrade():
+		return true
 	if not pending_outcome.is_empty():
 		_apply_outcome(pending_outcome)
 		pending_outcome.clear()
@@ -1392,7 +1565,7 @@ func _apply_outcome(outcome: Dictionary) -> void:
 		_run_flow().prepare_defeat(_outcome_reason_text(String(outcome.get("reason", ""))))
 		get_tree().change_scene_to_file("res://scenes/RunResult.tscn")
 
-func _open_upgrade_overlay(victory_gate: bool) -> void:
+func _open_upgrade_overlay(victory_gate: bool, source: String = "level") -> void:
 	if state == null:
 		return
 	var run_flow = _run_flow()
@@ -1407,8 +1580,12 @@ func _open_upgrade_overlay(victory_gate: bool) -> void:
 
 	queued_actions.clear()
 	_recompute_action_context()
-	upgrade_header_label.text = "Choose Evolution"
-	upgrade_hint_label.text = "Pick 1 of 3 run upgrades."
+	if source == "loot":
+		upgrade_header_label.text = "Fallen Adventurer"
+		upgrade_hint_label.text = "Digest the remains: pick 1 extra upgrade."
+	else:
+		upgrade_header_label.text = "Choose Evolution"
+		upgrade_hint_label.text = "Pick 1 of 3 evolutions for the rest of this run."
 	_upgrade_button_setup(upgrade_button_1, 0)
 	_upgrade_button_setup(upgrade_button_2, 1)
 	_upgrade_button_setup(upgrade_button_3, 2)
@@ -1416,6 +1593,28 @@ func _open_upgrade_overlay(victory_gate: bool) -> void:
 	_set_status("Upgrade ready: choose one", 1.5)
 	_refresh_ui()
 	_queue_world_redraw()
+
+func _offer_pending_loot_upgrade() -> bool:
+	if state == null or _is_spectator_mode() or run_over or _is_upgrade_overlay_open():
+		return false
+	for i in range(state.resource_nodes.size()):
+		var node: Dictionary = state.resource_nodes[i]
+		if not bool(node.get("upgrade_reward", false)):
+			continue
+		if bool(node.get("upgrade_claimed", false)):
+			continue
+		if not bool(node.get("consumed", false)):
+			continue
+		if int(node.get("consumed_by", -1)) != GameState.PLAYER_ID:
+			continue
+		node["upgrade_claimed"] = true
+		state.resource_nodes[i] = node
+		var loot_message: String = "You digest ancient remains... New evolution unlocked"
+		state.last_log.insert(0, loot_message)
+		_set_status(loot_message, 3.2)
+		_open_upgrade_overlay(false, "loot")
+		return true
+	return false
 
 func _close_upgrade_overlay() -> void:
 	if upgrade_overlay != null:
@@ -1469,8 +1668,10 @@ func _on_upgrade_choice_pressed(choice_index: int) -> void:
 	run_over = false
 
 func _refresh_enemy_intents() -> void:
+	var intent_start_usec: int = _perf_begin()
 	if _is_spectator_mode():
 		enemy_intent_actions.clear()
+		_perf_end("refresh_enemy_intents", intent_start_usec)
 		return
 	var min_by_owner: Dictionary = {}
 	for owner_id in state.players.keys():
@@ -1483,6 +1684,7 @@ func _refresh_enemy_intents() -> void:
 			continue
 		min_by_owner[owner_int] = _min_adjacent_for_owner(owner_int)
 	enemy_intent_actions = intent_planner.build_enemy_intents(state, ai, min_by_owner, _current_min_adjacent())
+	_perf_end("refresh_enemy_intents", intent_start_usec)
 
 func _setup_actor_cycle() -> void:
 	actor_round_index = 0
@@ -1597,6 +1799,7 @@ func _refresh_ui() -> void:
 	if state == null:
 		return
 
+	var refresh_start_usec: int = _perf_begin()
 	_apply_control_mode_state()
 	_refresh_speed_controls()
 
@@ -1607,14 +1810,22 @@ func _refresh_ui() -> void:
 		player_label.text = "SPECTATOR MODE"
 		enemy_label.text = ""
 	else:
-		player_label.text = "PLAYER HP %d  HEART %d" % [player_hp, player_hearts]
+		player_label.text = "Player Ooze HP %d  Hearts %d" % [player_hp, player_hearts]
 		enemy_label.text = _enemy_header_text()
-	var door_text: String = "DOOR %d/%d" % [maxi(0, state.door_hp), maxi(1, state.door_max_hp)]
-	turn_label.text = "TURN %d/%d  |  LEVEL %d  |  %s" % [state.turn_index, state.turn_limit, state.level_index, door_text]
+	var door_text: String = "Door %d/%d" % [maxi(0, state.door_hp), maxi(1, state.door_max_hp)]
+	turn_label.text = "Turn %d/%d  |  Level %d  |  %s" % [state.turn_index, state.turn_limit, state.level_index, door_text]
 	_refresh_team_status_panels()
 	_refresh_actor_bar()
 
-	energy_label.text = "ENERGY %d   STALL %d/3   SUPPORT R2   STABILITY 0/1/2+" % [player_energy, state.stall_counter]
+	var energy_flash_text: String = ""
+	if energy_flash_timer > 0.0 and energy_flash_delta != 0:
+		energy_flash_text = "   %s%d energy" % ["+" if energy_flash_delta > 0 else "", energy_flash_delta]
+	energy_label.text = "Energy %d%s   Momentum %d/3   Support Range 2   Stability grows over time" % [
+		player_energy,
+		energy_flash_text,
+		state.stall_counter,
+	]
+	_refresh_energy_label_style()
 	var upgrade_count: int = int(_run_flow().picked_upgrades.size())
 	var queued_place_count: int = 0
 	var queued_convert_count: int = 0
@@ -1629,7 +1840,7 @@ func _refresh_ui() -> void:
 				queued_convert_count += 1
 			"upgrade_tile":
 				queued_upgrade_count += 1
-	queue_label.text = "QUEUE %d   PLACE %d   CONVERT %d   TILE-UPG %d   RUN-UPG %d" % [
+	queue_label.text = "Queued Growth %d   Spread %d   Evolve %d   Strengthen %d   Run Evolutions %d" % [
 		queued_actions.size(),
 		queued_place_count,
 		queued_convert_count,
@@ -1637,20 +1848,22 @@ func _refresh_ui() -> void:
 		upgrade_count
 	]
 
-	var mode_text: String = "MODE %s | Same-type non-basic click queues tile-upgrade." % selected_tile_type.to_upper()
+	var mode_text: String = "Selected %s | Click empty ground to spread, owned ooze to evolve." % _tile_type_label(selected_tile_type)
 	if _is_spectator_mode():
-		mode_text = "SPECTATOR | AI autoplay enabled | Dev heart-click defeat active"
+		mode_text = "Spectator | AI autoplay enabled"
 	if not button_hover_description.is_empty():
 		mode_text = "%s | %s" % [mode_text, button_hover_description]
 	mode_label.text = _fit_line(mode_text, 86)
 
 	var debug_text: String = _debug_hint_text()
 	if not status_message.is_empty():
-		debug_text = "Status: %s | %s" % [status_message, debug_text]
+		debug_text = "%s | %s" % [status_message, debug_text]
 	debug_label.text = _fit_line(debug_text, 90)
+	_update_clarity_overlays()
 
 	_refresh_action_button_labels()
 	_refresh_log()
+	_perf_end("refresh_ui", refresh_start_usec)
 
 func _enemy_header_text() -> String:
 	var enemy_hp: int = 0
@@ -1667,7 +1880,7 @@ func _enemy_header_text() -> String:
 		enemy_energy += int(state.players[owner_id]["nutrients"])
 		enemy_hp += state.get_total_hp(owner_int)
 		enemy_hearts += state.count_heart_tiles(owner_int)
-	return "ENEMY HP %d  HEART %d  ENERGY %d" % [enemy_hp, enemy_hearts, enemy_energy]
+	return "Enemy Ooze HP %d  Hearts %d  Energy %d" % [enemy_hp, enemy_hearts, enemy_energy]
 
 func _refresh_team_status_panels() -> void:
 	if state == null:
@@ -1703,9 +1916,9 @@ func _team_status_entries(hostile_to_player: bool) -> Array:
 	for owner_id_variant in owners:
 		var owner_id: int = int(owner_id_variant)
 		var owner_color: Color = renderer.owner_tint_for_ui(state, owner_id)
-		var owner_label: String = "Slime %d" % _owner_display_number(owner_id)
+		var owner_label: String = _owner_public_name(owner_id).capitalize()
 		if owner_id == GameState.PLAYER_ID and not _is_spectator_mode():
-			owner_label = "Player"
+			owner_label = "Player Ooze"
 		entries.append({
 			"label": owner_label,
 			"color_hex": owner_color.to_html(false),
@@ -1751,7 +1964,7 @@ func _refresh_actor_bar() -> void:
 	var parts: Array[String] = []
 	for owner_id_entry in owners:
 		var owner_id: int = int(owner_id_entry)
-		var label: String = "Slime %d" % _owner_display_number(owner_id)
+		var label: String = _owner_public_name(owner_id).capitalize()
 		var is_active: bool = owner_id == active_owner_id
 		var owner_color: Color = renderer.owner_tint_for_ui(state, owner_id)
 		var color_hex: String = owner_color.to_html(false)
@@ -1848,18 +2061,55 @@ func _button_text(label: String, cost: int) -> String:
 	return "%s\nCost %d" % [label, cost]
 
 func _refresh_log() -> void:
+	var log_start_usec: int = _perf_begin()
 	var lines: Array[String] = []
 	var recent: Array[String] = state.last_log
-	var start: int = maxi(0, recent.size() - 6)
-	for i in range(start, recent.size()):
-		lines.append("- %s" % recent[i])
+	for i in range(recent.size()):
+		var line: String = _display_log_line(String(recent[i]))
+		if line.is_empty():
+			continue
+		if lines.has("- %s" % line):
+			continue
+		lines.append("- %s" % line)
+		if lines.size() >= 6:
+			break
 	if lines.is_empty():
 		lines.append("- Select a tile type, queue actions, then End Turn")
 	log_label.text = "\n".join(lines)
+	_perf_end("refresh_log", log_start_usec)
+
+func _display_log_line(raw: String) -> String:
+	if raw.is_empty():
+		return ""
+	if raw.begins_with("Outcome:"):
+		return "In Progress" if raw.find("ongoing") >= 0 else raw.replace("Outcome:", "Result:")
+	if raw.begins_with("Reason:"):
+		return ""
+	if raw.find("placed") >= 0:
+		return "Ooze spreads"
+	if raw.find("converted block") >= 0:
+		return "Ooze evolves"
+	if raw.find("upgraded block") >= 0:
+		return "Strength increased"
+	if raw.find("struck") >= 0 or raw.find("shot") >= 0 or raw.find("splashed") >= 0 or raw.find("hit door") >= 0:
+		return "Ooze attack lands"
+	if raw.find("dissolved") >= 0:
+		return "Ooze dissolves"
+	if raw.find("defeated") >= 0:
+		return "Heart collapsed"
+	if raw == "Economy settled":
+		return "Energy flows"
+	if raw == "Stability advanced":
+		return "Ooze stabilizes"
+	if raw == "Reclaim settled":
+		return ""
+	return raw
 
 func _recompute_action_context() -> void:
+	var recompute_start_usec: int = _perf_begin()
 	_recompute_valid_targets()
 	_recompute_hover_context()
+	_perf_end("recompute_action_context", recompute_start_usec)
 
 func _recompute_valid_targets() -> void:
 	valid_place_targets.clear()
@@ -2093,6 +2343,65 @@ func _apply_tile_button_selection() -> void:
 func _set_tile_button_state(button: Button, selected: bool) -> void:
 	_set_control_button_state(button, selected)
 
+func _setup_clarity_overlays() -> void:
+	if ui_root == null:
+		return
+	objective_banner_label = _make_overlay_label("ObjectiveBanner", 13, Color(1.0, 0.93, 0.66, 1.0), Color(0.08, 0.06, 0.04, 0.78))
+	tutorial_prompt_label = _make_overlay_label("TutorialPrompt", 12, Color(0.86, 1.0, 0.88, 1.0), Color(0.04, 0.09, 0.06, 0.82))
+	hover_card_label = _make_overlay_label("HoverCard", 11, Color(0.92, 0.95, 0.88, 1.0), Color(0.05, 0.05, 0.05, 0.86))
+	tutorial_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hover_card_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_update_clarity_overlays()
+
+func _make_overlay_label(label_name: String, font_size: int, font_color: Color, background: Color) -> Label:
+	var label: Label = Label.new()
+	label.name = label_name
+	label.z_index = 60
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.clip_text = true
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", font_color)
+	var panel: StyleBoxFlat = StyleBoxFlat.new()
+	panel.bg_color = background
+	panel.border_color = Color(0.86, 0.65, 0.32, 0.72)
+	panel.border_width_left = 1
+	panel.border_width_top = 1
+	panel.border_width_right = 1
+	panel.border_width_bottom = 1
+	panel.corner_radius_top_left = 4
+	panel.corner_radius_top_right = 4
+	panel.corner_radius_bottom_left = 4
+	panel.corner_radius_bottom_right = 4
+	panel.set_content_margin(SIDE_LEFT, 8)
+	panel.set_content_margin(SIDE_RIGHT, 8)
+	panel.set_content_margin(SIDE_TOP, 5)
+	panel.set_content_margin(SIDE_BOTTOM, 5)
+	label.add_theme_stylebox_override("normal", panel)
+	ui_root.add_child(label)
+	return label
+
+func _update_clarity_overlays() -> void:
+	if objective_banner_label == null:
+		return
+	var board_region_rect: Rect2 = board_region.get_global_rect() if board_region != null else Rect2(Vector2(12, 130), Vector2(640, 360))
+	var top_end: float = top_panel.get_global_rect().end.y if top_panel != null else board_region_rect.position.y
+	objective_banner_label.text = "Objective: %s" % OBJECTIVE_TEXT
+	objective_banner_label.position = Vector2(board_region_rect.position.x + 12.0, top_end + 6.0)
+	objective_banner_label.size = Vector2(minf(640.0, board_region_rect.size.x - 24.0), 28.0)
+	objective_banner_label.visible = state != null and not run_over
+
+	var tutorial_text: String = _tutorial_prompt_text()
+	tutorial_prompt_label.text = tutorial_text
+	tutorial_prompt_label.visible = not tutorial_text.is_empty() and not run_over
+	tutorial_prompt_label.position = Vector2(board_region_rect.position.x + 12.0, board_region_rect.position.y + 12.0)
+	tutorial_prompt_label.size = Vector2(minf(420.0, board_region_rect.size.x - 24.0), 64.0)
+
+	var hover_text: String = _hover_card_text()
+	hover_card_label.text = hover_text
+	hover_card_label.visible = not hover_text.is_empty() and not run_over
+	hover_card_label.position = Vector2(board_region_rect.position.x + 12.0, maxf(board_region_rect.position.y + 92.0, board_region_rect.end.y - 86.0))
+	hover_card_label.size = Vector2(minf(460.0, board_region_rect.size.x - 24.0), 74.0)
+
 func _make_stylebox_texture(texture: Texture2D, margin: int, content: int) -> StyleBoxTexture:
 	var style: StyleBoxTexture = StyleBoxTexture.new()
 	style.texture = texture
@@ -2125,18 +2434,25 @@ func _set_status(message: String, duration: float) -> void:
 	status_message = message
 	status_timer = duration
 
+func _level_intro_status(level_options: Dictionary) -> String:
+	if state == null:
+		return ""
+	var theme: String = String(level_options.get("level_theme", ""))
+	var objective: String = "Objective: %s." % OBJECTIVE_TEXT
+	if state.level_index == 1:
+		return "Spread your ooze. Gather energy. Destroy the enemy heart to win."
+	if state.level_index == 5:
+		return "The Sealed Heart Awakens. %s." % objective
+	if not theme.is_empty():
+		return "Level %d %s: %s" % [state.level_index, theme, objective]
+	return "Level %d: %s" % [state.level_index, objective]
+
 func _debug_hint_text() -> String:
 	if state == null:
 		return ""
 
 	if hovered_tile == Vector2i(-1, -1) or not state.is_inside(hovered_tile):
-		var support_delta: int = int(state.card_modifiers.get("placement_support_delta", 0))
-		var open_support: int = maxi(1, GameState.MIN_SUPPORT_FOR_PLACEMENT + support_delta)
-		var corridor_support: int = maxi(1, GameState.MIN_SUPPORT_FOR_PLACEMENT - GameState.CORRIDOR_SUPPORT_DISCOUNT + support_delta)
-		return "Hover board tiles for details | Placement support >= %d (corridors: %d)." % [
-			open_support,
-			corridor_support
-		]
+		return "Hover a tile for details. Click an action, then click the board to queue growth."
 
 	var hovered_block: Dictionary = state.get_block_at(hovered_tile)
 	if not hovered_block.is_empty():
@@ -2147,11 +2463,8 @@ func _debug_hint_text() -> String:
 		var tier: int = int(hovered_block.get("upgrade_tier", 0))
 		var age: int = int(hovered_block.get("age", 0))
 		var support: int = state.count_owned_within_manhattan(owner_id, hovered_tile, 2)
-		var label: String = "Tile (%d,%d): %s #%d %s HP %d/%d U%d S%d %s" % [
-			hovered_tile.x,
-			hovered_tile.y,
+		var label: String = "%s %s: HP %d/%d, Tier %d, Support %d, %s" % [
 			_owner_relation_label(owner_id),
-			_owner_display_number(owner_id),
 			_tile_type_label(tile_type),
 			hp,
 			max_hp,
@@ -2160,20 +2473,158 @@ func _debug_hint_text() -> String:
 			_stability_label(age),
 		]
 		if bool(hovered_block.get("is_heart", false)):
-			label += " heart"
+			label = "%s Heart: destroy this to defeat that ooze. HP %d/%d" % [
+				_owner_relation_label(owner_id),
+				hp,
+				max_hp,
+			]
 		if owner_id == GameState.PLAYER_ID and tile_type != "basic" and tier < Combat.MAX_UPGRADE_TIER:
 			var plan: Dictionary = _build_player_queue_plan()
 			var upgrade_check: Dictionary = _validate_upgrade_target(hovered_block, plan)
 			if bool(upgrade_check.get("ok", false)):
-				label += " | upg cost %d" % int(upgrade_check.get("cost", 0))
+				label += " | Strengthen cost %d" % int(upgrade_check.get("cost", 0))
 		return label
 
-	var ground_text: String = "Ground (%d,%d): empty" % [hovered_tile.x, hovered_tile.y]
+	var resource_node: Dictionary = state.get_resource_node_at(hovered_tile)
+	if not resource_node.is_empty() and not bool(resource_node.get("consumed", false)):
+		var kind: String = String(resource_node.get("kind", "gem"))
+		if kind == "adventurer":
+			return "Fallen Adventurer: digest remains to gain an extra evolution."
+		if kind == "rat":
+			return "Dungeon Remains: digest for energy."
+		return "Resource Cache: claim this ground to feed your ooze."
+
+	if hovered_tile == state.door_tile and state.door_hp > 0:
+		return "Dungeon Door: break it to escape. HP %d/%d" % [state.door_hp, state.door_max_hp]
+	if hovered_tile == state.entrance_tile:
+		return "Dungeon Entrance: your ooze entered from here."
+
+	var ground_text: String = "Empty dungeon stone"
 	if not hover_invalid_reason.is_empty():
-		return "%s | %s" % [ground_text, hover_invalid_reason]
+		return "%s | %s" % [ground_text, _player_reason_text(hover_invalid_reason)]
 	if not hover_preview_action.is_empty():
-		return "%s | action preview valid" % ground_text
+		return "%s | %s" % [ground_text, _action_preview_text(hover_preview_action)]
 	return ground_text
+
+func _hover_card_text() -> String:
+	if state == null:
+		return ""
+	if hovered_tile == Vector2i(-1, -1) or not state.is_inside(hovered_tile):
+		return ""
+	var hovered_block: Dictionary = state.get_block_at(hovered_tile)
+	if not hovered_block.is_empty():
+		var owner_id: int = int(hovered_block.get("owner", 0))
+		var tile_type: String = String(hovered_block.get("tile_type", "basic"))
+		var hp: int = int(hovered_block.get("hp", 0))
+		var max_hp: int = int(hovered_block.get("max_hp", hp))
+		if bool(hovered_block.get("is_heart", false)):
+			return "%s Heart\nDestroy enemy hearts to win. HP %d/%d." % [_owner_relation_label(owner_id), hp, max_hp]
+		var info: Dictionary = ROLE_INFO.get(tile_type, {})
+		var title: String = String(info.get("name", _tile_type_label(tile_type)))
+		var effect: String = String(info.get("effect", ""))
+		var cost_text: String = ""
+		if owner_id == GameState.PLAYER_ID:
+			cost_text = " Selected action: %s." % _tile_type_label(selected_tile_type)
+		return "%s %s\n%s%s" % [_owner_relation_label(owner_id), title, effect, cost_text]
+
+	var resource_node: Dictionary = state.get_resource_node_at(hovered_tile)
+	if not resource_node.is_empty() and not bool(resource_node.get("consumed", false)):
+		var kind: String = String(resource_node.get("kind", "gem"))
+		if kind == "adventurer":
+			return "Fallen Adventurer\nDigest remains to gain an extra evolution. Risky, valuable, very on-brand."
+		if kind == "rat":
+			return "Dungeon Remains\nClaim this tile to feed your ooze."
+		return "Resource Cache\nClaim this tile to improve your energy flow."
+
+	if hovered_tile == state.door_tile and state.door_hp > 0:
+		return "Dungeon Door\nBreak it to win this level. HP %d/%d." % [state.door_hp, state.door_max_hp]
+
+	if not hover_preview_action.is_empty():
+		return "Action Preview\n%s" % _action_preview_text(hover_preview_action)
+	if not hover_invalid_reason.is_empty():
+		return "Cannot Grow Here\n%s" % _player_reason_text(hover_invalid_reason)
+	return ""
+
+func _tutorial_prompt_text() -> String:
+	if state == null or _is_spectator_mode():
+		return ""
+	if state.level_index == 1:
+		if state.turn_index <= 0:
+			return "Spread your ooze: choose Basic, then click a glowing green tile."
+		if state.turn_index == 1:
+			return "Your ooze generates energy each turn. Use it to evolve Melee, Ranged, Defense, or Gather growths."
+		if state.turn_index <= 2:
+			return "Destroy the enemy heart or break the dungeon door to clear the level."
+	if state.level_index == 4 and _has_unclaimed_adventurer_reward():
+		return "Fallen Adventurer nearby: digest remains to gain an extra evolution."
+	if state.level_index == 5 and state.turn_index <= 1:
+		return "The Sealed Heart Awakens. Break it before the dungeon consumes you."
+	return ""
+
+func _has_unclaimed_adventurer_reward() -> bool:
+	if state == null:
+		return false
+	for node in state.resource_nodes:
+		if not bool(node.get("upgrade_reward", false)):
+			continue
+		if bool(node.get("upgrade_claimed", false)):
+			continue
+		if bool(node.get("consumed", false)):
+			continue
+		return true
+	return false
+
+func _action_preview_text(action: Dictionary) -> String:
+	var kind: String = String(action.get("type", ""))
+	match kind:
+		"place_tile":
+			return "Spread %s here for %d energy." % [
+				_tile_type_label(String(action.get("tile_type", "basic"))),
+				int(action.get("cost", 0)),
+			]
+		"convert_tile":
+			return "Evolve this tile into %s." % _tile_type_label(String(action.get("to_type", "basic")))
+		"upgrade_tile":
+			return "Strengthen this %s for %d energy." % [
+				_tile_type_label(String(action.get("tile_type", "basic"))),
+				int(action.get("cost", 0)),
+			]
+	return "Queue this action."
+
+func _player_reason_text(reason: String) -> String:
+	match reason:
+		"out of bounds":
+			return "that is outside the battlefield."
+		"blocked cave wall":
+			return "a wall blocks the ooze."
+		"cell reforming":
+			return "that space is still reforming."
+		"entrance tile":
+			return "the entrance cannot be occupied."
+		"exit tile":
+			return "the dungeon door is an objective, not a growth tile."
+		"not empty":
+			return "there is already something there."
+		"not owned":
+			return "you can only evolve your own ooze."
+		"already queued":
+			return "you already queued growth there."
+		"insufficient energy":
+			return "you need more energy."
+		"requires basic tile":
+			return "only Basic ooze can evolve into a role."
+		"basic cannot upgrade":
+			return "Basic ooze must evolve before it can be strengthened."
+		"max tier reached":
+			return "that growth is already fully strengthened."
+		"conflict in turn resolution":
+			return "another queued action would conflict this turn."
+		_:
+			if reason.begins_with("needs more support"):
+				return "spread from connected ooze or through a corridor first."
+			if reason.begins_with("already "):
+				return "that tile already has this role."
+			return reason if not reason.is_empty() else "that action is not valid."
 
 func _owner_relation_label(owner_id: int) -> String:
 	if owner_id == GameState.PLAYER_ID:
@@ -2181,6 +2632,13 @@ func _owner_relation_label(owner_id: int) -> String:
 	if state.are_hostile(GameState.PLAYER_ID, owner_id):
 		return "Enemy"
 	return "Ally"
+
+func _owner_public_name(owner_id: int) -> String:
+	if owner_id == GameState.PLAYER_ID:
+		return "Player ooze"
+	if state != null and state.are_hostile(GameState.PLAYER_ID, owner_id):
+		return "Enemy ooze %d" % _owner_display_number(owner_id)
+	return "Allied ooze %d" % _owner_display_number(owner_id)
 
 func _tile_type_label(tile_type: String) -> String:
 	match tile_type:
@@ -2229,6 +2687,7 @@ func _update_board_layout(force: bool = false) -> void:
 	board_origin = Vector2(centered_x, centered_y)
 	if _use_3d_world():
 		_update_3d_layout(region)
+	_update_clarity_overlays()
 	_queue_world_redraw()
 
 func _update_3d_layout(region: Rect2) -> void:
@@ -2295,3 +2754,43 @@ func _fit_line(text: String, max_chars: int) -> String:
 	if text.length() <= max_chars:
 		return text
 	return "%s..." % text.substr(0, max_chars - 3)
+
+func get_performance_counters() -> Dictionary:
+	var out: Dictionary = _perf_counters.duplicate(true)
+	for key_variant in _perf_timings_usec.keys():
+		var key: String = String(key_variant)
+		var total_usec: float = float(_perf_timings_usec[key])
+		var count: int = int(_perf_timing_counts.get(key, 0))
+		out["%s_total_ms" % key] = total_usec / 1000.0
+		out["%s_count" % key] = count
+		out["%s_avg_ms" % key] = total_usec / maxf(1.0, float(count)) / 1000.0
+	if state != null:
+		out["last_log_entries"] = state.last_log.size()
+		out["block_count"] = state.blocks.size()
+		out["resource_node_count"] = state.resource_nodes.size()
+		out["turn_index"] = state.turn_index
+	out["queued_actions_count"] = queued_actions.size()
+	out["enemy_intent_actions_count"] = enemy_intent_actions.size()
+	out["valid_place_targets_count"] = valid_place_targets.size()
+	out["valid_convert_targets_count"] = valid_convert_targets.size()
+	out["pulse_batch_count"] = pulse_batches.size()
+	out["actor_cycle_count"] = actor_cycle_order.size()
+	return out
+
+func reset_performance_counters() -> void:
+	_perf_counters.clear()
+	_perf_timings_usec.clear()
+	_perf_timing_counts.clear()
+
+func _perf_begin() -> int:
+	return Time.get_ticks_usec()
+
+func _perf_end(category: String, started_usec: int) -> void:
+	if started_usec <= 0:
+		return
+	var elapsed: int = maxi(0, Time.get_ticks_usec() - started_usec)
+	_perf_timings_usec[category] = float(_perf_timings_usec.get(category, 0.0)) + float(elapsed)
+	_perf_timing_counts[category] = int(_perf_timing_counts.get(category, 0)) + 1
+
+func _perf_increment(key: String, amount: int = 1) -> void:
+	_perf_counters[key] = int(_perf_counters.get(key, 0)) + amount

@@ -1,6 +1,6 @@
 extends Node
 
-const MAX_LEVELS: int = 3
+const MAX_LEVELS: int = 5
 const DEFAULT_TURN_LIMIT: int = 50
 const DEFAULT_DOOR_HP: int = 32
 const NORMAL_PLAYER_ENERGY: int = 10
@@ -65,9 +65,119 @@ const UPGRADE_POOL: Array = [
 ]
 
 const LEVEL_SETUPS: Dictionary = {
-	1: {"name": "1v1", "player_clusters": 1, "ally_ai_count": 0, "enemy_clusters": 1},
-	2: {"name": "2v2", "player_clusters": 1, "ally_ai_count": 1, "enemy_clusters": 2},
-	3: {"name": "1v3", "player_clusters": 1, "ally_ai_count": 0, "enemy_clusters": 3},
+	1: {
+		"name": "Awakening",
+		"theme": "Onboarding",
+		"description": "Simple chamber: spread, gather energy, and destroy the enemy hearts or break the door.",
+		"player_clusters": 1,
+		"ally_ai_count": 0,
+		"enemy_clusters": 1,
+		"player_energy_bonus": 8,
+		"enemy_energy_bonus": -5,
+		"player_income_delta": 2,
+		"player_max_actions": 5,
+		"enemy_income_delta": -2,
+		"enemy_max_actions": 1,
+		"player_heart_max": 1,
+		"enemy_heart_max": 1,
+		"player_cluster_size_min": 5,
+		"player_cluster_size_max": 5,
+		"enemy_cluster_size_min": 1,
+		"enemy_cluster_size_max": 1,
+		"turn_limit": 30,
+		"door_hp": 12,
+	},
+	2: {
+		"name": "Narrow Halls",
+		"theme": "Chokepoints",
+		"description": "A split corridor fight where walls force contact through narrow lanes.",
+		"player_clusters": 1,
+		"ally_ai_count": 0,
+		"enemy_clusters": 1,
+		"player_energy_bonus": 6,
+		"enemy_energy_bonus": -4,
+		"player_income_delta": 2,
+		"player_max_actions": 5,
+		"enemy_income_delta": -1,
+		"enemy_max_actions": 1,
+		"player_heart_max": 1,
+		"enemy_heart_max": 1,
+		"player_cluster_size_min": 5,
+		"player_cluster_size_max": 6,
+		"enemy_cluster_size_min": 1,
+		"enemy_cluster_size_max": 1,
+		"turn_limit": 36,
+		"door_hp": 14,
+	},
+	3: {
+		"name": "Forked Vault",
+		"theme": "Multi-front",
+		"description": "Multiple enemy hearts pressure separate fronts and reward smart territory choices.",
+		"player_clusters": 1,
+		"ally_ai_count": 0,
+		"enemy_clusters": 2,
+		"player_energy_bonus": 6,
+		"enemy_energy_bonus": -4,
+		"player_income_delta": 2,
+		"player_max_actions": 5,
+		"enemy_income_delta": -1,
+		"enemy_max_actions": 1,
+		"player_heart_max": 2,
+		"enemy_heart_max": 1,
+		"player_cluster_size_min": 5,
+		"player_cluster_size_max": 6,
+		"enemy_cluster_size_min": 1,
+		"enemy_cluster_size_max": 1,
+		"turn_limit": 44,
+		"door_hp": 18,
+	},
+	4: {
+		"name": "Starving Gallery",
+		"theme": "Pressure",
+		"description": "Lower margin for delay, with a risky fallen adventurer offering an extra evolution.",
+		"player_clusters": 1,
+		"ally_ai_count": 0,
+		"enemy_clusters": 2,
+		"player_energy_bonus": 7,
+		"enemy_energy_bonus": -3,
+		"player_income_delta": 2,
+		"player_max_actions": 5,
+		"enemy_income_delta": -1,
+		"enemy_max_actions": 2,
+		"player_heart_max": 2,
+		"enemy_heart_max": 1,
+		"player_cluster_size_min": 5,
+		"player_cluster_size_max": 6,
+		"enemy_cluster_size_min": 2,
+		"enemy_cluster_size_max": 2,
+		"turn_limit": 44,
+		"door_hp": 20,
+		"loot_upgrade": true,
+	},
+	5: {
+		"name": "The Sealed Heart",
+		"theme": "Miniboss",
+		"description": "A tighter arena around a reinforced enemy heart with upgraded defenders.",
+		"player_clusters": 1,
+		"ally_ai_count": 0,
+		"enemy_clusters": 1,
+		"player_energy_bonus": 8,
+		"enemy_energy_bonus": -14,
+		"player_income_delta": 2,
+		"player_max_actions": 5,
+		"enemy_income_delta": -2,
+		"enemy_max_actions": 1,
+		"player_heart_max": 2,
+		"enemy_heart_max": 1,
+		"player_cluster_size_min": 6,
+		"player_cluster_size_max": 6,
+		"enemy_cluster_size_min": 3,
+		"enemy_cluster_size_max": 3,
+		"turn_limit": 50,
+		"door_hp": 18,
+		"miniboss": true,
+		"boss_core_hp_bonus": 9,
+	},
 }
 
 var run_active: bool = false
@@ -148,11 +258,13 @@ func build_level_options() -> Dictionary:
 		enemy_clusters = dev_enemy_team_size
 
 	var base_player_energy: int = NORMAL_PLAYER_ENERGY + current_level
+	base_player_energy += int(setup.get("player_energy_bonus", 0))
 	if dev_mode:
 		base_player_energy = DEV_PLAYER_ENERGY
 
 	var base_enemy_energy: int = NORMAL_ENEMY_ENERGY + current_level
-	var turn_limit: int = DEFAULT_TURN_LIMIT
+	base_enemy_energy += int(setup.get("enemy_energy_bonus", 0))
+	var turn_limit: int = int(setup.get("turn_limit", DEFAULT_TURN_LIMIT))
 	if dev_mode and dev_spectator_mode:
 		turn_limit = 0
 	return {
@@ -162,11 +274,32 @@ func build_level_options() -> Dictionary:
 		"player_start_energy": base_player_energy,
 		"ally_start_energy": base_player_energy,
 		"enemy_start_energy": base_enemy_energy,
+		"player_income_delta": int(setup.get("player_income_delta", 0)),
+		"ally_income_delta": int(setup.get("ally_income_delta", setup.get("player_income_delta", 0))),
+		"enemy_income_delta": int(setup.get("enemy_income_delta", 0)),
+		"player_max_actions": int(setup.get("player_max_actions", 3)),
+		"ally_max_actions": int(setup.get("ally_max_actions", setup.get("player_max_actions", 3))),
+		"enemy_max_actions": int(setup.get("enemy_max_actions", 3)),
+		"player_heart_max": int(setup.get("player_heart_max", 3)),
+		"ally_heart_max": int(setup.get("ally_heart_max", setup.get("player_heart_max", 3))),
+		"enemy_heart_max": int(setup.get("enemy_heart_max", 3)),
+		"player_cluster_size_min": int(setup.get("player_cluster_size_min", 3)),
+		"player_cluster_size_max": int(setup.get("player_cluster_size_max", 6)),
+		"ally_cluster_size_min": int(setup.get("ally_cluster_size_min", setup.get("player_cluster_size_min", 3))),
+		"ally_cluster_size_max": int(setup.get("ally_cluster_size_max", setup.get("player_cluster_size_max", 5))),
+		"enemy_cluster_size_min": int(setup.get("enemy_cluster_size_min", 3)),
+		"enemy_cluster_size_max": int(setup.get("enemy_cluster_size_max", 6)),
 		"enemies_allied": enemies_allied,
 		"dev_player_immortal": dev_player_immortal,
 		"dev_spectator_mode": dev_spectator_mode,
 		"turn_limit": turn_limit,
-		"door_hp": DEFAULT_DOOR_HP,
+		"door_hp": int(setup.get("door_hp", DEFAULT_DOOR_HP)),
+		"use_curated_vertical_slice": true,
+		"level_theme": String(setup.get("theme", "")),
+		"level_description": String(setup.get("description", "")),
+		"loot_upgrade": bool(setup.get("loot_upgrade", false)),
+		"miniboss": bool(setup.get("miniboss", false)),
+		"boss_core_hp_bonus": int(setup.get("boss_core_hp_bonus", 0)),
 	}
 
 func get_level_seed() -> int:
@@ -189,8 +322,8 @@ func prepare_victory(level_index: int, reason: String) -> void:
 		return
 
 	run_active = false
-	result_title = "RUN COMPLETE"
-	result_message = "All levels cleared."
+	result_title = "VERTICAL SLICE COMPLETE"
+	result_message = "The sealed heart is dissolved.\nFive levels cleared; the full 10-level run structure is ready to expand."
 	result_next_scene = "res://scenes/MainMenu.tscn"
 	result_button_text = "Main Menu"
 	result_auto_advance = false

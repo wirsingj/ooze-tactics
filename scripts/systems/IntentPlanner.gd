@@ -19,7 +19,10 @@ func build_enemy_intents(state: GameState, ai: RefCounted, min_expand_adjacent_b
 		var min_adjacent: int = default_min_expand_adjacent
 		if min_expand_adjacent_by_owner.has(enemy_id):
 			min_adjacent = int(min_expand_adjacent_by_owner[enemy_id])
-		intents.append_array(ai.choose_actions(state, enemy_id, min_adjacent))
+		var owner_actions: Array = ai.choose_actions(state, enemy_id, min_adjacent)
+		if owner_actions.is_empty():
+			owner_actions = [{"type": "pass", "owner": enemy_id}]
+		intents.append_array(owner_actions)
 
 	return intents
 

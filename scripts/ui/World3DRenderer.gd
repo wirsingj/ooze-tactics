@@ -1,6 +1,12 @@
 extends Node3D
 class_name World3DRenderer
 
+const World3DAssetsScript: GDScript = preload("res://scripts/ui/world3d/World3DAssets.gd")
+const World3DLightingScript: GDScript = preload("res://scripts/ui/world3d/World3DLighting.gd")
+const MarkerLayerRendererScript: GDScript = preload("res://scripts/ui/world3d/MarkerLayerRenderer.gd")
+const StaticEnvironmentBuilderScript: GDScript = preload("res://scripts/ui/world3d/StaticEnvironmentBuilder.gd")
+const DynamicOozeRendererScript: GDScript = preload("res://scripts/ui/world3d/DynamicOozeRenderer.gd")
+
 const PLAYER_TINT: Color = Color(0.33, 0.90, 0.44, 1.0)
 const CAVE_FLOOR_BASE: Color = Color(0.22, 0.22, 0.23, 1.0)
 const CAVE_FLOOR_ALT: Color = Color(0.12, 0.12, 0.13, 1.0)
@@ -19,12 +25,25 @@ const CAMERA_DRAG_THRESHOLD: float = 6.0
 const DRAG_NONE: int = 0
 const DRAG_ORBIT: int = 1
 const DRAG_PAN: int = 2
-const OOZE_MASK_SCALE: int = 10
+const OOZE_MASK_SCALE: int = 16
 const OOZE_MASK_SMOOTH_PASSES: int = 2
 const OOZE_ENABLE_FRAGMENTED_SURFACE_DETAILS: bool = false
 const PHASED_BUILD_MODE_ENABLED: bool = false
-const STRICT_ENV_ASSET_KIT_ONLY: bool = true
 const ASSET_MANIFEST_PATH: String = "res://data/world3d_asset_manifest.json"
+const FLOOR_SURFACE_TOP_OFFSET: float = 0.115
+const OOZE_SURFACE_OFFSET: float = 0.090
+const OOZE_BASE_SURFACE_OFFSET: float = 0.165
+const OOZE_GROWTH_BASE_OFFSET: float = 0.180
+const OOZE_BASE_THICKNESS: float = 0.30
+const OOZE_MIN_VALUE: float = 0.48
+const OOZE_MIN_LUMA: float = 0.20
+const OOZE_MAX_SATURATION: float = 1.0
+const OOZE_GROWTH_MIN_VALUE: float = 0.50
+const OOZE_GROWTH_MIN_LUMA: float = 0.21
+const INNER_WALL_TILE_FOOTPRINT: float = 0.86
+const INNER_WALL_HEIGHT: float = 1.82
+const FRONT_WALL_CUTOUT_MIN: float = 0.24
+const FRONT_WALL_CUTOUT_MAX: float = 0.76
 
 # Known-good stabilization lock for gameplay readability.
 # Future art experiments should preserve this as the quick revert baseline.
@@ -40,22 +59,21 @@ const STABILIZATION_CAMERA_BASELINE := {
 	"distance_max": CAMERA_MAX_DISTANCE,
 }
 const STABILIZATION_ENV_BASELINE := {
-	"background_color": Color(0.026, 0.024, 0.031, 1.0),
-	"ambient_color": Color(0.30, 0.29, 0.32, 1.0),
-	"ambient_energy": 0.82,
-	"brightness": 1.12,
-	"contrast": 1.24,
-	"saturation": 0.96,
+	"background_color": Color(0.040, 0.040, 0.044, 1.0),
+	"ambient_color": Color(0.52, 0.52, 0.51, 1.0),
+	"ambient_energy": 0.96,
+	"brightness": 1.06,
+	"contrast": 1.08,
+	"saturation": 0.78,
 	"fog_enabled": true,
-	"fog_density": 0.010,
+	"fog_density": 0.003,
 }
 const STABILIZATION_LIGHT_BASELINE := {
-	"key_energy": 3.42,
-	"fill_energy": 0.98,
-	"fill_range": 70.0,
-	"rim_energy": 0.50,
+	"key_energy": 0.32,
+	"fill_energy": 0.62,
+	"fill_range": 42.0,
+	"rim_energy": 0.14,
 }
-const ENABLE_CAVE_CEILING: bool = false
 
 const POOL_SHADER_CODE: String = """
 shader_type spatial;
@@ -67,17 +85,22 @@ uniform sampler2D detail_tex;
 uniform vec2 texel_size = vec2(0.01, 0.01);
 uniform float pulse_speed = 0.22;
 uniform float bubble_strength = 0.0015;
-uniform float emission_strength = 0.010;
+uniform float emission_strength = 0.007;
 uniform float detail_scale = 6.2;
 uniform float body_thickness = 0.010;
 uniform float lip_thickness = 0.018;
 uniform float flow_scale = 1.34;
 uniform float flow_speed = 0.010;
-uniform float flow_normal_strength = 0.36;
-uniform float edge_darkening_strength = 0.18;
-uniform float contact_darkening_strength = 0.10;
-uniform float clearcoat_strength = 0.64;
-uniform float specular_strength = 0.56;
+uniform float flow_normal_strength = 0.32;
+uniform float edge_darkening_strength = 0.22;
+uniform float contact_darkening_strength = 0.14;
+uniform float clearcoat_strength = 0.56;
+uniform float specular_strength = 0.50;
+uniform float rim_highlight_strength = 0.18;
+uniform float acid_glow_strength = 0.020;
+uniform float edge_wobble_strength = 0.055;
+uniform float inner_pulse_strength = 0.010;
+uniform float bubble_pop_strength = 0.20;
 
 float hash12(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -113,19 +136,24 @@ void vertex() {
 	float flow = texture(detail_tex, flow_uv).r - 0.5;
 	float bulge = fbm(UV * (detail_scale * 0.32) + vec2(TIME * flow_speed * 0.35, -TIME * flow_speed * 0.21));
 	float wave = sin((VERTEX.x * 1.1 + VERTEX.z * 1.0) + TIME * pulse_speed);
+	float slow_pulse = sin(TIME * (pulse_speed * 1.9) + fbm(UV * 3.4) * 6.2831);
+	float bubble_lift = smoothstep(0.68, 0.96, fbm(UV * 18.0 + vec2(TIME * 0.11, -TIME * 0.09)));
 	VERTEX.y += body * body_thickness * (0.55 + bulge * 0.65)
 		+ lip * lip_thickness
 		+ flow * bubble_strength
-		+ wave * bubble_strength * 0.40;
+		+ wave * bubble_strength * 0.40
+		+ body * slow_pulse * inner_pulse_strength
+		+ body * bubble_lift * bubble_strength * 1.75;
 }
 
 void fragment() {
 	float m0 = texture(mask_tex, UV).a;
-	float m1 = texture(mask_tex, UV + vec2(texel_size.x, 0.0)).a;
-	float m2 = texture(mask_tex, UV + vec2(0.0, texel_size.y)).a;
-	float m3 = texture(mask_tex, UV + vec2(texel_size.x, texel_size.y)).a;
-	float mask = clamp(m0 * 0.60 + (m1 + m2) * 0.15 + m3 * 0.10, 0.0, 1.0);
-	float alpha = smoothstep(0.20, 0.90, mask);
+	// Keep wall carving absolute; do not blur back into blocked pixels.
+	float mask = m0;
+	float boundary_noise = fbm(UV * 28.0 + vec2(TIME * 0.018, -TIME * 0.014));
+	float edge_zone = 1.0 - smoothstep(0.58, 0.96, mask);
+	float alpha_threshold = 0.10 + boundary_noise * edge_wobble_strength * edge_zone;
+	float alpha = smoothstep(alpha_threshold, 0.92, mask);
 	if (alpha < 0.02) {
 		discard;
 	}
@@ -142,72 +170,55 @@ void fragment() {
 	float flowy = texture(detail_tex, flow_uv + vec2(0.0, 0.01)).r;
 	vec2 flow_grad = vec2(flowx - flow0, flowy - flow0);
 	float broad = fbm(UV * (detail_scale * 0.38) + vec2(TIME * 0.02, -TIME * 0.015));
+	float veins = smoothstep(0.56, 0.88, fbm(flow_uv * 0.42 + vec2(TIME * 0.04, -TIME * 0.03)));
 	float shimmer = 0.5 + 0.5 * sin(TIME * pulse_speed + UV.x * 2.0 + UV.y * 1.7);
+	vec2 bubble_grid = UV * vec2(18.0, 12.0);
+	vec2 bubble_cell = floor(bubble_grid);
+	vec2 bubble_uv = fract(bubble_grid);
+	float bubble_seed = hash12(bubble_cell);
+	vec2 bubble_center = vec2(0.30 + hash12(bubble_cell + vec2(4.1, 1.7)) * 0.40, 0.30 + hash12(bubble_cell + vec2(2.3, 8.9)) * 0.40);
+	float bubble_phase = fract(TIME * (0.10 + bubble_seed * 0.06) + bubble_seed);
+	float bubble_dist = length(bubble_uv - bubble_center);
+	float bubble_ring = smoothstep(0.115 + bubble_phase * 0.11, 0.045 + bubble_phase * 0.11, abs(bubble_dist - (0.035 + bubble_phase * 0.095)));
+	float bubble_flash = bubble_ring * smoothstep(0.72, 0.98, bubble_phase) * smoothstep(0.20, 0.82, body) * (1.0 - edge * 0.60);
+	float living_pulse = 0.5 + 0.5 * sin(TIME * pulse_speed * 2.2 + broad * 4.8);
 
 	vec2 normal_xy = flow_grad * flow_normal_strength + grad * edge * 0.34;
+	normal_xy += (bubble_uv - bubble_center) * bubble_flash * 0.16;
 	vec3 mapped_normal = normalize(vec3(normal_xy, 1.0));
 	NORMAL_MAP = mapped_normal * 0.5 + 0.5;
 	NORMAL_MAP_DEPTH = 1.0;
 
-	vec3 dark_tint = mix(owner_color.rgb * 0.48, vec3(0.03, 0.04, 0.05), 0.36);
-	vec3 mid_tint = owner_color.rgb * 0.86;
+	vec3 acid_shadow = vec3(0.025, 0.032, 0.030);
+	vec3 dark_tint = mix(owner_color.rgb * 0.34, acid_shadow, 0.38);
+	vec3 mid_tint = mix(owner_color.rgb * 0.74, vec3(0.08, 0.12, 0.10), 0.16);
 	vec3 col = mix(dark_tint, mid_tint, body);
-	col *= 0.86 + broad * 0.16 + shimmer * 0.05;
-	col = mix(col, col * 0.80, edge * edge_darkening_strength * 2.0);
-	col = mix(col, col * 0.74, edge * contact_darkening_strength * 2.0);
+	col *= 0.76 + broad * 0.14 + shimmer * 0.035 + living_pulse * inner_pulse_strength * 1.8;
+	col = mix(col, col * 1.16, veins * 0.14 * body);
 	float fres = pow(1.0 - clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0), 2.4);
+	vec3 rim_col = mix(owner_color.rgb, vec3(0.92, 1.0, 0.86), 0.24);
+	col = mix(col, col * 0.76, edge * edge_darkening_strength);
+	col = mix(col, col * 0.78, edge * contact_darkening_strength);
+	col += rim_col * fres * rim_highlight_strength * (0.48 + edge * 0.30 + body * 0.12);
+	col += rim_col * veins * body * 0.018;
+	col += rim_col * bubble_flash * bubble_pop_strength * 0.24;
 
 	ALBEDO = col;
-	ROUGHNESS = clamp(0.40 - body * 0.06 + (1.0 - broad) * 0.14 + edge * 0.08, 0.22, 0.68);
+	ROUGHNESS = clamp(0.62 - body * 0.08 + (1.0 - broad) * 0.12 + edge * 0.08, 0.38, 0.86);
 	METALLIC = 0.0;
-	SPECULAR = specular_strength + fres * 0.12;
-	CLEARCOAT = clearcoat_strength * (0.46 + edge * 0.18);
-	EMISSION = owner_color.rgb * emission_strength * (0.06 + edge * 0.12 + broad * 0.05 + fres * 0.10);
-	ALPHA = alpha * (0.76 + edge * 0.16);
-}
-"""
-
-const HAZE_SHADER_CODE: String = """
-shader_type spatial;
-render_mode blend_mix, depth_draw_never, cull_disabled, unshaded;
-
-uniform vec4 haze_color : source_color = vec4(0.36, 0.33, 0.28, 0.08);
-uniform float noise_scale = 5.0;
-uniform float drift_speed = 0.020;
-
-float hash12(vec2 p) {
-	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-}
-
-float noise(vec2 p) {
-	vec2 i = floor(p);
-	vec2 f = fract(p);
-	float a = hash12(i);
-	float b = hash12(i + vec2(1.0, 0.0));
-	float c = hash12(i + vec2(0.0, 1.0));
-	float d = hash12(i + vec2(1.0, 1.0));
-	vec2 u = f * f * (3.0 - 2.0 * f);
-	return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
-}
-
-void fragment() {
-	vec2 uv0 = UV * noise_scale + vec2(TIME * drift_speed, -TIME * drift_speed * 0.7);
-	vec2 uv1 = UV * (noise_scale * 1.9) - vec2(TIME * drift_speed * 0.5, TIME * drift_speed * 0.35);
-	float n0 = noise(uv0);
-	float n1 = noise(uv1);
-	float veil = clamp(n0 * 0.62 + n1 * 0.38, 0.0, 1.0);
-	float fade = smoothstep(0.02, 0.22, UV.x) * smoothstep(0.02, 0.22, UV.y) *
-		(1.0 - smoothstep(0.78, 0.98, UV.x)) * (1.0 - smoothstep(0.78, 0.98, UV.y));
-	float alpha = haze_color.a * (0.45 + veil * 0.55) * fade;
-	ALBEDO = haze_color.rgb;
-	EMISSION = haze_color.rgb * 0.018;
-	ALPHA = alpha;
+	SPECULAR = specular_strength + fres * 0.08;
+	CLEARCOAT = clearcoat_strength * (0.34 + edge * 0.12);
+	EMISSION = owner_color.rgb * emission_strength * (0.14 + edge * 0.24 + broad * 0.06)
+		+ rim_col * acid_glow_strength * fres * (0.30 + edge * 0.24)
+		+ rim_col * acid_glow_strength * veins * body * 0.11
+		+ rim_col * bubble_flash * bubble_pop_strength * 0.12;
+	ALPHA = clamp(alpha * (0.98 + edge * 0.04), 0.0, 1.0);
 }
 """
 
 const STONE_SHADER_CODE: String = """
 shader_type spatial;
-render_mode diffuse_burley, specular_schlick_ggx;
+render_mode diffuse_burley, specular_schlick_ggx, cull_disabled;
 
 uniform vec4 stone_base : source_color = vec4(0.30, 0.24, 0.19, 1.0);
 uniform vec4 stone_alt : source_color = vec4(0.19, 0.16, 0.14, 1.0);
@@ -216,9 +227,14 @@ uniform float uv_scale = 12.0;
 uniform sampler2D detail_albedo_tex : source_color;
 uniform sampler2D detail_roughness_tex;
 uniform sampler2D detail_normal_tex : hint_normal;
-uniform float detail_mix = 0.52;
-uniform float normal_strength = 0.42;
-uniform float height_amp = 0.012;
+uniform float detail_mix = 0.62;
+uniform float normal_strength = 0.52;
+uniform float height_amp = 0.016;
+uniform float tile_variation_strength = 0.035;
+uniform float seam_strength = 0.40;
+uniform float detail_color_strength = 0.018;
+uniform float min_midtone = 0.250;
+uniform float max_midtone = 0.430;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -240,36 +256,38 @@ void vertex() {
 	float n0 = noise(p);
 	float n1 = noise(p * 1.8 + vec2(2.8, 4.4));
 	float disp = (n0 * 0.60 + n1 * 0.40) - 0.5;
-	VERTEX.y += disp * height_amp;
+	VERTEX.y += disp * height_amp * 0.18;
 }
 
 void fragment() {
-	vec2 macro_uv = UV * max(1.0, uv_scale * 0.16);
-	float n0 = noise(macro_uv);
-	float n1 = noise(macro_uv * 1.7 + vec2(3.2, 6.8));
-	float n2 = noise(macro_uv * 2.3 + vec2(7.1, 1.9));
-	float blend = clamp(n0 * 0.54 + n1 * 0.34 + n2 * 0.12, 0.0, 1.0);
-	float striations = noise(macro_uv * 3.6 + vec2(5.2, 1.4));
-	striations = smoothstep(0.62, 0.88, striations);
-	float cracks = abs(sin(macro_uv.x * 17.0 + n1 * 5.8) * cos(macro_uv.y * 15.0 - n2 * 6.6));
-	cracks = smoothstep(0.74, 0.97, cracks);
-	float mineral = noise(macro_uv * 4.8 + vec2(1.7, 9.3));
-	float damp = smoothstep(0.56, 0.90, n2);
+	vec2 tile_coord = floor(UV);
+	vec2 tile_uv = fract(UV);
+	vec2 tile_edge_dist = abs(tile_uv - vec2(0.5));
+	float tile_hash = hash(tile_coord + vec2(13.0, 29.0));
+	float stone_mix = clamp(0.60 + (tile_hash - 0.5) * tile_variation_strength, 0.0, 1.0);
+	float seam = smoothstep(0.438, 0.494, max(tile_edge_dist.x, tile_edge_dist.y));
+	float fine_wear = noise(UV * max(1.0, uv_scale * 0.20) + vec2(2.1, 4.7));
+	float seam_crack_noise = noise(tile_coord * 1.73 + vec2(tile_uv.x * 7.0, tile_uv.y * 7.0));
+	float cracks = seam * smoothstep(0.62, 0.92, seam_crack_noise);
 	vec2 tex_uv = UV * max(1.0, uv_scale * 0.08);
 	vec3 detail_col = texture(detail_albedo_tex, tex_uv).rgb;
 	float detail_rough = texture(detail_roughness_tex, tex_uv).r;
 	vec3 detail_nrm = texture(detail_normal_tex, tex_uv).rgb;
-	vec3 stone = mix(stone_alt.rgb, stone_base.rgb, blend);
-	stone = mix(stone, detail_col, detail_mix * 0.26);
-	stone = mix(stone, damp_tint.rgb, damp * 0.18);
-	stone = mix(stone, stone * 0.78, striations * 0.18 + cracks * 0.26);
-	stone = mix(stone, stone * 1.06, mineral * 0.10);
-	float wet = clamp(damp * 0.64 + (1.0 - blend) * 0.12, 0.0, 1.0);
+	vec3 stone = mix(stone_alt.rgb, stone_base.rgb, stone_mix);
+	stone = mix(stone, detail_col, detail_mix * detail_color_strength);
+	stone = mix(stone, damp_tint.rgb, cracks * 0.10);
+	stone = mix(stone, stone * 0.82, seam * seam_strength + cracks * 0.18);
+	stone = mix(stone, stone * 1.025, fine_wear * 0.045);
+	float view_rim = pow(1.0 - clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0), 2.0);
+	stone = mix(stone, stone * 1.045, view_rim * 0.10);
+	float stone_luma = dot(stone, vec3(0.299, 0.587, 0.114));
+	stone = mix(vec3(stone_luma), stone, 0.08);
+	stone = clamp(stone, vec3(min_midtone, min_midtone + 0.005, min_midtone + 0.008), vec3(max_midtone, max_midtone + 0.005, max_midtone + 0.008));
 	ALBEDO = stone;
-	ROUGHNESS = clamp(0.66 + (1.0 - blend) * 0.12 - wet * 0.22 + striations * 0.08 + detail_rough * 0.08, 0.26, 0.92);
+	ROUGHNESS = clamp(0.80 + seam * 0.08 + detail_rough * 0.035, 0.66, 0.98);
 	METALLIC = 0.0;
-	SPECULAR = 0.34;
-	NORMAL_MAP = mix(vec3(0.5, 0.5, 1.0), detail_nrm, normal_strength * 0.40);
+	SPECULAR = 0.12;
+	NORMAL_MAP = mix(vec3(0.5, 0.5, 1.0), detail_nrm, normal_strength * 0.22);
 	NORMAL_MAP_DEPTH = 1.0;
 }
 """
@@ -298,32 +316,17 @@ void fragment() {
 }
 """
 
-const PREVIEW_MARKER_SHADER_CODE: String = """
-shader_type spatial;
-render_mode blend_mix, cull_disabled, depth_prepass_alpha, unshaded;
-
-uniform vec4 base_color : source_color = vec4(0.5, 1.0, 0.7, 0.85);
-uniform float pulse_speed = 2.4;
-uniform float pulse_amp = 0.38;
-uniform float alpha_scale = 1.0;
-
-void fragment() {
-	float pulse = 0.5 + 0.5 * sin(TIME * pulse_speed + UV.x * 6.0 + UV.y * 5.0);
-	vec3 col = base_color.rgb * (0.74 + pulse * pulse_amp);
-	ALBEDO = col;
-	EMISSION = col * (0.20 + pulse * 0.30);
-	ALPHA = base_color.a * alpha_scale * (0.78 + pulse * 0.22);
-}
-"""
-
-
 var tile_world_size: float = 1.0
 
 var _state: GameState = null
 var _palette_renderer: BoardRenderer = null
 var _pool_material_cache: Dictionary = {}
-var _marker_material_cache: Dictionary = {}
+var _owner_mask_texture_cache: Dictionary = {}
+var _shell_material_cache: Dictionary = {}
+var _growth_material_template_cache: Dictionary = {}
 var _ground_tops: Dictionary = {}
+var _floor_surface_tops: Dictionary = {}
+var _ooze_surface_mesh_cache: Dictionary = {}
 
 var _viewport_size: Vector2i = Vector2i(1280, 720)
 var _board_min: Vector3 = Vector3.ZERO
@@ -358,25 +361,49 @@ var _consume_left_release: bool = false
 
 var _terrain_root: Node3D = null
 var _dynamic_root: Node3D = null
+var _growth_pool_root: Node3D = null
+var _dynamic_light_root: Node3D = null
 var _marker_root: Node3D = null
+var _hero_shot_root: Node3D = null
 var _camera: Camera3D = null
 var _key_light: DirectionalLight3D = null
 var _rim_light: DirectionalLight3D = null
 var _fill_light: OmniLight3D = null
 var _environment: WorldEnvironment = null
 var _point_lights: Array[OmniLight3D] = []
-var _haze_layer: MeshInstance3D = null
+var _wall_lights: Array[OmniLight3D] = []
+var _hero_shot_lights: Array[OmniLight3D] = []
+var _play_area_fill_light: OmniLight3D = null
+var _dynamic_light_pool: Dictionary = {}
+var _growth_anim_entries: Array[Dictionary] = []
+var _growth_asset_pool: Dictionary = {}
+var _active_growth_asset_nodes: Array[Node3D] = []
+var _rendered_inner_wall_tiles: Dictionary = {}
+var _rendered_owner_tiles_by_owner: Dictionary = {}
 
 var _stone_texture_cache: Texture2D = null
 var _stone_roughness_texture_cache: Texture2D = null
 var _stone_normal_texture_cache: Texture2D = null
 var _slime_detail_texture_cache: Texture2D = null
-var _asset_scene_cache: Dictionary = {}
 var _asset_material_cache: Dictionary = {}
-var _asset_manifest: Dictionary = {}
-var _geometry_asset_registry: Dictionary = {}
-var _geometry_asset_normalize: Dictionary = {}
-var _texture_asset_registry: Dictionary = {}
+var _assets: RefCounted = World3DAssetsScript.new()
+var _lighting: RefCounted = World3DLightingScript.new()
+var _marker_layer: RefCounted = MarkerLayerRendererScript.new()
+var _static_environment: RefCounted = StaticEnvironmentBuilderScript.new()
+var _dynamic_ooze: RefCounted = DynamicOozeRendererScript.new()
+var _perf_counters: Dictionary = {}
+var _frame_time_accum: float = 0.0
+var _frame_time_samples: int = 0
+var _frame_time_max_ms: float = 0.0
+var _growth_animation_time_accum_ms: float = 0.0
+var _growth_animation_time_samples: int = 0
+var _growth_animation_time_max_ms: float = 0.0
+var _dynamic_rebuild_time_accum_ms: float = 0.0
+var _dynamic_rebuild_time_samples: int = 0
+var _dynamic_rebuild_time_max_ms: float = 0.0
+var _dynamic_rebuild_time_last_ms: float = 0.0
+var _perf_dynamic_rendering_enabled: bool = true
+var _perf_growth_animation_enabled: bool = true
 var _camera_contract_signature: String = ""
 var _force_camera_reset: bool = false
 var _scene_graph_built: bool = false
@@ -414,6 +441,20 @@ func apply_capture_camera_preset(yaw_degrees: float = 0.0, pitch_degrees: float 
 	_camera_initialized = true
 	_update_camera_transform(true)
 
+func apply_hero_shot_composition() -> void:
+	if _state == null:
+		return
+	initialize_runtime_renderer()
+	_clear_hero_shot_composition()
+	_ensure_hero_shot_root()
+	var focal_tile: Vector2i = _find_hero_focal_tile()
+	_apply_hero_shot_lighting(focal_tile)
+	_add_hero_shot_story_props(focal_tile)
+	_add_hero_shot_ooze_presence(focal_tile)
+
+func clear_hero_shot_composition() -> void:
+	_clear_hero_shot_composition()
+
 func sync_world(
 	state: GameState,
 	selected_tile: Vector2i,
@@ -424,6 +465,7 @@ func sync_world(
 	_recent_enemy_actions: Array,
 	_anim_frame: int
 ) -> void:
+	_perf_increment("sync_calls")
 	_state = state
 	_selected_tile = selected_tile
 	_hovered_tile = hovered_tile
@@ -438,6 +480,7 @@ func sync_world(
 
 	var static_stamp: String = _make_static_stamp()
 	if static_stamp != _last_static_stamp:
+		_perf_increment("static_stamp_changes")
 		_rebuild_static_world()
 		_last_static_stamp = static_stamp
 		_last_dynamic_stamp = ""
@@ -445,12 +488,13 @@ func sync_world(
 
 	var dynamic_stamp: String = _make_dynamic_stamp()
 	if dynamic_stamp != _last_dynamic_stamp:
+		_perf_increment("dynamic_stamp_changes")
 		_rebuild_dynamic_world()
 		_last_dynamic_stamp = dynamic_stamp
-		_last_marker_stamp = ""
 
 	var marker_stamp: String = _make_marker_stamp()
 	if marker_stamp != _last_marker_stamp:
+		_perf_increment("marker_stamp_changes")
 		_rebuild_markers()
 		_last_marker_stamp = marker_stamp
 
@@ -463,8 +507,31 @@ func sync_world(
 
 func tick_visual(delta: float) -> void:
 	_visual_time += maxf(0.0, delta)
+	var frame_ms: float = maxf(0.0, delta) * 1000.0
+	_frame_time_accum += frame_ms
+	_frame_time_samples += 1
+	_frame_time_max_ms = maxf(_frame_time_max_ms, frame_ms)
 	_animate_lights()
+	if _perf_growth_animation_enabled:
+		var growth_anim_start_usec: int = Time.get_ticks_usec()
+		_animate_growth_assets()
+		var growth_anim_ms: float = float(Time.get_ticks_usec() - growth_anim_start_usec) / 1000.0
+		_growth_animation_time_accum_ms += growth_anim_ms
+		_growth_animation_time_samples += 1
+		_growth_animation_time_max_ms = maxf(_growth_animation_time_max_ms, growth_anim_ms)
 	_update_camera_transform(false)
+
+func set_perf_dynamic_rendering_enabled(enabled: bool) -> void:
+	_perf_dynamic_rendering_enabled = enabled
+	if not enabled:
+		_release_active_growth_asset_nodes()
+		_clear_children(_dynamic_root)
+		_point_lights.clear()
+		_growth_anim_entries.clear()
+		_rendered_owner_tiles_by_owner.clear()
+
+func set_perf_growth_animation_enabled(enabled: bool) -> void:
+	_perf_growth_animation_enabled = enabled
 
 func _phase_one_world_only() -> bool:
 	return PHASED_BUILD_MODE_ENABLED
@@ -557,9 +624,22 @@ func _build_scene_graph() -> void:
 	_dynamic_root.name = "DynamicRoot"
 	add_child(_dynamic_root)
 
+	_growth_pool_root = Node3D.new()
+	_growth_pool_root.name = "GrowthPoolRoot"
+	_growth_pool_root.visible = false
+	add_child(_growth_pool_root)
+
+	_dynamic_light_root = Node3D.new()
+	_dynamic_light_root.name = "DynamicLightRoot"
+	add_child(_dynamic_light_root)
+
 	_marker_root = Node3D.new()
 	_marker_root.name = "MarkerRoot"
 	add_child(_marker_root)
+
+	_hero_shot_root = Node3D.new()
+	_hero_shot_root.name = "HeroShotRoot"
+	add_child(_hero_shot_root)
 
 	_camera = Camera3D.new()
 	_camera.name = "TacticalCamera3D"
@@ -570,51 +650,15 @@ func _build_scene_graph() -> void:
 	_camera.far = 240.0
 	add_child(_camera)
 
-	_key_light = DirectionalLight3D.new()
-	_key_light.name = "CaveKeyLight"
-	_key_light.light_color = Color(0.90, 0.78, 0.66, 1.0)
-	_key_light.light_energy = float(STABILIZATION_LIGHT_BASELINE["key_energy"])
-	_key_light.shadow_enabled = true
-	_key_light.rotation_degrees = Vector3(-56.0, -28.0, 0.0)
-	add_child(_key_light)
-
-	_rim_light = DirectionalLight3D.new()
-	_rim_light.name = "RimLight"
-	_rim_light.light_color = Color(0.22, 0.34, 0.56, 1.0)
-	_rim_light.light_energy = float(STABILIZATION_LIGHT_BASELINE["rim_energy"])
-	_rim_light.shadow_enabled = false
-	_rim_light.rotation_degrees = Vector3(-38.0, 142.0, 0.0)
-	add_child(_rim_light)
-
-	_fill_light = OmniLight3D.new()
-	_fill_light.name = "CaveFillLight"
-	_fill_light.light_color = Color(0.24, 0.28, 0.34, 1.0)
-	_fill_light.light_energy = float(STABILIZATION_LIGHT_BASELINE["fill_energy"])
-	_fill_light.omni_range = float(STABILIZATION_LIGHT_BASELINE["fill_range"])
-	add_child(_fill_light)
-
-	_environment = WorldEnvironment.new()
-	_environment.name = "CaveEnvironment"
-	var env: Environment = Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(STABILIZATION_ENV_BASELINE["background_color"])
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(STABILIZATION_ENV_BASELINE["ambient_color"])
-	env.ambient_light_energy = float(STABILIZATION_ENV_BASELINE["ambient_energy"])
-	env.ssao_enabled = false
-	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.glow_enabled = false
-	env.fog_enabled = bool(STABILIZATION_ENV_BASELINE["fog_enabled"])
-	env.fog_light_color = Color(0.22, 0.24, 0.30, 1.0)
-	env.fog_light_energy = 0.28
-	env.fog_density = float(STABILIZATION_ENV_BASELINE["fog_density"])
-	env.fog_sky_affect = 0.0
-	env.adjustment_enabled = true
-	env.adjustment_brightness = float(STABILIZATION_ENV_BASELINE["brightness"])
-	env.adjustment_contrast = float(STABILIZATION_ENV_BASELINE["contrast"])
-	env.adjustment_saturation = float(STABILIZATION_ENV_BASELINE["saturation"])
-	_environment.environment = env
-	add_child(_environment)
+	var lighting_nodes: Dictionary = _lighting.create_base_lighting(
+		self,
+		STABILIZATION_ENV_BASELINE,
+		STABILIZATION_LIGHT_BASELINE
+	)
+	_key_light = lighting_nodes.get("key_light", null)
+	_rim_light = lighting_nodes.get("rim_light", null)
+	_fill_light = lighting_nodes.get("fill_light", null)
+	_environment = lighting_nodes.get("environment", null)
 
 func _refresh_board_bounds() -> void:
 	_board_min = Vector3(
@@ -634,13 +678,42 @@ func _refresh_board_bounds() -> void:
 	)
 
 func _make_static_stamp() -> String:
-	return "%d|%d|%d|%d" % [_state.width, _state.height, _state.level_index, _state.wall_tiles.size()]
+	var wall_signature: int = 0
+	var wall_keys: Array = _state.wall_tiles.keys()
+	wall_keys.sort()
+	for key_variant in wall_keys:
+		var wall_key: String = String(key_variant)
+		wall_signature = int(wall_signature * 131 + hash(wall_key))
+	var bounds: Dictionary = _layout_outer_bounds_tiles()
+	var min_tile: Vector2i = bounds.get("min", Vector2i(0, 0))
+	var max_tile: Vector2i = bounds.get("max", Vector2i(_state.width - 1, _state.height - 1))
+	return "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d" % [
+		_state.width,
+		_state.height,
+		_state.level_index,
+		_state.wall_tiles.size(),
+		min_tile.x,
+		min_tile.y,
+		max_tile.x,
+		max_tile.y,
+		_state.entrance_tile.x,
+		_state.entrance_tile.y,
+		_state.door_tile.x,
+		_state.door_tile.y,
+		wall_signature,
+	]
 
 func _make_dynamic_stamp() -> String:
-	var consumed_resources: int = 0
+	var resource_signature: int = 0
 	for node in _state.resource_nodes:
-		if bool(node.get("consumed", false)):
-			consumed_resources += 1
+		var resource_tile: Vector2i = node.get("pos", Vector2i(-1, -1))
+		resource_signature = int(
+			resource_signature * 131
+			+ resource_tile.x * 97
+			+ resource_tile.y * 193
+			+ hash(String(node.get("kind", "gem")))
+			+ (17 if bool(node.get("consumed", false)) else 0)
+		)
 	var block_signature: int = 0
 	for block in _state.blocks.values():
 		var block_id: int = int(block.get("id", 0))
@@ -661,30 +734,19 @@ func _make_dynamic_stamp() -> String:
 		_state.blocks.size(),
 		_state.next_block_id,
 		_state.door_hp,
-		block_signature + consumed_resources * 17,
+		block_signature + resource_signature,
 	]
 
 func _make_marker_stamp() -> String:
-	var queued_keys: Array = _queued_tiles.keys()
-	queued_keys.sort()
-	var queued_joined: String = ""
-	for key_variant in queued_keys:
-		if not queued_joined.is_empty():
-			queued_joined += ","
-		queued_joined += String(key_variant)
-	var preview_tile: Vector2i = _preview_target_tile(_hover_preview_action)
-	var preview_key: String = _tile_key(preview_tile)
-	var preview_kind: String = String(_hover_preview_action.get("type", "")) if not _hover_preview_action.is_empty() else ""
-	var preview_role: String = String(_hover_preview_action.get("tile_type", _hover_preview_action.get("to_type", ""))) if not _hover_preview_action.is_empty() else ""
-	var queued_sig: String = ""
-	for action in _queued_actions:
-		if typeof(action) != TYPE_DICTIONARY:
-			continue
-		var info: Dictionary = _queued_action_tile_role(action)
-		if not queued_sig.is_empty():
-			queued_sig += ","
-		queued_sig += "%s:%s" % [_tile_key(info.get("tile", Vector2i(-1, -1))), String(info.get("role", "basic"))]
-	return "%s|%s|%s|%s|%s|%s|%s" % [_tile_key(_selected_tile), _tile_key(_hovered_tile), queued_joined, preview_key, preview_kind, preview_role + ":" + _hover_invalid_reason, queued_sig]
+	return _marker_layer.make_marker_stamp(
+		_state,
+		_selected_tile,
+		_hovered_tile,
+		_queued_tiles,
+		_queued_actions,
+		_hover_preview_action,
+		_hover_invalid_reason
+	)
 
 func _terrain_height_local(local_x: float, local_z: float, board_width: float, board_height: float) -> float:
 	var nx: float = local_x / maxf(0.001, board_width * 0.5)
@@ -742,7 +804,7 @@ func _build_carved_floor_mesh(board_width: float, board_height: float, board_top
 			var h_u: float = board_top + _terrain_height_local(lx, lz + eps_z, board_width, board_height)
 			var tx: Vector3 = Vector3(2.0 * eps_x, h_r - h_l, 0.0)
 			var tz: Vector3 = Vector3(0.0, h_u - h_d, 2.0 * eps_z)
-			normals[idx] = tx.cross(tz).normalized()
+			normals[idx] = tz.cross(tx).normalized()
 	for z in range(sz):
 		for x in range(sx):
 			var i0: int = z * (sx + 1) + x
@@ -765,1338 +827,197 @@ func _build_carved_floor_mesh(board_width: float, board_height: float, board_top
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return mesh
 
-func _build_ooze_conforming_mesh(board_width: float, board_height: float, board_top: float, density: float = 2.1) -> ArrayMesh:
-	var sx: int = maxi(16, int(board_width * density))
-	var sz: int = maxi(16, int(board_height * density))
-	return _build_carved_floor_mesh(board_width, board_height, board_top, sx, sz)
-
-func _append_skirt_quad(
-	vertices: PackedVector3Array,
-	normals: PackedVector3Array,
-	uvs: PackedVector2Array,
-	indices: PackedInt32Array,
-	a: Vector3,
-	b: Vector3,
-	c: Vector3,
-	d: Vector3
-) -> void:
-	var normal: Vector3 = (b - a).cross(c - a).normalized()
-	var base: int = vertices.size()
-	vertices.push_back(a)
-	vertices.push_back(b)
-	vertices.push_back(c)
-	vertices.push_back(d)
-	normals.push_back(normal)
-	normals.push_back(normal)
-	normals.push_back(normal)
-	normals.push_back(normal)
-	uvs.push_back(Vector2(0.0, 0.0))
-	uvs.push_back(Vector2(1.0, 0.0))
-	uvs.push_back(Vector2(1.0, 1.0))
-	uvs.push_back(Vector2(0.0, 1.0))
-	indices.push_back(base + 0)
-	indices.push_back(base + 1)
-	indices.push_back(base + 2)
-	indices.push_back(base + 0)
-	indices.push_back(base + 2)
-	indices.push_back(base + 3)
-
-func _add_terrain_skirt(board_width: float, board_height: float, board_top: float) -> void:
+func _sample_ground_height_at_local(local_x: float, local_z: float, board_width: float, board_height: float) -> float:
 	if _state == null:
-		return
-	var vertices: PackedVector3Array = PackedVector3Array()
-	var normals: PackedVector3Array = PackedVector3Array()
-	var uvs: PackedVector2Array = PackedVector2Array()
-	var indices: PackedInt32Array = PackedInt32Array()
-	var inset: float = 0.34
-	var outward: float = 2.20
-	var drop: float = 2.05
-	var seg_x: int = maxi(12, _state.width * 2)
-	var seg_z: int = maxi(12, _state.height * 2)
-
-	var to_world := func(local: Vector3) -> Vector3:
-		return _camera_base_target + local
-
-	var half_w: float = board_width * 0.5
-	var half_h: float = board_height * 0.5
-	var inner_north_z: float = -half_h - inset
-	var outer_north_z: float = inner_north_z - outward
-	var inner_south_z: float = half_h + inset
-	var outer_south_z: float = inner_south_z + outward
-	for i in range(seg_x):
-		var t0: float = float(i) / float(seg_x)
-		var t1: float = float(i + 1) / float(seg_x)
-		var x0: float = lerpf(-half_w - inset, half_w + inset, t0)
-		var x1: float = lerpf(-half_w - inset, half_w + inset, t1)
-		var y_n0: float = board_top + _terrain_height_local(x0, inner_north_z, board_width, board_height) - 0.03
-		var y_n1: float = board_top + _terrain_height_local(x1, inner_north_z, board_width, board_height) - 0.03
-		var y_n_out0: float = y_n0 - 0.18 - _noise01(int((x0 + 41.0) * 19.0), int((outer_north_z + 67.0) * 23.0)) * 0.52
-		var y_n_out1: float = y_n1 - 0.18 - _noise01(int((x1 + 43.0) * 19.0), int((outer_north_z + 71.0) * 23.0)) * 0.52
-		var n_in0: Vector3 = to_world.call(Vector3(x0, y_n0, inner_north_z))
-		var n_in1: Vector3 = to_world.call(Vector3(x1, y_n1, inner_north_z))
-		var n_out0: Vector3 = to_world.call(Vector3(x0, y_n_out0, outer_north_z))
-		var n_out1: Vector3 = to_world.call(Vector3(x1, y_n_out1, outer_north_z))
-		_append_skirt_quad(vertices, normals, uvs, indices, n_in0, n_in1, n_out1, n_out0)
-		_append_skirt_quad(
-			vertices,
-			normals,
-			uvs,
-			indices,
-			n_out0,
-			n_out1,
-			n_out1 + Vector3(0.0, -drop, 0.0),
-			n_out0 + Vector3(0.0, -drop, 0.0)
-		)
-
-		var y_s0: float = board_top + _terrain_height_local(x0, inner_south_z, board_width, board_height) - 0.03
-		var y_s1: float = board_top + _terrain_height_local(x1, inner_south_z, board_width, board_height) - 0.03
-		var y_s_out0: float = y_s0 - 0.16 - _noise01(int((x0 + 53.0) * 17.0), int((outer_south_z + 79.0) * 29.0)) * 0.52
-		var y_s_out1: float = y_s1 - 0.16 - _noise01(int((x1 + 57.0) * 17.0), int((outer_south_z + 83.0) * 29.0)) * 0.52
-		var s_in0: Vector3 = to_world.call(Vector3(x0, y_s0, inner_south_z))
-		var s_in1: Vector3 = to_world.call(Vector3(x1, y_s1, inner_south_z))
-		var s_out0: Vector3 = to_world.call(Vector3(x0, y_s_out0, outer_south_z))
-		var s_out1: Vector3 = to_world.call(Vector3(x1, y_s_out1, outer_south_z))
-		_append_skirt_quad(vertices, normals, uvs, indices, s_in1, s_in0, s_out0, s_out1)
-		_append_skirt_quad(
-			vertices,
-			normals,
-			uvs,
-			indices,
-			s_out1,
-			s_out0,
-			s_out0 + Vector3(0.0, -drop, 0.0),
-			s_out1 + Vector3(0.0, -drop, 0.0)
-		)
-
-	var inner_west_x: float = -half_w - inset
-	var outer_west_x: float = inner_west_x - outward
-	var inner_east_x: float = half_w + inset
-	var outer_east_x: float = inner_east_x + outward
-	for i in range(seg_z):
-		var t0: float = float(i) / float(seg_z)
-		var t1: float = float(i + 1) / float(seg_z)
-		var z0: float = lerpf(-half_h - inset, half_h + inset, t0)
-		var z1: float = lerpf(-half_h - inset, half_h + inset, t1)
-		var y_w0: float = board_top + _terrain_height_local(inner_west_x, z0, board_width, board_height) - 0.03
-		var y_w1: float = board_top + _terrain_height_local(inner_west_x, z1, board_width, board_height) - 0.03
-		var y_w_out0: float = y_w0 - 0.16 - _noise01(int((outer_west_x + 61.0) * 17.0), int((z0 + 73.0) * 19.0)) * 0.52
-		var y_w_out1: float = y_w1 - 0.16 - _noise01(int((outer_west_x + 67.0) * 17.0), int((z1 + 79.0) * 19.0)) * 0.52
-		var w_in0: Vector3 = to_world.call(Vector3(inner_west_x, y_w0, z0))
-		var w_in1: Vector3 = to_world.call(Vector3(inner_west_x, y_w1, z1))
-		var w_out0: Vector3 = to_world.call(Vector3(outer_west_x, y_w_out0, z0))
-		var w_out1: Vector3 = to_world.call(Vector3(outer_west_x, y_w_out1, z1))
-		_append_skirt_quad(vertices, normals, uvs, indices, w_in1, w_in0, w_out0, w_out1)
-		_append_skirt_quad(
-			vertices,
-			normals,
-			uvs,
-			indices,
-			w_out1,
-			w_out0,
-			w_out0 + Vector3(0.0, -drop, 0.0),
-			w_out1 + Vector3(0.0, -drop, 0.0)
-		)
-
-		var y_e0: float = board_top + _terrain_height_local(inner_east_x, z0, board_width, board_height) - 0.03
-		var y_e1: float = board_top + _terrain_height_local(inner_east_x, z1, board_width, board_height) - 0.03
-		var y_e_out0: float = y_e0 - 0.16 - _noise01(int((outer_east_x + 71.0) * 17.0), int((z0 + 83.0) * 19.0)) * 0.52
-		var y_e_out1: float = y_e1 - 0.16 - _noise01(int((outer_east_x + 79.0) * 17.0), int((z1 + 89.0) * 19.0)) * 0.52
-		var e_in0: Vector3 = to_world.call(Vector3(inner_east_x, y_e0, z0))
-		var e_in1: Vector3 = to_world.call(Vector3(inner_east_x, y_e1, z1))
-		var e_out0: Vector3 = to_world.call(Vector3(outer_east_x, y_e_out0, z0))
-		var e_out1: Vector3 = to_world.call(Vector3(outer_east_x, y_e_out1, z1))
-		_append_skirt_quad(vertices, normals, uvs, indices, e_in0, e_in1, e_out1, e_out0)
-		_append_skirt_quad(
-			vertices,
-			normals,
-			uvs,
-			indices,
-			e_out0,
-			e_out1,
-			e_out1 + Vector3(0.0, -drop, 0.0),
-			e_out0 + Vector3(0.0, -drop, 0.0)
-		)
-
-	if vertices.is_empty():
-		return
-	var arrays: Array = []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	arrays[Mesh.ARRAY_NORMAL] = normals
-	arrays[Mesh.ARRAY_TEX_UV] = uvs
-	arrays[Mesh.ARRAY_INDEX] = indices
-	var mesh: ArrayMesh = ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var skirt: MeshInstance3D = MeshInstance3D.new()
-	skirt.mesh = mesh
-	skirt.material_override = _stone_shader_material(
-		Color(0.17, 0.16, 0.17, 1.0),
-		Color(0.08, 0.08, 0.09, 1.0),
-		Color(0.08, 0.10, 0.12, 1.0),
-		6.8,
-		0.026,
-		0.52
-	)
-	skirt.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	_terrain_root.add_child(skirt)
-
-func _add_floor_rock_shelves(board_width: float, board_height: float, board_top: float) -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	if not _has_asset_scene("cave_wall"):
-		return
-	var shelves: Array[Dictionary] = [
-		{"offset": Vector3(-board_width * 0.68, 0.0, -board_height * 0.64), "yaw": 44.0, "scale": Vector3(1.90, 0.76, 1.18), "lift": 0.06},
-		{"offset": Vector3(board_width * 0.14, 0.0, -board_height * 0.68), "yaw": 182.0, "scale": Vector3(1.72, 0.72, 1.08), "lift": 0.04},
-		{"offset": Vector3(board_width * 0.62, 0.0, -board_height * 0.32), "yaw": 104.0, "scale": Vector3(1.44, 0.66, 1.04), "lift": 0.03},
-		{"offset": Vector3(-board_width * 0.52, 0.0, board_height * 0.58), "yaw": 132.0, "scale": Vector3(1.70, 0.66, 1.02), "lift": 0.03},
-	]
-	for i in range(shelves.size()):
-		var shelf: Dictionary = shelves[i]
-		var seed: int = i + _state.level_index * 73
-		var offset: Vector3 = shelf["offset"]
-		offset.x += (_noise01(seed * 17 + 3, seed * 29 + 11) - 0.5) * 0.24
-		offset.z += (_noise01(seed * 31 + 5, seed * 37 + 13) - 0.5) * 0.22
-		var pos: Vector3 = _camera_base_target + offset
-		pos.y = board_top - 0.44 + float(shelf.get("lift", 0.0)) + (_noise01(seed * 41 + 7, seed * 43 + 17) - 0.5) * 0.10
-		var yaw: float = deg_to_rad(float(shelf["yaw"]) + (_noise01(seed * 47 + 19, seed * 53 + 23) - 0.5) * 18.0)
-		var scale: Vector3 = shelf["scale"]
-		scale.x *= 0.90 + _noise01(seed * 59 + 2, seed * 61 + 7) * 0.26
-		scale.y *= 0.90 + _noise01(seed * 67 + 11, seed * 71 + 13) * 0.18
-		scale.z *= 0.90 + _noise01(seed * 73 + 17, seed * 79 + 29) * 0.20
-		_add_asset_instance(
-			_terrain_root,
-			"cave_wall",
-			Transform3D(Basis(Vector3.UP, yaw).scaled(scale), pos),
-			GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		)
-
-func _add_board_edge_cliffs(board_width: float, board_height: float, board_top: float) -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	if _has_asset_scene("cave_wall"):
-		var cliff_data: Array[Dictionary] = [
-			{"offset": Vector3(-board_width * 0.86, -0.30, -board_height * 0.10), "yaw": -92.0, "scale": Vector3(2.22, 3.08, 1.64)},
-			{"offset": Vector3(board_width * 0.86, -0.30, -board_height * 0.10), "yaw": 92.0, "scale": Vector3(2.22, 3.08, 1.64)},
-			{"offset": Vector3(-board_width * 0.28, -0.34, -board_height * 0.90), "yaw": 172.0, "scale": Vector3(1.98, 3.18, 1.52)},
-			{"offset": Vector3(board_width * 0.28, -0.34, -board_height * 0.90), "yaw": 188.0, "scale": Vector3(1.98, 3.18, 1.52)},
-			{"offset": Vector3(0.0, -0.42, -board_height * 0.96), "yaw": 180.0, "scale": Vector3(2.34, 3.46, 1.84)},
-		]
-		for i in range(cliff_data.size()):
-			var seed: int = i + _state.level_index * 151
-			var entry: Dictionary = cliff_data[i]
-			var pos: Vector3 = _camera_base_target + entry["offset"]
-			pos.x += (_noise01(seed * 17 + 3, seed * 23 + 7) - 0.5) * 0.28
-			pos.y += (_noise01(seed * 31 + 11, seed * 37 + 13) - 0.5) * 0.16
-			pos.z += (_noise01(seed * 41 + 17, seed * 43 + 19) - 0.5) * 0.22
-			var yaw: float = deg_to_rad(float(entry["yaw"]) + (_noise01(seed * 47 + 23, seed * 53 + 29) - 0.5) * 10.0)
-			var scale: Vector3 = entry["scale"]
-			scale.x *= 0.92 + _noise01(seed * 59 + 31, seed * 61 + 37) * 0.16
-			scale.y *= 0.92 + _noise01(seed * 67 + 41, seed * 71 + 43) * 0.18
-			scale.z *= 0.92 + _noise01(seed * 73 + 47, seed * 79 + 53) * 0.14
-			_add_asset_instance(
-				_terrain_root,
-				"cave_wall",
-				Transform3D(Basis(Vector3.UP, yaw).scaled(scale), pos),
-				GeometryInstance3D.SHADOW_CASTING_SETTING_ON if i <= 2 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			)
-		return
-
-	var fallback_mesh: BoxMesh = BoxMesh.new()
-	fallback_mesh.size = Vector3(board_width + 1.8, 1.8, 0.8)
-	var fallback_mat: ShaderMaterial = _stone_shader_material(
-		Color(0.18, 0.17, 0.18, 1.0),
-		Color(0.08, 0.08, 0.09, 1.0),
-		Color(0.08, 0.10, 0.12, 1.0),
-		7.2,
-		0.026,
-		0.76
-	)
-	var cliff: MeshInstance3D = MeshInstance3D.new()
-	cliff.mesh = fallback_mesh
-	cliff.material_override = fallback_mat
-	cliff.position = _camera_base_target + Vector3(0.0, board_top - 0.62, -board_height * 0.94)
-	cliff.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	_terrain_root.add_child(cliff)
-
-func _add_phase1_structural_massing(board_width: float, board_height: float, board_top: float) -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	if _has_asset_scene("cave_wall"):
-		var masses: Array[Dictionary] = [
-			{"offset": Vector3(-board_width * 0.34, -0.20, -board_height * 0.02), "yaw": -26.0, "scale": Vector3(1.34, 1.52, 1.08)},
-			{"offset": Vector3(board_width * 0.30, -0.18, -board_height * 0.16), "yaw": 28.0, "scale": Vector3(1.24, 1.46, 1.00)},
-			{"offset": Vector3(board_width * 0.22, -0.24, board_height * 0.26), "yaw": 96.0, "scale": Vector3(1.20, 1.40, 0.92)},
-			{"offset": Vector3(-board_width * 0.18, -0.22, board_height * 0.30), "yaw": -102.0, "scale": Vector3(1.14, 1.34, 0.88)},
-			{"offset": Vector3(0.02, -0.18, -board_height * 0.34), "yaw": 180.0, "scale": Vector3(1.08, 1.26, 0.84)},
-		]
-		for mass in masses:
-			var pos: Vector3 = _camera_base_target + mass["offset"]
-			_add_asset_instance(
-				_terrain_root,
-				"cave_wall",
-				Transform3D(Basis(Vector3.UP, deg_to_rad(float(mass["yaw"]))).scaled(mass["scale"]), pos),
-				GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-			)
-	else:
-		var fallback_mat: ShaderMaterial = _stone_shader_material(
-			Color(0.20, 0.19, 0.20, 1.0),
-			Color(0.09, 0.09, 0.10, 1.0),
-			Color(0.09, 0.10, 0.12, 1.0),
-			7.6,
-			0.024,
-			0.82
-		)
-		var fallback_mesh: BoxMesh = BoxMesh.new()
-		fallback_mesh.size = Vector3(1.6, 2.4, 1.2)
-		var fallback_offsets: Array[Vector3] = [
-			Vector3(-board_width * 0.32, board_top + 0.60, -board_height * 0.04),
-			Vector3(board_width * 0.28, board_top + 0.58, -board_height * 0.18),
-			Vector3(board_width * 0.20, board_top + 0.54, board_height * 0.24),
-		]
-		for o in fallback_offsets:
-			var m: MeshInstance3D = MeshInstance3D.new()
-			m.mesh = fallback_mesh
-			m.position = _camera_base_target + o
-			m.material_override = fallback_mat
-			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-			_terrain_root.add_child(m)
-
-	# Carved lane walls for readable chokepoints (large forms, no tile-grid repetition).
-	var lane_mat: ShaderMaterial = _stone_shader_material(
-		CAVE_WALL_BASE.lerp(Color(0.24, 0.22, 0.21, 1.0), 0.16),
-		CAVE_WALL_ALT.lerp(Color(0.11, 0.11, 0.12, 1.0), 0.20),
-		Color(0.10, 0.11, 0.12, 1.0),
-		8.2,
-		0.032,
-		0.86
-	)
-	var lane_mesh: BoxMesh = BoxMesh.new()
-	lane_mesh.size = Vector3(1.32, 0.74, 0.46)
-	var lane_chunks: Array[Dictionary] = [
-		{"offset": Vector3(-board_width * 0.08, board_top + 0.20, -board_height * 0.10), "yaw": 0.0, "scale": Vector3(1.14, 1.0, 1.0)},
-		{"offset": Vector3(board_width * 0.10, board_top + 0.20, -board_height * 0.12), "yaw": 0.0, "scale": Vector3(1.06, 1.0, 1.0)},
-		{"offset": Vector3(0.00, board_top + 0.18, board_height * 0.12), "yaw": 0.0, "scale": Vector3(1.20, 1.0, 1.0)},
-	]
-	for chunk in lane_chunks:
-		var lane: MeshInstance3D = MeshInstance3D.new()
-		lane.mesh = lane_mesh
-		lane.position = _camera_base_target + chunk["offset"]
-		lane.rotation_degrees = Vector3(0.0, float(chunk["yaw"]), 0.0)
-		lane.scale = chunk["scale"]
-		lane.material_override = lane_mat
-		lane.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-		_terrain_root.add_child(lane)
+		return 0.0
+	var nx: float = clampf((local_x / maxf(0.001, board_width)) + 0.5, 0.0, 1.0)
+	var nz: float = clampf((local_z / maxf(0.001, board_height)) + 0.5, 0.0, 1.0)
+	var px: float = nx * float(maxi(1, _state.width - 1))
+	var py: float = nz * float(maxi(1, _state.height - 1))
+	var x0: int = clampi(int(floor(px)), 0, _state.width - 1)
+	var y0: int = clampi(int(floor(py)), 0, _state.height - 1)
+	var x1: int = mini(_state.width - 1, x0 + 1)
+	var y1: int = mini(_state.height - 1, y0 + 1)
+	var tx: float = px - float(x0)
+	var ty: float = py - float(y0)
+	var h00: float = _tile_floor_top(Vector2i(x0, y0))
+	var h10: float = _tile_floor_top(Vector2i(x1, y0))
+	var h01: float = _tile_floor_top(Vector2i(x0, y1))
+	var h11: float = _tile_floor_top(Vector2i(x1, y1))
+	var hx0: float = lerpf(h00, h10, tx)
+	var hx1: float = lerpf(h01, h11, tx)
+	return lerpf(hx0, hx1, ty)
 
 func _rebuild_static_world() -> void:
-	_clear_children(_terrain_root)
-	_ground_tops.clear()
-	if _state == null:
-		return
+	_perf_increment("static_rebuilds")
+	_ooze_surface_mesh_cache.clear()
+	_owner_mask_texture_cache.clear()
+	var built: bool = _static_environment.build_static_world(
+		self,
+		_terrain_root,
+		_state,
+		tile_world_size,
+		_board_min,
+		_board_max,
+		_camera_base_target,
+		_ground_tops,
+		_floor_surface_tops,
+		_rendered_inner_wall_tiles
+	)
+	if built:
+		_add_chamber_accent_lights()
 
-	var board_width: float = float(_state.width) * tile_world_size
-	var board_height: float = float(_state.height) * tile_world_size
-	var board_top: float = -0.02
-
-	for y in range(_state.height):
-		for x in range(_state.width):
-			var tile: Vector2i = Vector2i(x, y)
-			_ground_tops[_tile_key(tile)] = board_top
-
-	_build_asset_kit_floor(board_width, board_height, board_top)
-	_build_asset_kit_chamber(board_width, board_height, board_top)
-	_build_asset_kit_blockers(board_top)
-	_add_cave_doors()
-	_add_chamber_accent_lights()
-	_add_cave_foreground_occluders()
-
-func _build_asset_kit_floor(board_width: float, board_height: float, board_top: float) -> void:
-	if _terrain_root == null:
-		return
-	if not _has_asset_scene("floor_tile_rock"):
-		return
-
-	var segments: Array[Dictionary] = [
-		{"offset": Vector3(-board_width * 0.30, board_top, -board_height * 0.24), "yaw": -10.0, "scale": Vector3(board_width * 0.46, 1.0, board_height * 0.42)},
-		{"offset": Vector3(board_width * 0.24, board_top + 0.01, -board_height * 0.26), "yaw": 11.0, "scale": Vector3(board_width * 0.48, 1.0, board_height * 0.40)},
-		{"offset": Vector3(-board_width * 0.18, board_top - 0.01, board_height * 0.22), "yaw": 6.0, "scale": Vector3(board_width * 0.44, 1.0, board_height * 0.44)},
-		{"offset": Vector3(board_width * 0.28, board_top + 0.00, board_height * 0.24), "yaw": -13.0, "scale": Vector3(board_width * 0.46, 1.0, board_height * 0.42)},
-		{"offset": Vector3(0.0, board_top + 0.02, 0.0), "yaw": 0.0, "scale": Vector3(board_width * 0.34, 1.0, board_height * 0.30)},
-	]
-	for seg in segments:
-		var tf: Transform3D = Transform3D(
-			Basis(Vector3.UP, deg_to_rad(float(seg["yaw"]))).scaled(seg["scale"]),
-			_camera_base_target + seg["offset"]
-		)
-		var mat: Material = _stone_shader_material(
-			Color(0.15, 0.15, 0.16, 1.0),
-			Color(0.08, 0.08, 0.09, 1.0),
-			Color(0.09, 0.11, 0.12, 1.0),
-			8.0,
-			0.020,
-			0.78
-		)
-		_add_asset_instance(_terrain_root, "floor_tile_rock", tf, GeometryInstance3D.SHADOW_CASTING_SETTING_ON, mat)
-
-func _build_asset_kit_chamber(board_width: float, board_height: float, board_top: float) -> void:
-	if _terrain_root == null:
-		return
-	if not _has_asset_scene("cave_wall"):
-		return
-
-	var outer_masses: Array[Dictionary] = [
-		{"asset": "cave_wall", "offset": Vector3(-board_width * 0.58, board_top + 0.12, -board_height * 0.44), "yaw": 156.0, "scale": Vector3(2.10, 2.60, 1.36)},
-		{"asset": "cave_wall", "offset": Vector3(-board_width * 0.08, board_top + 0.14, -board_height * 0.56), "yaw": 180.0, "scale": Vector3(2.24, 2.74, 1.40)},
-		{"asset": "cave_wall", "offset": Vector3(board_width * 0.44, board_top + 0.12, -board_height * 0.46), "yaw": 208.0, "scale": Vector3(2.08, 2.58, 1.34)},
-		{"asset": "cave_wall", "offset": Vector3(-board_width * 0.72, board_top + 0.04, -board_height * 0.04), "yaw": -94.0, "scale": Vector3(1.84, 2.42, 1.22)},
-		{"asset": "cave_wall", "offset": Vector3(board_width * 0.72, board_top + 0.04, -board_height * 0.02), "yaw": 92.0, "scale": Vector3(1.84, 2.42, 1.22)},
-		{"asset": "cave_wall", "offset": Vector3(-board_width * 0.54, board_top, board_height * 0.44), "yaw": -30.0, "scale": Vector3(1.86, 2.14, 1.18)},
-		{"asset": "cave_wall", "offset": Vector3(board_width * 0.56, board_top, board_height * 0.42), "yaw": 26.0, "scale": Vector3(1.86, 2.14, 1.18)},
-	]
-	for entry in outer_masses:
-		var key: String = String(entry.get("asset", "cave_wall"))
-		if not _has_asset_scene(key):
-			continue
-		var tf: Transform3D = Transform3D(
-			Basis(Vector3.UP, deg_to_rad(float(entry["yaw"]))).scaled(entry["scale"]),
-			_camera_base_target + entry["offset"]
-		)
-		_add_asset_instance(_terrain_root, key, tf, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
-
-	var corner_masses: Array[Dictionary] = [
-		{"asset": "cave_corner", "offset": Vector3(-board_width * 0.82, board_top + 0.08, -board_height * 0.60), "yaw": 132.0, "scale": Vector3(1.68, 2.28, 1.68)},
-		{"asset": "cave_corner", "offset": Vector3(board_width * 0.82, board_top + 0.08, -board_height * 0.60), "yaw": 228.0, "scale": Vector3(1.68, 2.28, 1.68)},
-		{"asset": "cave_corner", "offset": Vector3(-board_width * 0.78, board_top, board_height * 0.58), "yaw": 46.0, "scale": Vector3(1.54, 2.06, 1.54)},
-		{"asset": "cave_corner", "offset": Vector3(board_width * 0.78, board_top, board_height * 0.58), "yaw": -46.0, "scale": Vector3(1.54, 2.06, 1.54)},
-	]
-	for entry in corner_masses:
-		var key: String = String(entry.get("asset", "cave_corner"))
-		if not _has_asset_scene(key):
-			continue
-		var tf: Transform3D = Transform3D(
-			Basis(Vector3.UP, deg_to_rad(float(entry["yaw"]))).scaled(entry["scale"]),
-			_camera_base_target + entry["offset"]
-		)
-		_add_asset_instance(_terrain_root, key, tf, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
-
-	var intrusions: Array[Dictionary] = [
-		{"offset": Vector3(-board_width * 0.20, board_top + 0.04, board_height * 0.02), "yaw": 8.0, "scale": Vector3(1.24, 1.38, 1.02)},
-		{"offset": Vector3(board_width * 0.16, board_top + 0.04, -board_height * 0.06), "yaw": -12.0, "scale": Vector3(1.20, 1.34, 1.02)},
-	]
-	for entry in intrusions:
-		var tf: Transform3D = Transform3D(
-			Basis(Vector3.UP, deg_to_rad(float(entry["yaw"]))).scaled(entry["scale"]),
-			_camera_base_target + entry["offset"]
-		)
-		_add_asset_instance(_terrain_root, "cave_wall", tf, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
-
-func _build_asset_kit_blockers(board_top: float) -> void:
-	if _state == null or not _has_asset_scene("blocker_wall"):
-		return
-	for y in range(_state.height):
-		for x in range(_state.width):
-			var tile: Vector2i = Vector2i(x, y)
-			if not _state.is_blocked(tile):
-				continue
-			var center: Vector3 = _tile_world_position(tile)
-			var blocked_l: bool = _state.is_inside(tile + Vector2i.LEFT) and _state.is_blocked(tile + Vector2i.LEFT)
-			var blocked_r: bool = _state.is_inside(tile + Vector2i.RIGHT) and _state.is_blocked(tile + Vector2i.RIGHT)
-			var blocked_u: bool = _state.is_inside(tile + Vector2i.UP) and _state.is_blocked(tile + Vector2i.UP)
-			var blocked_d: bool = _state.is_inside(tile + Vector2i.DOWN) and _state.is_blocked(tile + Vector2i.DOWN)
-			var yaw: float = 0.0
-			if blocked_u or blocked_d:
-				yaw = deg_to_rad(90.0)
-			var tf: Transform3D = Transform3D(
-				Basis(Vector3.UP, yaw).scaled(Vector3(1.04, 1.02, 1.04)),
-				center + Vector3(0.0, board_top + 0.44, 0.0)
-			)
-			_add_asset_instance(_terrain_root, "blocker_wall", tf, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
-			_ground_tops[_tile_key(tile)] = board_top + 0.88
-
-func _add_board_channels(board_width: float, board_height: float, board_top: float) -> void:
-	var groove_mat: StandardMaterial3D = StandardMaterial3D.new()
-	groove_mat.albedo_color = Color(0.10, 0.095, 0.10, 1.0)
-	groove_mat.roughness = 0.88
-	groove_mat.metallic = 0.0
-
-	var groove_long: BoxMesh = BoxMesh.new()
-	groove_long.size = Vector3(0.08, 0.004, board_height * 0.76)
-	var groove_wide: BoxMesh = BoxMesh.new()
-	groove_wide.size = Vector3(board_width * 0.78, 0.004, 0.08)
-
-	var lanes_x: Array[float] = [0.0]
-	for lane_x in lanes_x:
-		var groove: MeshInstance3D = MeshInstance3D.new()
-		groove.mesh = groove_long
-		groove.position = _camera_base_target + Vector3(lane_x, board_top + 0.005, 0.0)
-		groove.material_override = groove_mat
-		groove.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_terrain_root.add_child(groove)
-
-	var lanes_z: Array[float] = [0.0]
-	for lane_z in lanes_z:
-		var groove: MeshInstance3D = MeshInstance3D.new()
-		groove.mesh = groove_wide
-		groove.position = _camera_base_target + Vector3(0.0, board_top + 0.005, lane_z)
-		groove.material_override = groove_mat
-		groove.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_terrain_root.add_child(groove)
+func _layout_outer_bounds_tiles() -> Dictionary:
+	return _static_environment.layout_outer_bounds_tiles(_state)
 
 func _rebuild_dynamic_world() -> void:
+	var rebuild_start_usec: int = Time.get_ticks_usec()
+	_perf_increment("dynamic_rebuilds")
+	var active_mask_cache_keys: Dictionary = {}
+	_release_active_growth_asset_nodes()
 	_clear_children(_dynamic_root)
 	_point_lights.clear()
-	if _state == null:
+	_growth_anim_entries.clear()
+	_rendered_owner_tiles_by_owner.clear()
+	_begin_dynamic_light_sync()
+	if _state == null or not _perf_dynamic_rendering_enabled:
+		_end_dynamic_light_sync({})
+		_prune_owner_mask_texture_cache(active_mask_cache_keys)
+		_record_dynamic_rebuild_time(rebuild_start_usec)
 		return
 
+	var active_light_keys: Dictionary = {}
 	var owner_blocks: Dictionary = {}
 	for block in _state.blocks.values():
-		var owner: int = int(block.get("owner", 0))
-		if not owner_blocks.has(owner):
-			owner_blocks[owner] = []
-		owner_blocks[owner].append(block)
+		var owner_id_local: int = int(block.get("owner", 0))
+		if not owner_blocks.has(owner_id_local):
+			owner_blocks[owner_id_local] = []
+		owner_blocks[owner_id_local].append(block)
 
 	for owner_variant in owner_blocks.keys():
 		var owner_id: int = int(owner_variant)
 		var blocks: Array = owner_blocks[owner_id]
-		_build_owner_ooze(owner_id, blocks)
-		_build_owner_volume_shell(owner_id, blocks)
-		_build_owner_meniscus(owner_id, blocks)
-		if OOZE_ENABLE_FRAGMENTED_SURFACE_DETAILS:
-			_build_owner_blob_caps(owner_id, blocks)
-			_build_owner_micro_bubbles(owner_id, blocks)
-			_build_owner_edge_beads(owner_id, blocks)
-		_build_specialization_markers(owner_id, blocks)
-		_build_heart_markers(owner_id, blocks)
+		var owner_layers_start: int = Time.get_ticks_usec()
+		_dynamic_ooze.build_owner_layers(
+			self,
+			_dynamic_root,
+			_state,
+			tile_world_size,
+			_camera_base_target,
+			_owner_mask_texture_cache,
+			active_mask_cache_keys,
+			_ooze_surface_mesh_cache,
+			_rendered_owner_tiles_by_owner,
+			_growth_anim_entries,
+			owner_id,
+			blocks,
+			OOZE_ENABLE_FRAGMENTED_SURFACE_DETAILS
+		)
+		_perf_record_time("profile_owner_layers", owner_layers_start)
+		var owner_light_start: int = Time.get_ticks_usec()
+		_add_owner_zone_light(owner_id, blocks, active_light_keys)
+		_perf_record_time("profile_owner_lights", owner_light_start)
 
+	_prune_owner_mask_texture_cache(active_mask_cache_keys)
+	var world_points_start: int = Time.get_ticks_usec()
 	_build_world_points()
-	_add_objective_glow_lights()
+	_perf_record_time("profile_world_points", world_points_start)
+	var objective_lights_start: int = Time.get_ticks_usec()
+	_add_objective_glow_lights(active_light_keys)
+	_perf_record_time("profile_objective_lights", objective_lights_start)
+	_end_dynamic_light_sync(active_light_keys)
+	_record_dynamic_rebuild_time(rebuild_start_usec)
 
-func _build_owner_ooze(owner_id: int, blocks: Array) -> void:
-	if blocks.is_empty():
-		return
-
-	var tile_set: Dictionary = {}
-	for block in blocks:
-		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
-		tile_set[_tile_key(tile)] = tile
-	var mask_tex: Texture2D = _build_owner_mask_texture(tile_set)
-	if mask_tex == null:
-		return
-
-	var quad: MeshInstance3D = MeshInstance3D.new()
-	var plane_mesh: PlaneMesh = PlaneMesh.new()
-	plane_mesh.size = Vector2(float(_state.width) * tile_world_size, float(_state.height) * tile_world_size)
-	plane_mesh.subdivide_width = maxi(24, _state.width * 4)
-	plane_mesh.subdivide_depth = maxi(24, _state.height * 4)
-	quad.mesh = plane_mesh
-	quad.position = _camera_base_target + Vector3(0.0, 0.068, 0.0)
-	quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	quad.material_override = _owner_pool_material(owner_id, mask_tex)
-	_dynamic_root.add_child(quad)
-
-	# Keep ooze glow material-driven to avoid one dynamic light per owner.
-
-func _build_owner_volume_shell(owner_id: int, blocks: Array) -> void:
-	if blocks.is_empty():
-		return
-	var tile_set: Dictionary = {}
-	for block in blocks:
-		var t: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if _state.is_inside(t):
-			tile_set[_tile_key(t)] = t
-	if tile_set.is_empty():
-		return
-
-	var edge_mesh_x: BoxMesh = BoxMesh.new()
-	edge_mesh_x.size = Vector3(0.13, 0.030, 0.86)
-	var edge_mesh_z: BoxMesh = BoxMesh.new()
-	edge_mesh_z.size = Vector3(0.86, 0.030, 0.13)
-	var edges_x: Array[Transform3D] = []
-	var edges_z: Array[Transform3D] = []
-	for block in blocks:
-		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if not _state.is_inside(tile):
+func _prune_owner_mask_texture_cache(active_mask_cache_keys: Dictionary) -> void:
+	var pruned_count: int = 0
+	for key_variant in _owner_mask_texture_cache.keys():
+		var key: String = String(key_variant)
+		if active_mask_cache_keys.has(key):
 			continue
-		var center: Vector3 = _tile_world_position(tile)
-		var top: float = _tile_ground_top(tile)
-		var y_off: float = top + 0.044
-		var jitter: float = (_noise01(tile.x * 53 + owner_id * 11, tile.y * 31 + 17) - 0.5) * 0.025
-		if not tile_set.has(_tile_key(tile + Vector2i.RIGHT)):
-			edges_x.append(Transform3D(Basis(), center + Vector3(0.47, y_off + jitter, 0.0)))
-		if not tile_set.has(_tile_key(tile + Vector2i.LEFT)):
-			edges_x.append(Transform3D(Basis(), center + Vector3(-0.47, y_off + jitter, 0.0)))
-		if not tile_set.has(_tile_key(tile + Vector2i.DOWN)):
-			edges_z.append(Transform3D(Basis(), center + Vector3(0.0, y_off + jitter, 0.47)))
-		if not tile_set.has(_tile_key(tile + Vector2i.UP)):
-			edges_z.append(Transform3D(Basis(), center + Vector3(0.0, y_off + jitter, -0.47)))
+		_owner_mask_texture_cache.erase(key)
+		pruned_count += 1
+	if pruned_count > 0:
+		_perf_increment("mask_cache_prunes")
+		_perf_increment("mask_cache_pruned_entries", pruned_count)
 
-	if edges_x.is_empty() and edges_z.is_empty():
-		return
+func _record_dynamic_rebuild_time(start_usec: int) -> void:
+	var elapsed_ms: float = float(Time.get_ticks_usec() - start_usec) / 1000.0
+	_dynamic_rebuild_time_last_ms = elapsed_ms
+	_dynamic_rebuild_time_accum_ms += elapsed_ms
+	_dynamic_rebuild_time_samples += 1
+	_dynamic_rebuild_time_max_ms = maxf(_dynamic_rebuild_time_max_ms, elapsed_ms)
 
-	var tint: Color = _owner_ooze_tint(owner_id)
-	var shell_mat: StandardMaterial3D = StandardMaterial3D.new()
-	shell_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	shell_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	shell_mat.albedo_color = Color(tint.r * 0.84, tint.g * 0.84, tint.b * 0.84, 0.44)
-	shell_mat.roughness = 0.12
-	shell_mat.metallic = 0.0
-	shell_mat.metallic_specular = 0.74
-	shell_mat.clearcoat_enabled = true
-	shell_mat.clearcoat = 0.70
-	shell_mat.clearcoat_roughness = 0.16
-	shell_mat.emission_enabled = true
-	shell_mat.emission = tint * 0.14
-	shell_mat.emission_energy_multiplier = 0.05
-	if not edges_x.is_empty():
-		_dynamic_root.add_child(_make_multimesh_instance(edge_mesh_x, edges_x, [], shell_mat, false))
-	if not edges_z.is_empty():
-		_dynamic_root.add_child(_make_multimesh_instance(edge_mesh_z, edges_z, [], shell_mat, false))
-
-func _build_owner_meniscus(owner_id: int, blocks: Array) -> void:
-	if blocks.is_empty():
-		return
-	var tile_set: Dictionary = {}
-	for block in blocks:
-		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
-		tile_set[_tile_key(tile)] = tile
-	var mask_tex: Texture2D = _build_owner_mask_texture(tile_set)
-	if mask_tex == null:
-		return
-	var quad: MeshInstance3D = MeshInstance3D.new()
-	var quad_mesh: QuadMesh = QuadMesh.new()
-	quad_mesh.size = Vector2(float(_state.width) * tile_world_size, float(_state.height) * tile_world_size)
-	quad.mesh = quad_mesh
-	quad.position = _camera_base_target + Vector3(0.0, 0.074, 0.0)
-	quad.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
-	quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var meniscus: ShaderMaterial = _owner_pool_material(owner_id, mask_tex).duplicate(true)
-	meniscus.set_shader_parameter("pulse_speed", 0.20)
-	meniscus.set_shader_parameter("bubble_strength", 0.0015)
-	meniscus.set_shader_parameter("emission_strength", 0.008)
-	meniscus.set_shader_parameter("detail_scale", 5.6)
-	meniscus.set_shader_parameter("body_thickness", 0.012)
-	meniscus.set_shader_parameter("lip_thickness", 0.034)
-	meniscus.set_shader_parameter("flow_scale", 1.30)
-	meniscus.set_shader_parameter("flow_speed", 0.008)
-	meniscus.set_shader_parameter("flow_normal_strength", 0.28)
-	meniscus.set_shader_parameter("edge_darkening_strength", 0.12)
-	meniscus.set_shader_parameter("contact_darkening_strength", 0.10)
-	meniscus.set_shader_parameter("clearcoat_strength", 0.48)
-	meniscus.set_shader_parameter("specular_strength", 0.42)
-	quad.material_override = meniscus
-	_dynamic_root.add_child(quad)
-
-func _build_owner_blob_caps(owner_id: int, blocks: Array) -> void:
-	if blocks.is_empty():
-		return
-	var tile_set: Dictionary = {}
-	for block in blocks:
-		var t: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if _state.is_inside(t):
-			tile_set[_tile_key(t)] = true
-
-	var blob_mesh: SphereMesh = SphereMesh.new()
-	blob_mesh.radius = 0.18
-	blob_mesh.height = 0.24
-	blob_mesh.radial_segments = 10
-	blob_mesh.rings = 5
-	var transforms: Array[Transform3D] = []
-	for block in blocks:
-		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if not _state.is_inside(tile):
+func _animate_growth_assets() -> void:
+	for entry in _growth_anim_entries:
+		if typeof(entry) != TYPE_DICTIONARY:
 			continue
-		var neighbor_count: int = _owned_neighbor_count(tile, tile_set)
-		if neighbor_count <= 0:
+		var node: Node3D = entry.get("node", null)
+		if node == null or not is_instance_valid(node):
 			continue
-		var edge_tile: bool = neighbor_count < 4
-		var noise_gate: float = _noise01(tile.x * 17 + owner_id * 19, tile.y * 31 + owner_id * 7)
-		if edge_tile:
-			if noise_gate < 0.60:
-				continue
-		elif noise_gate < 0.82:
-			continue
-		var center: Vector3 = _tile_world_position(tile)
-		var top: float = _tile_ground_top(tile)
-		var noise_scale: float = 0.66 + _noise01(tile.x + owner_id * 7, tile.y + 13) * 0.24
-		var blob_basis: Basis = Basis().scaled(Vector3(1.0, 0.48, 1.0) * noise_scale)
-		transforms.append(Transform3D(blob_basis, center + Vector3(0.0, top + 0.040, 0.0)))
-	if transforms.is_empty():
-		return
-	var tint: Color = _owner_tint(owner_id)
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.albedo_color = Color(tint.r * 0.52, tint.g * 0.52, tint.b * 0.52, 1.0)
-	mat.roughness = 0.52
-	mat.metallic = 0.01
-	mat.metallic_specular = 0.26
-	mat.clearcoat_enabled = true
-	mat.clearcoat = 0.08
-	mat.clearcoat_roughness = 0.44
-	mat.emission_enabled = true
-	mat.emission = Color(tint.r * 0.16, tint.g * 0.16, tint.b * 0.16, 1.0)
-	mat.emission_energy_multiplier = 0.010
-	_dynamic_root.add_child(_make_multimesh_instance(blob_mesh, transforms, [], mat, true))
+		var base_tf: Transform3D = entry.get("base_tf", node.transform)
+		var role: String = String(entry.get("role", "gather"))
+		var phase: float = float(entry.get("phase", 0.0))
+		var tier: int = clampi(int(entry.get("tier", 0)), 0, 3)
+		var t: float = _visual_time + phase
 
-func _build_owner_micro_bubbles(owner_id: int, blocks: Array) -> void:
-	if blocks.is_empty():
-		return
-	var tile_set: Dictionary = {}
-	for block in blocks:
-		var t: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if _state.is_inside(t):
-			tile_set[_tile_key(t)] = true
-
-	var bubble_mesh: SphereMesh = SphereMesh.new()
-	bubble_mesh.radius = 0.06
-	bubble_mesh.height = 0.12
-	bubble_mesh.radial_segments = 8
-	bubble_mesh.rings = 5
-	var bubble_transforms: Array[Transform3D] = []
-	var max_bubbles: int = mini(96, maxi(24, int(blocks.size() * 0.35)))
-	for block in blocks:
-		if bubble_transforms.size() >= max_bubbles:
-			break
-		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if not _state.is_inside(tile):
-			continue
-		var neighbor_count: int = _owned_neighbor_count(tile, tile_set)
-		if neighbor_count <= 0:
-			continue
-		var edge_tile: bool = neighbor_count < 4
-		var presence_gate: float = _noise01(tile.x * 11 + owner_id * 43, tile.y * 13 + owner_id * 57)
-		if edge_tile:
-			if presence_gate < 0.78:
-				continue
-		elif presence_gate < 0.94:
-			continue
-		var center: Vector3 = _tile_world_position(tile)
-		var top: float = _tile_ground_top(tile)
-		var dx: float = (_noise01(tile.x * 7 + owner_id, tile.y * 13 + 3) - 0.5) * 0.30
-		var dz: float = (_noise01(tile.x * 11 + owner_id * 5, tile.y * 5 + 9) - 0.5) * 0.30
-		var scale_v: float = 0.66 + _noise01(tile.x * 17 + 2, tile.y * 19 + owner_id) * 0.58
-		var bb: Basis = Basis().scaled(Vector3.ONE * scale_v)
-		bubble_transforms.append(Transform3D(bb, center + Vector3(dx, top + 0.048, dz)))
-	if bubble_transforms.is_empty():
-		return
-	var tint: Color = _owner_tint(owner_id)
-	var bubble_mat: StandardMaterial3D = StandardMaterial3D.new()
-	bubble_mat.albedo_color = Color(tint.r * 0.58, tint.g * 0.58, tint.b * 0.58, 1.0)
-	bubble_mat.roughness = 0.52
-	bubble_mat.metallic = 0.01
-	bubble_mat.metallic_specular = 0.28
-	bubble_mat.clearcoat_enabled = true
-	bubble_mat.clearcoat = 0.08
-	bubble_mat.clearcoat_roughness = 0.48
-	bubble_mat.emission_enabled = true
-	bubble_mat.emission = Color(tint.r * 0.16, tint.g * 0.16, tint.b * 0.16, 1.0)
-	bubble_mat.emission_energy_multiplier = 0.010
-	_dynamic_root.add_child(_make_multimesh_instance(bubble_mesh, bubble_transforms, [], bubble_mat, false))
-
-func _build_owner_edge_beads(owner_id: int, blocks: Array) -> void:
-	if blocks.is_empty():
-		return
-	var tile_set: Dictionary = {}
-	for block in blocks:
-		var t: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if _state.is_inside(t):
-			tile_set[_tile_key(t)] = true
-
-	var bead_mesh: SphereMesh = SphereMesh.new()
-	bead_mesh.radius = 0.08
-	bead_mesh.height = 0.16
-	bead_mesh.radial_segments = 8
-	bead_mesh.rings = 5
-	var transforms: Array[Transform3D] = []
-	var max_beads: int = mini(84, maxi(18, int(blocks.size() * 0.28)))
-	for block in blocks:
-		if transforms.size() >= max_beads:
-			break
-		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if not _state.is_inside(tile):
-			continue
-		var neighbors: int = _owned_neighbor_count(tile, tile_set)
-		if neighbors >= 4:
-			continue
-		var gate: float = _noise01(tile.x * 47 + owner_id * 13, tile.y * 29 + owner_id * 31)
-		if gate < 0.60:
-			continue
-		var center: Vector3 = _tile_world_position(tile)
-		var top: float = _tile_ground_top(tile)
-		var bead_count: int = 1 + int(floor(_noise01(tile.x * 11 + owner_id * 7, tile.y * 17 + owner_id * 19) * 2.0))
-		for n in range(bead_count):
-			if transforms.size() >= max_beads:
-				break
-			var ang: float = _noise01(tile.x * 73 + n * 19 + owner_id, tile.y * 41 + n * 23 + owner_id * 3) * TAU
-			var rad: float = 0.24 + _noise01(tile.x * 59 + n * 29, tile.y * 67 + n * 17) * 0.20
-			var sx: float = 0.72 + _noise01(tile.x * 13 + n * 7, tile.y * 19 + n * 5) * 0.38
-			var basis: Basis = Basis().scaled(Vector3.ONE * sx)
-			transforms.append(
-				Transform3D(
-					basis,
-					center + Vector3(cos(ang) * rad, top + 0.038, sin(ang) * rad)
-				)
-			)
-	if transforms.is_empty():
-		return
-	var tint: Color = _owner_tint(owner_id)
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.albedo_color = Color(tint.r * 0.58, tint.g * 0.58, tint.b * 0.58, 1.0)
-	mat.roughness = 0.56
-	mat.metallic = 0.01
-	mat.metallic_specular = 0.22
-	mat.clearcoat_enabled = true
-	mat.clearcoat = 0.06
-	mat.clearcoat_roughness = 0.50
-	mat.emission_enabled = true
-	mat.emission = Color(tint.r * 0.14, tint.g * 0.14, tint.b * 0.14, 1.0)
-	mat.emission_energy_multiplier = 0.008
-	_dynamic_root.add_child(_make_multimesh_instance(bead_mesh, transforms, [], mat, false))
-
-func _build_owner_mask_texture(tile_set: Dictionary) -> Texture2D:
-	if _state == null:
-		return null
-	var mask_scale: int = OOZE_MASK_SCALE
-	var img_w: int = maxi(8, _state.width * mask_scale)
-	var img_h: int = maxi(8, _state.height * mask_scale)
-	var image: Image = Image.create(img_w, img_h, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0.0, 0.0, 0.0, 0.0))
-
-	var radius: int = maxi(2, int(round(float(mask_scale) * 1.10)))
-	var bridge_half: int = maxi(1, int(round(float(mask_scale) * 0.62)))
-	for tile_key in tile_set.keys():
-		var tile: Vector2i = tile_set[tile_key]
-		var wall_adjacent: bool = _tile_touches_blocked_neighbor(tile)
-		var jitter_scale: float = 0.03 if wall_adjacent else 0.08
-		var jx: int = int(round((_noise01(tile.x * 23 + 7, tile.y * 19 + 11) - 0.5) * float(mask_scale) * jitter_scale))
-		var jy: int = int(round((_noise01(tile.x * 31 + 3, tile.y * 29 + 17) - 0.5) * float(mask_scale) * jitter_scale))
-		var local_radius: int = radius + int(round((_noise01(tile.x * 41 + 5, tile.y * 37 + 13) - 0.5) * 0.9))
-		if wall_adjacent:
-			local_radius -= maxi(1, int(round(float(mask_scale) * 0.28)))
-		local_radius = maxi(2, local_radius)
-		var cx: int = tile.x * mask_scale + int(floor(float(mask_scale) * 0.5)) + jx
-		var cy: int = tile.y * mask_scale + int(floor(float(mask_scale) * 0.5)) + jy
-		_stamp_circle(image, cx, cy, local_radius, 0.98)
-		_stamp_circle(image, cx + int(round(float(mask_scale) * 0.08)), cy - int(round(float(mask_scale) * 0.04)), maxi(1, local_radius - 1), 0.86)
-		var right: Vector2i = tile + Vector2i.RIGHT
-		var down: Vector2i = tile + Vector2i.DOWN
-		if tile_set.has(_tile_key(right)):
-			var cx2: int = right.x * mask_scale + int(floor(float(mask_scale) * 0.5))
-			_stamp_rect(image, mini(cx, cx2), cy - bridge_half, maxi(cx, cx2), cy + bridge_half, 1.0)
-		if tile_set.has(_tile_key(down)):
-			var cy2: int = down.y * mask_scale + int(floor(float(mask_scale) * 0.5))
-			_stamp_rect(image, cx - bridge_half, mini(cy, cy2), cx + bridge_half, maxi(cy, cy2), 1.0)
-
-	_dilate_mask(image)
-	for _i in range(OOZE_MASK_SMOOTH_PASSES):
-		_smooth_mask(image)
-	_carve_blocked_tiles_from_mask(image, mask_scale)
-	_carve_wall_contact_moat(image, mask_scale)
-	var texture: ImageTexture = ImageTexture.create_from_image(image)
-	return texture
-
-func _tile_touches_blocked_neighbor(tile: Vector2i) -> bool:
-	if _state == null:
-		return false
-	for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		var neighbor: Vector2i = tile + step
-		if _state.is_inside(neighbor) and _state.is_blocked(neighbor):
-			return true
-	return false
-
-func _carve_blocked_tiles_from_mask(image: Image, mask_scale: int) -> void:
-	if _state == null:
-		return
-	var w: int = image.get_width()
-	var h: int = image.get_height()
-	var guard_band: int = maxi(0, int(round(float(mask_scale) * 0.05)))
-	for y in range(_state.height):
-		for x in range(_state.width):
-			var tile: Vector2i = Vector2i(x, y)
-			if not _state.is_blocked(tile):
-				continue
-			var px0: int = x * mask_scale + guard_band
-			var py0: int = y * mask_scale + guard_band
-			var px1: int = (x + 1) * mask_scale - 1 - guard_band
-			var py1: int = (y + 1) * mask_scale - 1 - guard_band
-			px0 = clampi(px0, 0, w - 1)
-			px1 = clampi(px1, 0, w - 1)
-			py0 = clampi(py0, 0, h - 1)
-			py1 = clampi(py1, 0, h - 1)
-			for py in range(py0, py1 + 1):
-				for px in range(px0, px1 + 1):
-					image.set_pixel(px, py, Color(1.0, 1.0, 1.0, 0.0))
-
-func _carve_wall_contact_moat(image: Image, mask_scale: int) -> void:
-	if _state == null:
-		return
-	var w: int = image.get_width()
-	var h: int = image.get_height()
-	var pad: int = maxi(1, int(round(float(mask_scale) * 0.08)))
-	for y in range(_state.height):
-		for x in range(_state.width):
-			var tile: Vector2i = Vector2i(x, y)
-			if not _state.is_blocked(tile):
-				continue
-			var px0: int = x * mask_scale - pad
-			var py0: int = y * mask_scale - pad
-			var px1: int = (x + 1) * mask_scale - 1 + pad
-			var py1: int = (y + 1) * mask_scale - 1 + pad
-			px0 = clampi(px0, 0, w - 1)
-			px1 = clampi(px1, 0, w - 1)
-			py0 = clampi(py0, 0, h - 1)
-			py1 = clampi(py1, 0, h - 1)
-			for py in range(py0, py1 + 1):
-				for px in range(px0, px1 + 1):
-					image.set_pixel(px, py, Color(1.0, 1.0, 1.0, 0.0))
-
-func _dilate_mask(image: Image) -> void:
-	var copy: Image = image.duplicate()
-	var w: int = image.get_width()
-	var h: int = image.get_height()
-	for y in range(1, h - 1):
-		for x in range(1, w - 1):
-			var current: float = copy.get_pixel(x, y).a
-			var n1: float = copy.get_pixel(x + 1, y).a
-			var n2: float = copy.get_pixel(x - 1, y).a
-			var n3: float = copy.get_pixel(x, y + 1).a
-			var n4: float = copy.get_pixel(x, y - 1).a
-			var max_n: float = maxf(maxf(n1, n2), maxf(n3, n4))
-			var expanded: float = maxf(current, max_n * 0.94)
-			image.set_pixel(x, y, Color(1.0, 1.0, 1.0, expanded))
-
-func _stamp_circle(image: Image, cx: int, cy: int, radius: int, strength: float) -> void:
-	var x0: int = maxi(0, cx - radius)
-	var x1: int = mini(image.get_width() - 1, cx + radius)
-	var y0: int = maxi(0, cy - radius)
-	var y1: int = mini(image.get_height() - 1, cy + radius)
-	var r2: float = float(radius * radius)
-	for y in range(y0, y1 + 1):
-		for x in range(x0, x1 + 1):
-			var dx: float = float(x - cx)
-			var dy: float = float(y - cy)
-			var dist2: float = dx * dx + dy * dy
-			if dist2 > r2:
-				continue
-			var falloff: float = 1.0 - (dist2 / maxf(1.0, r2))
-			var alpha: float = clampf(strength * (0.60 + 0.40 * falloff), 0.0, 1.0)
-			var current: Color = image.get_pixel(x, y)
-			if alpha > current.a:
-				image.set_pixel(x, y, Color(1.0, 1.0, 1.0, alpha))
-
-func _stamp_rect(image: Image, x0: int, y0: int, x1: int, y1: int, strength: float) -> void:
-	var clamped_x0: int = maxi(0, mini(x0, x1))
-	var clamped_x1: int = mini(image.get_width() - 1, maxi(x0, x1))
-	var clamped_y0: int = maxi(0, mini(y0, y1))
-	var clamped_y1: int = mini(image.get_height() - 1, maxi(y0, y1))
-	for y in range(clamped_y0, clamped_y1 + 1):
-		for x in range(clamped_x0, clamped_x1 + 1):
-			var current: Color = image.get_pixel(x, y)
-			if strength > current.a:
-				image.set_pixel(x, y, Color(1.0, 1.0, 1.0, strength))
-
-func _smooth_mask(image: Image) -> void:
-	var copy: Image = image.duplicate()
-	var w: int = image.get_width()
-	var h: int = image.get_height()
-	for y in range(1, h - 1):
-		for x in range(1, w - 1):
-			var a0: float = copy.get_pixel(x, y).a
-			var a1: float = copy.get_pixel(x + 1, y).a
-			var a2: float = copy.get_pixel(x - 1, y).a
-			var a3: float = copy.get_pixel(x, y + 1).a
-			var a4: float = copy.get_pixel(x, y - 1).a
-			var smoothed: float = clampf(a0 * 0.36 + (a1 + a2 + a3 + a4) * 0.16, 0.0, 1.0)
-			image.set_pixel(x, y, Color(1.0, 1.0, 1.0, smoothed))
-
-func _build_heart_markers(owner_id: int, blocks: Array) -> void:
-	var base_mesh: SphereMesh = SphereMesh.new()
-	base_mesh.radius = 0.44
-	base_mesh.height = 0.46
-	base_mesh.radial_segments = 16
-	base_mesh.rings = 10
-	var core_mesh: SphereMesh = SphereMesh.new()
-	core_mesh.radius = 0.16
-	core_mesh.height = 0.24
-	core_mesh.radial_segments = 14
-	core_mesh.rings = 8
-	var lobe_mesh: SphereMesh = SphereMesh.new()
-	lobe_mesh.radius = 0.18
-	lobe_mesh.height = 0.22
-	lobe_mesh.radial_segments = 12
-	lobe_mesh.rings = 7
-	var tip_mesh: CylinderMesh = CylinderMesh.new()
-	tip_mesh.top_radius = 0.02
-	tip_mesh.bottom_radius = 0.12
-	tip_mesh.height = 0.26
-	tip_mesh.radial_segments = 10
-	var tendril_mesh: CylinderMesh = CylinderMesh.new()
-	tendril_mesh.top_radius = 0.054
-	tendril_mesh.bottom_radius = 0.092
-	tendril_mesh.height = 0.58
-	tendril_mesh.radial_segments = 10
-	var use_heart_asset: bool = _has_asset_scene("heart_crystal")
-
-	var base_transforms: Array[Transform3D] = []
-	var core_transforms: Array[Transform3D] = []
-	var lobe_transforms: Array[Transform3D] = []
-	var tip_transforms: Array[Transform3D] = []
-	var tendril_transforms: Array[Transform3D] = []
-	var heart_asset_transforms: Array[Transform3D] = []
-	for block in blocks:
-		if not bool(block.get("is_heart", false)):
-			continue
-		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if not _state.is_inside(tile):
-			continue
-		var top: float = _tile_ground_top(tile)
-		var center: Vector3 = _tile_world_position(tile)
-		var dir: Vector3 = _tile_attack_direction(owner_id, tile)
-		var yaw: float = atan2(dir.x, dir.z)
-		var spread: float = 0.36
-		var mound_scale: float = 1.08 + _noise01(tile.x * 37 + owner_id * 5, tile.y * 29 + owner_id * 11) * 0.34
-		var mound_basis: Basis = Basis(Vector3.UP, yaw).scaled(Vector3(1.12, 0.74, 1.04) * mound_scale)
-		base_transforms.append(Transform3D(mound_basis, center + Vector3(0.0, top + 0.12, 0.0)))
-
-		var side: Vector3 = Vector3(-dir.z, 0.0, dir.x).normalized()
-		if use_heart_asset:
-			var hero_scale: float = 1.02 + _noise01(tile.x * 41 + owner_id * 19, tile.y * 47 + owner_id * 7) * 0.24
-			var hero_basis: Basis = Basis(Vector3.UP, yaw + 0.18).scaled(Vector3.ONE * hero_scale)
-			heart_asset_transforms.append(Transform3D(hero_basis, center + dir * 0.02 + Vector3(0.0, top + 0.34, 0.0)))
-		else:
-			var core_scale: float = 1.00 + _noise01(tile.x * 41 + owner_id * 19, tile.y * 47 + owner_id * 7) * 0.20
-			var core_basis: Basis = Basis(Vector3.UP, yaw + 0.2).scaled(Vector3(1.00, 1.12, 1.00) * core_scale)
-			core_transforms.append(Transform3D(core_basis, center + Vector3(0.0, top + 0.40, 0.0)))
-			var lobe_scale: float = 0.96 + _noise01(tile.x * 53 + owner_id * 17, tile.y * 59 + owner_id * 13) * 0.18
-			var lobe_a_pos: Vector3 = center + side * 0.11 + dir * 0.03 + Vector3(0.0, top + 0.38, 0.0)
-			var lobe_b_pos: Vector3 = center - side * 0.11 + dir * 0.03 + Vector3(0.0, top + 0.38, 0.0)
-			lobe_transforms.append(Transform3D(Basis(Vector3.UP, yaw + 0.1).scaled(Vector3(1.0, 1.0, 1.0) * lobe_scale), lobe_a_pos))
-			lobe_transforms.append(Transform3D(Basis(Vector3.UP, yaw - 0.1).scaled(Vector3(1.0, 1.0, 1.0) * lobe_scale), lobe_b_pos))
-			var tip_basis: Basis = Basis(Vector3.UP, yaw + PI) * Basis(Vector3.RIGHT, deg_to_rad(-10.0))
-			tip_transforms.append(Transform3D(tip_basis, center + dir * 0.02 + Vector3(0.0, top + 0.30, 0.0)))
-
-		for i in range(6):
-			var t: float = float(i) / 6.0
-			var angle: float = t * TAU + _noise01(tile.x * 13 + i * 17, tile.y * 19 + i * 23) * 0.35
-			var radial: Vector3 = Vector3(cos(angle), 0.0, sin(angle)).normalized()
-			var bias: float = 0.22 + maxf(0.0, radial.dot(dir)) * 0.20
-			var tendril_pos: Vector3 = center + radial * (spread + bias * 0.30) + Vector3(0.0, top + 0.18, 0.0)
-			var tendril_yaw: float = atan2(radial.x, radial.z)
-			var lean: float = deg_to_rad(20.0 + 16.0 * maxf(0.0, radial.dot(side)))
-			var tendril_scale: float = 0.76 + _noise01(tile.x * 31 + i * 3, tile.y * 17 + i * 7) * 0.34
-			var tendril_basis: Basis = Basis(Vector3.UP, tendril_yaw) * Basis(Vector3.RIGHT, -lean)
-			tendril_basis = tendril_basis.scaled(Vector3(1.0, 1.0 + tendril_scale * 0.22, 1.0))
-			tendril_transforms.append(Transform3D(tendril_basis, tendril_pos))
-
-	if base_transforms.is_empty():
-		return
-	var owner_tint: Color = _owner_ooze_tint(owner_id)
-	var heart_tint: Color = owner_tint.lerp(_owner_tint(owner_id), 0.18).lerp(Color(1.0, 0.92, 0.96, 1.0), 0.04)
-	var heart_mat: StandardMaterial3D = _ooze_growth_material(owner_tint, heart_tint, "heart", false)
-	var heart_core_mat: StandardMaterial3D = _ooze_growth_material(owner_tint, heart_tint, "heart", true)
-	var lobe_mat: StandardMaterial3D = _ooze_growth_material(owner_tint, heart_tint, "heart", true)
-	_dynamic_root.add_child(_make_multimesh_instance(base_mesh, base_transforms, [], heart_mat, true))
-	_dynamic_root.add_child(_make_multimesh_instance(tendril_mesh, tendril_transforms, [], heart_mat, true))
-	if use_heart_asset and not heart_asset_transforms.is_empty():
-		for tf in heart_asset_transforms:
-			_add_asset_instance(
-				_dynamic_root,
-				"heart_crystal",
-				tf,
-				GeometryInstance3D.SHADOW_CASTING_SETTING_ON,
-				heart_core_mat
-			)
-	else:
-		_dynamic_root.add_child(_make_multimesh_instance(core_mesh, core_transforms, [], heart_core_mat, false))
-		_dynamic_root.add_child(_make_multimesh_instance(lobe_mesh, lobe_transforms, [], lobe_mat, false))
-		_dynamic_root.add_child(_make_multimesh_instance(tip_mesh, tip_transforms, [], lobe_mat, false))
-
-func _build_specialization_markers(owner_id: int, blocks: Array) -> void:
-	var role_tiles: Dictionary = {
-		"melee": [],
-		"ranged": [],
-		"defense": [],
-		"gather": [],
-	}
-	for block in blocks:
-		var role: String = String(block.get("tile_type", "basic"))
-		if role_tiles.has(role):
-			role_tiles[role].append(block)
-
-	for role in role_tiles.keys():
-		var entries: Array = role_tiles[role]
-		if entries.is_empty():
-			continue
-		_build_role_growth_surface(owner_id, String(role), entries)
-		_build_role_ooze_growth(owner_id, String(role), entries)
-
-func _build_role_growth_surface(owner_id: int, role: String, entries: Array) -> void:
-	if entries.is_empty():
-		return
-	var mound_mesh: SphereMesh = SphereMesh.new()
-	mound_mesh.radius = 0.26
-	mound_mesh.height = 0.14
-	mound_mesh.radial_segments = 12
-	mound_mesh.rings = 6
-	var transforms: Array[Transform3D] = []
-	for block in entries:
-		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if not _state.is_inside(tile):
-			continue
-		var top: float = _tile_ground_top(tile)
-		var center: Vector3 = _tile_world_position(tile)
-		var rot: float = _noise01(tile.x * 31 + owner_id * 17, tile.y * 37 + owner_id * 11) * TAU
-		var scale: Vector3 = Vector3(1.06, 0.72, 1.00)
+		var pulse_amp: float = 0.035
+		var pulse_speed: float = 1.2
+		var sway_amp: float = deg_to_rad(1.1)
+		var sway_speed: float = 0.9
+		var bob_amp: float = 0.010
+		var scale_mul: Vector3 = Vector3.ONE
 		match role:
+			"core":
+				pulse_amp = 0.055
+				pulse_speed = 0.84
+				sway_amp = deg_to_rad(0.8)
+				sway_speed = 0.66
+				bob_amp = 0.014
 			"melee":
-				scale = Vector3(1.10, 0.76, 0.96)
+				pulse_amp = 0.030
+				pulse_speed = 1.40
+				sway_amp = deg_to_rad(2.2)
+				sway_speed = 1.32
+				bob_amp = 0.009
 			"ranged":
-				scale = Vector3(1.00, 0.68, 1.00)
+				pulse_amp = 0.036
+				pulse_speed = 1.08
+				sway_amp = deg_to_rad(1.6)
+				sway_speed = 1.06
+				bob_amp = 0.012
+				scale_mul.y += 0.08 * (0.5 + 0.5 * sin(t * 1.9))
 			"defense":
-				scale = Vector3(1.12, 0.82, 1.12)
+				pulse_amp = 0.018
+				pulse_speed = 0.72
+				sway_amp = deg_to_rad(0.5)
+				sway_speed = 0.62
+				bob_amp = 0.006
 			"gather":
-				scale = Vector3(1.00, 0.66, 1.00)
-		var n: float = 0.92 + _noise01(tile.x * 13 + 7, tile.y * 19 + 5) * 0.22
-		transforms.append(Transform3D(Basis(Vector3.UP, rot).scaled(scale * n), center + Vector3(0.0, top + 0.062, 0.0)))
-	if transforms.is_empty():
-		return
-	var base_tint: Color = _owner_ooze_tint(owner_id)
-	var role_tint: Color = _role_tint(role)
-	var mat: StandardMaterial3D = _ooze_growth_material(base_tint, role_tint, role, false)
-	mat.emission_energy_multiplier *= 0.72
-	mat.roughness = clampf(mat.roughness + 0.08, 0.28, 0.72)
-	_dynamic_root.add_child(_make_multimesh_instance(mound_mesh, transforms, [], mat, true))
+				pulse_amp = 0.044
+				pulse_speed = 1.54
+				sway_amp = deg_to_rad(1.2)
+				sway_speed = 1.18
+				bob_amp = 0.010
+		var tier_mul: float = 1.0 + float(tier) * 0.10
+		pulse_amp *= tier_mul
+		bob_amp *= tier_mul
 
-func _build_role_ooze_growth(owner_id: int, role: String, entries: Array) -> void:
-	if entries.is_empty():
-		return
-	var owner_tint: Color = _owner_ooze_tint(owner_id)
-	var role_tint: Color = _role_tint(role)
-	var core_mat: StandardMaterial3D = _ooze_growth_material(owner_tint, role_tint, role, false)
-	var accent_mat: StandardMaterial3D = _ooze_growth_material(owner_tint, role_tint, role, true)
+		var pulse: float = 1.0 + pulse_amp * sin(t * pulse_speed)
+		scale_mul *= pulse
+		var sway_x: float = sin(t * sway_speed) * sway_amp
+		var sway_z: float = cos(t * (sway_speed * 0.82 + 0.11)) * sway_amp * 0.72
+		var bob: float = sin(t * (pulse_speed * 0.58 + 0.22)) * bob_amp
 
-	var base_mesh: SphereMesh = SphereMesh.new()
-	base_mesh.radius = 0.26
-	base_mesh.height = 0.20
-	base_mesh.radial_segments = 14
-	base_mesh.rings = 7
-
-	var accent_a: Mesh = null
-	var accent_b: Mesh = null
-	match role:
-		"melee":
-			base_mesh.radius = 0.28
-			base_mesh.height = 0.22
-			var spike: PrismMesh = PrismMesh.new()
-			spike.left_to_right = 0.56
-			spike.size = Vector3(0.16, 0.42, 0.14)
-			accent_a = spike
-		"ranged":
-			base_mesh.radius = 0.26
-			base_mesh.height = 0.20
-			var bulb: SphereMesh = SphereMesh.new()
-			bulb.radius = 0.14
-			bulb.height = 0.20
-			bulb.radial_segments = 12
-			bulb.rings = 7
-			accent_a = bulb
-			var nozzle: CylinderMesh = CylinderMesh.new()
-			nozzle.top_radius = 0.030
-			nozzle.bottom_radius = 0.054
-			nozzle.height = 0.18
-			nozzle.radial_segments = 8
-			accent_b = nozzle
-		"defense":
-			base_mesh.radius = 0.30
-			base_mesh.height = 0.24
-			var shell: CapsuleMesh = CapsuleMesh.new()
-			shell.radius = 0.13
-			shell.height = 0.30
-			shell.radial_segments = 10
-			shell.rings = 5
-			accent_a = shell
-		"gather":
-			base_mesh.radius = 0.24
-			base_mesh.height = 0.18
-			var nodule: SphereMesh = SphereMesh.new()
-			nodule.radius = 0.11
-			nodule.height = 0.16
-			nodule.radial_segments = 10
-			nodule.rings = 6
-			accent_a = nodule
-
-	var base_transforms: Array[Transform3D] = []
-	var accent_a_transforms: Array[Transform3D] = []
-	var accent_b_transforms: Array[Transform3D] = []
-	for block in entries:
-		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if not _state.is_inside(tile):
-			continue
-		var top: float = _tile_ground_top(tile)
-		var center: Vector3 = _tile_world_position(tile)
-		var direction: Vector3 = _tile_attack_direction(owner_id, tile)
-		var yaw: float = atan2(direction.x, direction.z)
-		var scale_noise: float = 0.86 + _noise01(tile.x * 17 + owner_id * 13, tile.y * 31 + owner_id * 7) * 0.30
-		var base_basis: Basis = Basis(Vector3.UP, yaw + _noise01(tile.x * 13 + 2, tile.y * 11 + 5) * 0.36).scaled(Vector3.ONE * scale_noise)
-		base_transforms.append(Transform3D(base_basis, center + Vector3(0.0, top + 0.078, 0.0)))
-		var accent_gate: float = _noise01(tile.x * 43 + owner_id * 19, tile.y * 47 + owner_id * 23)
-
-		match role:
-			"melee":
-				var side: Vector3 = Vector3(-direction.z, 0.0, direction.x).normalized()
-				for i in range(2):
-					var lane: float = -0.08 if i == 0 else 0.08
-					var spike_pos: Vector3 = center + direction * 0.08 + side * lane + Vector3(0.0, top + 0.17, 0.0)
-					var spike_basis: Basis = Basis(Vector3.UP, yaw + lane * 1.7) * Basis(Vector3.RIGHT, deg_to_rad(-18.0))
-					var spike_scale: float = 0.90 + _noise01(tile.x * 29 + i * 7, tile.y * 37 + i * 5) * 0.30
-					accent_a_transforms.append(Transform3D(spike_basis.scaled(Vector3.ONE * spike_scale), spike_pos))
-			"ranged":
-				var bulb_pos: Vector3 = center + Vector3(0.0, top + 0.17, 0.0)
-				var bulb_scale: float = 0.84 + _noise01(tile.x * 11 + 9, tile.y * 13 + 3) * 0.28
-				accent_a_transforms.append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * bulb_scale), bulb_pos))
-				var nozzle_pos: Vector3 = center + direction * 0.08 + Vector3(0.0, top + 0.21, 0.0)
-				var nozzle_basis: Basis = Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, deg_to_rad(-14.0))
-				accent_b_transforms.append(Transform3D(nozzle_basis, nozzle_pos))
-			"defense":
-				var shell_basis: Basis = Basis(Vector3.UP, yaw).scaled(Vector3(1.06, 1.16, 1.06))
-				accent_a_transforms.append(Transform3D(shell_basis, center + Vector3(0.0, top + 0.18, 0.0)))
-			"gather":
-				if accent_gate < 0.45:
-					continue
-				for i in range(3):
-					var a: float = float(i) * (TAU / 3.0) + _noise01(tile.x * 23 + i * 3, tile.y * 19 + i * 5) * 0.32
-					var p: Vector3 = center + Vector3(cos(a) * 0.12, top + 0.16, sin(a) * 0.12)
-					var n_scale: float = 0.72 + _noise01(tile.x * 41 + i * 11, tile.y * 43 + i * 13) * 0.24
-					accent_a_transforms.append(Transform3D(Basis(Vector3.UP, a).scaled(Vector3.ONE * n_scale), p))
-
-	if not base_transforms.is_empty():
-		_dynamic_root.add_child(_make_multimesh_instance(base_mesh, base_transforms, [], core_mat, true))
-	if accent_a != null and not accent_a_transforms.is_empty():
-		_dynamic_root.add_child(_make_multimesh_instance(accent_a, accent_a_transforms, [], accent_mat, true))
-	if accent_b != null and not accent_b_transforms.is_empty():
-		_dynamic_root.add_child(_make_multimesh_instance(accent_b, accent_b_transforms, [], accent_mat, true))
-
-func _tile_attack_direction(owner_id: int, tile: Vector2i) -> Vector3:
-	var fallback: Vector3 = Vector3.RIGHT if owner_id == GameState.PLAYER_ID else Vector3.LEFT
-	if _state == null:
-		return fallback
-	var src: Vector3 = _tile_world_position(tile)
-	var best_dist_sq: float = INF
-	var best_dir: Vector3 = fallback
-	for block in _state.blocks.values():
-		if not bool(block.get("is_heart", false)):
-			continue
-		if int(block.get("owner", owner_id)) == owner_id:
-			continue
-		var other: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if not _state.is_inside(other):
-			continue
-		var delta: Vector3 = _tile_world_position(other) - src
-		delta.y = 0.0
-		var dist_sq: float = delta.length_squared()
-		if dist_sq <= 0.0001 or dist_sq >= best_dist_sq:
-			continue
-		best_dist_sq = dist_sq
-		best_dir = delta.normalized()
-	return best_dir
-
-func _build_role_marker_layer(owner_id: int, role: String, entries: Array) -> void:
-	var owner_tint: Color = _owner_tint(owner_id)
-	var role_tint: Color = _role_tint(role)
-	var crest_tint: Color = role_tint.lerp(owner_tint, 0.52).lerp(Color(1.0, 1.0, 1.0, 1.0), 0.14)
-	var base_y_offset: float = 0.088
-	var crest_y_offset: float = 0.188
-	if role == "defense":
-		base_y_offset = 0.082
-		crest_y_offset = 0.152
-	elif role == "melee":
-		base_y_offset = 0.094
-		crest_y_offset = 0.202
-	elif role == "gather":
-		base_y_offset = 0.086
-		crest_y_offset = 0.168
-	elif role == "ranged":
-		base_y_offset = 0.088
-		crest_y_offset = 0.196
-
-	var base_mesh: Mesh = _role_base_mesh(role)
-	var base_transforms: Array[Transform3D] = []
-
-	var crest_mesh: Mesh = _role_crest_mesh(role)
-	var crest_transforms: Array[Transform3D] = []
-
-	for block in entries:
-		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
-		var top: float = _tile_ground_top(tile)
-		var center: Vector3 = _tile_world_position(tile)
-		var rot: float = _noise01(tile.x * 53 + owner_id * 7, tile.y * 47 + owner_id * 13) * TAU
-		var s: float = 1.00 + _noise01(tile.x * 17 + owner_id * 3, tile.y * 29 + owner_id * 5) * 0.28
-		var base_basis: Basis = Basis(Vector3.UP, rot).scaled(Vector3.ONE * (0.74 + (s - 1.0) * 0.32))
-		var crest_basis: Basis = Basis(Vector3.UP, rot + 0.24).scaled(Vector3.ONE * (0.74 + (s - 1.0) * 0.28))
-		base_transforms.append(Transform3D(base_basis, center + Vector3(0.0, top + base_y_offset, 0.0)))
-		crest_transforms.append(Transform3D(crest_basis, center + Vector3(0.0, top + crest_y_offset, 0.0)))
-
-	var base_material: StandardMaterial3D = _role_base_material(role, role_tint, owner_tint)
-	_dynamic_root.add_child(_make_multimesh_instance(base_mesh, base_transforms, [], base_material, true))
-
-	var crest_material: ShaderMaterial = ShaderMaterial.new()
-	var crest_shader: Shader = Shader.new()
-	crest_shader.code = ROLE_CREST_SHADER_CODE
-	crest_material.shader = crest_shader
-	crest_material.set_shader_parameter("crest_color", crest_tint.lerp(Color(1.0, 1.0, 1.0, 1.0), 0.30))
-	crest_material.set_shader_parameter("crest_emission", crest_tint.lerp(Color(1.0, 1.0, 1.0, 1.0), 0.20))
-	crest_material.set_shader_parameter("crest_roughness", 0.30 if role == "ranged" else (0.40 if role == "gather" else (0.52 if role == "melee" else 0.60)))
-	crest_material.set_shader_parameter("pulse_speed", 1.9 if role == "ranged" else (1.6 if role == "gather" else 1.4))
-	crest_material.set_shader_parameter("pulse_amp", 0.030 if role == "gather" else (0.024 if role == "ranged" else 0.018))
-	_dynamic_root.add_child(_make_multimesh_instance(crest_mesh, crest_transforms, [], crest_material, true))
-
-func _build_role_surface_overlay(owner_id: int, role: String, entries: Array) -> void:
-	if entries.is_empty():
-		return
-	var tile_set: Dictionary = {}
-	for block in entries:
-		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
-		if _state.is_inside(tile):
-			tile_set[_tile_key(tile)] = tile
-	if tile_set.is_empty():
-		return
-	var mask_tex: Texture2D = _build_owner_mask_texture(tile_set)
-	if mask_tex == null:
-		return
-	var quad: MeshInstance3D = MeshInstance3D.new()
-	var quad_mesh: QuadMesh = QuadMesh.new()
-	quad_mesh.size = Vector2(float(_state.width) * tile_world_size, float(_state.height) * tile_world_size)
-	quad.mesh = quad_mesh
-	quad.position = _camera_base_target + Vector3(0.0, 0.079, 0.0)
-	quad.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
-	quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var mat: ShaderMaterial = _owner_pool_material(owner_id, mask_tex).duplicate(true)
-	var role_mix: float = 0.40
-	if role == "defense":
-		role_mix = 0.30
-	elif role == "gather":
-		role_mix = 0.46
-	elif role == "ranged":
-		role_mix = 0.36
-	var tint: Color = _owner_ooze_tint(owner_id).lerp(_role_tint(role), role_mix)
-	mat.set_shader_parameter("owner_color", tint)
-	mat.set_shader_parameter("pulse_speed", 0.30 if role == "ranged" else 0.24)
-	mat.set_shader_parameter("bubble_strength", 0.0010)
-	mat.set_shader_parameter("emission_strength", 0.013 if role == "ranged" else (0.011 if role == "gather" else 0.009))
-	mat.set_shader_parameter("detail_scale", 6.0)
-	mat.set_shader_parameter("body_thickness", 0.0065)
-	mat.set_shader_parameter("lip_thickness", 0.011)
-	mat.set_shader_parameter("flow_scale", 1.42)
-	mat.set_shader_parameter("flow_speed", 0.013 if role == "melee" else 0.010)
-	mat.set_shader_parameter("flow_normal_strength", 0.31)
-	mat.set_shader_parameter("clearcoat_strength", 0.56)
-	mat.set_shader_parameter("specular_strength", 0.50)
-	quad.material_override = mat
-	_dynamic_root.add_child(quad)
+		var base_scale: Vector3 = base_tf.basis.get_scale()
+		var base_rot: Basis = base_tf.basis.orthonormalized()
+		var sway_basis: Basis = Basis(Vector3.RIGHT, sway_x) * Basis(Vector3.FORWARD, sway_z)
+		var animated_scale: Vector3 = Vector3(
+			base_scale.x * scale_mul.x,
+			base_scale.y * scale_mul.y,
+			base_scale.z * scale_mul.z
+		)
+		var animated_basis: Basis = (base_rot * sway_basis).scaled(animated_scale)
+		node.transform = Transform3D(animated_basis, base_tf.origin + Vector3(0.0, bob, 0.0))
 
 func _build_world_points() -> void:
 	if _state == null:
@@ -2117,7 +1038,57 @@ func _build_world_points() -> void:
 func _add_ambient_lights() -> void:
 	return
 
-func _add_objective_glow_lights() -> void:
+func _begin_dynamic_light_sync() -> void:
+	_perf_increment("light_rebuild_passes")
+	for light_variant in _dynamic_light_pool.values():
+		var light: OmniLight3D = light_variant as OmniLight3D
+		if light == null or not is_instance_valid(light):
+			continue
+		light.visible = false
+
+func _end_dynamic_light_sync(active_light_keys: Dictionary) -> void:
+	if _dynamic_light_root == null:
+		return
+	for key_variant in _dynamic_light_pool.keys():
+		var key: String = String(key_variant)
+		var light: OmniLight3D = _dynamic_light_pool[key] as OmniLight3D
+		if light == null or not is_instance_valid(light):
+			continue
+		light.visible = active_light_keys.has(key)
+
+func _claim_dynamic_light(key: String, active_light_keys: Dictionary) -> OmniLight3D:
+	active_light_keys[key] = true
+	var light: OmniLight3D = _dynamic_light_pool.get(key, null) as OmniLight3D
+	if light == null or not is_instance_valid(light):
+		light = OmniLight3D.new()
+		light.name = "DynamicLight_%s" % key.replace(":", "_").replace(",", "_")
+		light.shadow_enabled = false
+		_dynamic_light_pool[key] = light
+		_perf_increment("lights_created")
+		if _dynamic_light_root != null:
+			_dynamic_light_root.add_child(light)
+	elif light.get_parent() == null and _dynamic_light_root != null:
+		_dynamic_light_root.add_child(light)
+	light.visible = true
+	if not _point_lights.has(light):
+		_point_lights.append(light)
+	return light
+
+func _configure_dynamic_light(
+	light: OmniLight3D,
+	light_position: Vector3,
+	color: Color,
+	energy: float,
+	omni_range: float
+) -> void:
+	light.position = light_position
+	light.light_color = color
+	light.light_energy = energy
+	light.set_meta("base_energy", energy)
+	light.omni_range = omni_range
+	light.shadow_enabled = false
+
+func _add_objective_glow_lights(active_light_keys: Dictionary) -> void:
 	if _state == null:
 		return
 	var heart_lights_added: int = 0
@@ -2128,208 +1099,68 @@ func _add_objective_glow_lights() -> void:
 		if not _state.is_inside(tile):
 			continue
 		var owner_id: int = int(block.get("owner", GameState.PLAYER_ID))
-		var glow_color: Color = _owner_tint(owner_id).lerp(Color(1.0, 1.0, 1.0, 1.0), 0.02)
-		var light: OmniLight3D = OmniLight3D.new()
-		light.position = _tile_world_position(tile) + Vector3(0.0, _tile_ground_top(tile) + 0.72, 0.0)
-		light.light_color = glow_color
-		light.light_energy = 0.72
-		light.set_meta("base_energy", 0.72)
-		light.omni_range = 3.6
-		light.shadow_enabled = false
-		_dynamic_root.add_child(light)
-		_point_lights.append(light)
+		var glow_color: Color = _owner_tint(owner_id).lerp(Color(1.0, 1.0, 1.0, 1.0), 0.10)
+		var light: OmniLight3D = _claim_dynamic_light("heart:%s" % _tile_key(tile), active_light_keys)
+		_configure_dynamic_light(
+			light,
+			_tile_world_position(tile) + Vector3(0.0, _tile_ground_top(tile) + 0.78, 0.0),
+			glow_color,
+			1.08,
+			4.8
+		)
 		heart_lights_added += 1
 		if heart_lights_added >= 4:
 			break
 	if _state.is_inside(_state.entrance_tile):
-		var entry_light: OmniLight3D = OmniLight3D.new()
-		entry_light.position = _tile_world_position(_state.entrance_tile) + Vector3(0.0, _tile_ground_top(_state.entrance_tile) + 0.58, 0.0)
-		entry_light.light_color = Color(0.22, 0.55, 0.86, 1.0)
-		entry_light.light_energy = 0.68
-		entry_light.set_meta("base_energy", 0.68)
-		entry_light.omni_range = 3.2
-		entry_light.shadow_enabled = false
-		_dynamic_root.add_child(entry_light)
-		_point_lights.append(entry_light)
+		var entry_light: OmniLight3D = _claim_dynamic_light("entrance", active_light_keys)
+		_configure_dynamic_light(
+			entry_light,
+			_tile_world_position(_state.entrance_tile) + Vector3(0.0, _tile_ground_top(_state.entrance_tile) + 0.58, 0.0),
+			Color(0.28, 0.60, 0.90, 1.0),
+			0.76,
+			3.8
+		)
 	if _state.door_hp > 0 and _state.is_inside(_state.door_tile):
-		var door_light: OmniLight3D = OmniLight3D.new()
-		door_light.position = _tile_world_position(_state.door_tile) + Vector3(0.0, _tile_ground_top(_state.door_tile) + 0.64, 0.0)
-		door_light.light_color = Color(0.86, 0.52, 0.20, 1.0)
-		door_light.light_energy = 0.84
-		door_light.set_meta("base_energy", 0.84)
-		door_light.omni_range = 3.4
-		door_light.shadow_enabled = false
-		_dynamic_root.add_child(door_light)
-		_point_lights.append(door_light)
+		var door_light: OmniLight3D = _claim_dynamic_light("door", active_light_keys)
+		_configure_dynamic_light(
+			door_light,
+			_tile_world_position(_state.door_tile) + Vector3(0.0, _tile_ground_top(_state.door_tile) + 0.64, 0.0),
+			Color(0.94, 0.60, 0.28, 1.0),
+			1.04,
+			4.1
+		)
+
+func _add_owner_zone_light(owner_id: int, blocks: Array, active_light_keys: Dictionary) -> void:
+	if blocks.is_empty():
+		return
+	var centroid: Vector3 = _owner_centroid(blocks)
+	var nearest_tile: Vector2i = blocks[0].get("pos", Vector2i(-1, -1))
+	var top: float = _tile_ground_top(nearest_tile) if _state != null and _state.is_inside(nearest_tile) else 0.0
+	var strength: float = clampf(0.34 + float(blocks.size()) * 0.0060, 0.34, 0.72)
+	var light: OmniLight3D = _claim_dynamic_light("owner:%d" % owner_id, active_light_keys)
+	_configure_dynamic_light(
+		light,
+		centroid + Vector3(0.0, top + 0.88, 0.0),
+		_owner_ooze_tint(owner_id).lerp(Color(1.0, 1.0, 1.0, 1.0), 0.02),
+		strength,
+		11.2
+	)
 
 func _rebuild_markers() -> void:
-	_clear_children(_marker_root)
-	if _state == null:
-		return
-	_add_queued_preview_markers()
-	if not _hover_preview_action.is_empty():
-		var preview_tile: Vector2i = _preview_target_tile(_hover_preview_action)
-		if _state.is_inside(preview_tile):
-			var preview_role: String = String(_hover_preview_action.get("tile_type", _hover_preview_action.get("to_type", "basic")))
-			var preview_ok: bool = _hover_invalid_reason.is_empty()
-			_add_preview_marker(preview_tile, preview_role, preview_ok)
-			if not preview_ok:
-				_add_invalid_preview_cross(preview_tile)
-	if _hovered_tile != Vector2i(-1, -1) and _state.is_inside(_hovered_tile):
-		_add_tile_marker(_hovered_tile, Color(0.88, 0.96, 1.0, 0.42), 0.026)
-	if _selected_tile != Vector2i(-1, -1) and _state.is_inside(_selected_tile):
-		_add_tile_marker(_selected_tile, Color(1.0, 0.93, 0.54, 0.52), 0.034)
-	for key in _queued_tiles.keys():
-		var tile: Vector2i = _queued_tiles[key]
-		if _state.is_inside(tile):
-			_add_tile_marker(tile, Color(0.54, 0.98, 0.76, 0.30), 0.019)
-
-func _preview_target_tile(action: Dictionary) -> Vector2i:
-	if _state == null or action.is_empty():
-		return Vector2i(-1, -1)
-	var action_type: String = String(action.get("type", ""))
-	if action_type == "place_tile":
-		return action.get("target", Vector2i(-1, -1))
-	if action_type == "convert_tile" or action_type == "upgrade_tile":
-		var block_id: int = int(action.get("block_id", -1))
-		if _state.blocks.has(block_id):
-			return _state.blocks[block_id].get("pos", Vector2i(-1, -1))
-	return Vector2i(-1, -1)
-
-func _add_queued_preview_markers() -> void:
-	if _state == null or _queued_actions.is_empty():
-		return
-	var seen: Dictionary = {}
-	for action in _queued_actions:
-		if typeof(action) != TYPE_DICTIONARY:
-			continue
-		var info: Dictionary = _queued_action_tile_role(action)
-		var tile: Vector2i = info.get("tile", Vector2i(-1, -1))
-		var role: String = String(info.get("role", "basic"))
-		if not _state.is_inside(tile):
-			continue
-		var key: String = _tile_key(tile)
-		if seen.has(key):
-			continue
-		seen[key] = true
-		_add_preview_marker(tile, role, true, true)
-
-func _queued_action_tile_role(action: Dictionary) -> Dictionary:
-	var result: Dictionary = {"tile": Vector2i(-1, -1), "role": "basic"}
-	if _state == null:
-		return result
-	var action_type: String = String(action.get("type", ""))
-	if action_type == "place_tile":
-		result["tile"] = action.get("target", Vector2i(-1, -1))
-		result["role"] = String(action.get("tile_type", "basic"))
-		return result
-	if action_type == "convert_tile" or action_type == "upgrade_tile":
-		var block_id: int = int(action.get("block_id", -1))
-		if _state.blocks.has(block_id):
-			result["tile"] = _state.blocks[block_id].get("pos", Vector2i(-1, -1))
-			result["role"] = String(action.get("to_type", _state.blocks[block_id].get("tile_type", "basic")))
-	return result
-
-func _preview_material(color: Color, is_queued: bool = false) -> ShaderMaterial:
-	var mat: ShaderMaterial = ShaderMaterial.new()
-	var shader: Shader = Shader.new()
-	shader.code = PREVIEW_MARKER_SHADER_CODE
-	mat.shader = shader
-	mat.set_shader_parameter("base_color", color)
-	mat.set_shader_parameter("pulse_speed", 1.6 if is_queued else 2.8)
-	mat.set_shader_parameter("pulse_amp", 0.24 if is_queued else 0.40)
-	mat.set_shader_parameter("alpha_scale", 0.80 if is_queued else 1.0)
-	return mat
-
-func _add_preview_marker(tile: Vector2i, role: String, is_valid: bool, is_queued: bool = false) -> void:
-	var top: float = _tile_ground_top(tile)
-	var center: Vector3 = _tile_world_position(tile)
-	var ring: MeshInstance3D = MeshInstance3D.new()
-	var ring_mesh: TorusMesh = TorusMesh.new()
-	ring_mesh.inner_radius = tile_world_size * 0.36
-	ring_mesh.outer_radius = tile_world_size * 0.42
-	ring_mesh.rings = 12
-	ring_mesh.ring_segments = 24
-	ring.mesh = ring_mesh
-	ring.position = center + Vector3(0.0, top + (0.044 if is_queued else 0.048), 0.0)
-	var preview_col: Color = Color(0.52, 1.0, 0.76, 0.90) if is_valid else Color(1.0, 0.32, 0.36, 0.90)
-	if is_queued:
-		preview_col = preview_col.lerp(Color(0.48, 0.86, 1.0, 0.88), 0.45)
-	ring.material_override = _preview_material(preview_col, is_queued)
-	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_marker_root.add_child(ring)
-
-	var ghost: MeshInstance3D = MeshInstance3D.new()
-	ghost.mesh = _preview_role_mesh(role)
-	ghost.material_override = _preview_material(preview_col, is_queued)
-	ghost.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	ghost.position = center + Vector3(0.0, top + (0.13 if is_queued else 0.16), 0.0)
-	ghost.scale = Vector3(0.50, 0.50, 0.50) if is_queued else Vector3(0.58, 0.58, 0.58)
-	_marker_root.add_child(ghost)
-
-func _add_invalid_preview_cross(tile: Vector2i) -> void:
-	var top: float = _tile_ground_top(tile)
-	var center: Vector3 = _tile_world_position(tile)
-	for i in range(2):
-		var slash: MeshInstance3D = MeshInstance3D.new()
-		var slash_mesh: BoxMesh = BoxMesh.new()
-		slash_mesh.size = Vector3(tile_world_size * 0.58, 0.03, 0.08)
-		slash.mesh = slash_mesh
-		slash.position = center + Vector3(0.0, top + 0.08, 0.0)
-		slash.rotation_degrees = Vector3(0.0, 45.0 if i == 0 else -45.0, 0.0)
-		slash.material_override = _preview_material(Color(1.0, 0.26, 0.22, 0.92), false)
-		slash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_marker_root.add_child(slash)
-
-func _preview_role_mesh(role: String) -> PrimitiveMesh:
-	match role:
-		"melee":
-			var shard: PrismMesh = PrismMesh.new()
-			shard.left_to_right = 0.60
-			shard.size = Vector3(0.22, 0.46, 0.18)
-			return shard
-		"ranged":
-			var orb: SphereMesh = SphereMesh.new()
-			orb.radius = 0.16
-			orb.height = 0.28
-			orb.radial_segments = 10
-			orb.rings = 6
-			return orb
-		"defense":
-			var cyl: CylinderMesh = CylinderMesh.new()
-			cyl.top_radius = 0.20
-			cyl.bottom_radius = 0.24
-			cyl.height = 0.24
-			cyl.radial_segments = 12
-			return cyl
-		"gather":
-			var cap: CapsuleMesh = CapsuleMesh.new()
-			cap.radius = 0.11
-			cap.height = 0.30
-			cap.radial_segments = 10
-			cap.rings = 6
-			return cap
-		_:
-			var sphere: SphereMesh = SphereMesh.new()
-			sphere.radius = 0.14
-			sphere.height = 0.24
-			sphere.radial_segments = 10
-			sphere.rings = 6
-			return sphere
-
-func _add_tile_marker(tile: Vector2i, color: Color, y_offset: float) -> void:
-	var marker: MeshInstance3D = MeshInstance3D.new()
-	var mesh: CylinderMesh = CylinderMesh.new()
-	mesh.top_radius = tile_world_size * 0.45
-	mesh.bottom_radius = tile_world_size * 0.46
-	mesh.height = 0.016
-	mesh.radial_segments = 16
-	marker.mesh = mesh
-	var top: float = _tile_ground_top(tile)
-	marker.position = _tile_world_position(tile) + Vector3(0.0, top + y_offset, 0.0)
-	marker.material_override = _marker_material(color)
-	marker.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_marker_root.add_child(marker)
+	_perf_increment("marker_rebuilds")
+	_marker_layer.rebuild_markers(
+		_marker_root,
+		_state,
+		tile_world_size,
+		_board_min,
+		_floor_surface_tops,
+		_selected_tile,
+		_hovered_tile,
+		_queued_tiles,
+		_queued_actions,
+		_hover_preview_action,
+		_hover_invalid_reason
+	)
 
 func _add_door_marker(tile: Vector2i, entrance: bool) -> void:
 	if _state == null or not _state.is_inside(tile):
@@ -2435,896 +1266,310 @@ func _add_resource_marker(tile: Vector2i, kind: String, consumed: bool) -> void:
 	marker.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_dynamic_root.add_child(marker)
 
-func _add_floor_scars() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	var scar_mesh: BoxMesh = BoxMesh.new()
-	scar_mesh.size = Vector3(1.02, 0.012, 0.13)
-	var scar_transforms: Array[Transform3D] = []
-	var used_tiles: Dictionary = {}
-	var scar_count: int = maxi(6, int((_state.width + _state.height) * 0.26))
-	var attempts: int = scar_count * 4
-	for idx in range(attempts):
-		if scar_transforms.size() >= scar_count:
-			break
-		var sx: int = int(floor(_noise01(idx * 47 + 5, idx * 23 + 11) * float(_state.width)))
-		var sy: int = int(floor(_noise01(idx * 29 + 3, idx * 71 + 13) * float(_state.height)))
-		var tile: Vector2i = Vector2i(clampi(sx, 0, _state.width - 1), clampi(sy, 0, _state.height - 1))
-		if _state.is_blocked(tile):
-			continue
-		if _is_near_used_tile(tile, used_tiles, 1):
-			continue
-		used_tiles[_tile_key(tile)] = true
-		var center: Vector3 = _tile_world_position(tile)
-		var top: float = _tile_ground_top(tile)
-		var rot: float = _noise01(idx * 97 + 17, idx * 43 + 19) * TAU
-		var stretch: float = 0.92 + _noise01(idx * 61 + 7, idx * 37 + 2) * 1.02
-		var width: float = 0.76 + _noise01(idx * 83 + 11, idx * 89 + 13) * 0.30
-		var scar_basis: Basis = Basis(Vector3.UP, rot).scaled(Vector3(stretch, 1.0, width))
-		scar_transforms.append(Transform3D(scar_basis, center + Vector3(0.0, top + 0.004, 0.0)))
-	if scar_transforms.is_empty():
-		return
-	var scar_mat: StandardMaterial3D = StandardMaterial3D.new()
-	scar_mat.albedo_color = Color(0.07, 0.065, 0.06, 0.30)
-	scar_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	scar_mat.roughness = 0.96
-	scar_mat.metallic = 0.0
-	_terrain_root.add_child(_make_multimesh_instance(scar_mesh, scar_transforms, [], scar_mat, false))
-
-func _add_cobble_relief() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	var cobble_mesh: SphereMesh = SphereMesh.new()
-	cobble_mesh.radius = 0.08
-	cobble_mesh.height = 0.10
-	cobble_mesh.radial_segments = 8
-	cobble_mesh.rings = 5
-	var transforms: Array[Transform3D] = []
-	var used_tiles: Dictionary = {}
-	var cobble_count: int = maxi(4, int((_state.width + _state.height) * 0.10))
-	var attempts: int = cobble_count * 6
-	var center_tile: Vector2 = Vector2(float(_state.width) * 0.5, float(_state.height) * 0.5)
-	var center_keepout: float = maxf(2.0, minf(float(_state.width), float(_state.height)) * 0.20)
-	for idx in range(attempts):
-		if transforms.size() >= cobble_count:
-			break
-		var tx: int = int(floor(_noise01(idx * 31 + 3, idx * 17 + 19) * float(_state.width)))
-		var ty: int = int(floor(_noise01(idx * 47 + 7, idx * 13 + 11) * float(_state.height)))
-		var tile: Vector2i = Vector2i(clampi(tx, 0, _state.width - 1), clampi(ty, 0, _state.height - 1))
-		if _state.is_blocked(tile):
-			continue
-		if Vector2(float(tile.x), float(tile.y)).distance_to(center_tile) < center_keepout:
-			continue
-		if _is_near_used_tile(tile, used_tiles, 0):
-			continue
-		used_tiles[_tile_key(tile)] = true
-		var center: Vector3 = _tile_world_position(tile)
-		var top: float = _tile_ground_top(tile)
-		var rot: float = _noise01(idx * 83 + 2, idx * 59 + 5) * TAU
-		var sx: float = 0.80 + _noise01(idx * 41 + 7, idx * 67 + 13) * 0.40
-		var sz: float = 0.80 + _noise01(idx * 19 + 11, idx * 73 + 29) * 0.40
-		var sy: float = 0.70 + _noise01(idx * 23 + 17, idx * 37 + 23) * 0.30
-		var jitter_x: float = (_noise01(idx * 13 + 5, idx * 29 + 31) - 0.5) * 0.30
-		var jitter_z: float = (_noise01(idx * 17 + 3, idx * 31 + 37) - 0.5) * 0.30
-		var basis: Basis = Basis(Vector3.UP, rot).scaled(Vector3(sx, sy, sz))
-		transforms.append(Transform3D(basis, center + Vector3(jitter_x, top + 0.017, jitter_z)))
-	if transforms.is_empty():
-		return
-	var mat: ShaderMaterial = _stone_shader_material(
-		CAVE_FLOOR_BASE.lerp(Color(0.22, 0.20, 0.18, 1.0), 0.30),
-		CAVE_FLOOR_ALT,
-		Color(0.08, 0.10, 0.10, 1.0),
-		22.0
-	)
-	_terrain_root.add_child(_make_multimesh_instance(cobble_mesh, transforms, [], mat, false))
-
-func _add_wet_patches() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	var patch_mesh: QuadMesh = QuadMesh.new()
-	patch_mesh.size = Vector2(0.95, 0.72)
-	var patch_transforms: Array[Transform3D] = []
-	var patch_count: int = maxi(6, int((_state.width + _state.height) * 0.16))
-	var used_tiles: Dictionary = {}
-	var attempts: int = patch_count * 6
-	var center_tile: Vector2 = Vector2(float(_state.width) * 0.5, float(_state.height) * 0.5)
-	var center_keepout: float = maxf(2.4, minf(float(_state.width), float(_state.height)) * 0.24)
-	for idx in range(attempts):
-		if patch_transforms.size() >= patch_count:
-			break
-		var tx: int = int(floor(_noise01(idx * 43 + 7, idx * 19 + 13) * float(_state.width)))
-		var ty: int = int(floor(_noise01(idx * 29 + 11, idx * 31 + 23) * float(_state.height)))
-		var tile: Vector2i = Vector2i(clampi(tx, 0, _state.width - 1), clampi(ty, 0, _state.height - 1))
-		if _state.is_blocked(tile):
-			continue
-		if Vector2(float(tile.x), float(tile.y)).distance_to(center_tile) < center_keepout:
-			continue
-		if _is_near_used_tile(tile, used_tiles, 1):
-			continue
-		used_tiles[_tile_key(tile)] = true
-		var center: Vector3 = _tile_world_position(tile)
-		var top: float = _tile_ground_top(tile)
-		var rot: float = _noise01(idx * 71 + 3, idx * 37 + 17) * TAU
-		var sx: float = 0.72 + _noise01(idx * 11 + 5, idx * 97 + 2) * 0.62
-		var sy: float = 0.66 + _noise01(idx * 61 + 7, idx * 53 + 19) * 0.54
-		var basis: Basis = Basis(Vector3.UP, rot).scaled(Vector3(sx, 1.0, sy))
-		patch_transforms.append(Transform3D(basis, center + Vector3(0.0, top + 0.010, 0.0)))
-	if patch_transforms.is_empty():
-		return
-	var patch_mat: StandardMaterial3D = StandardMaterial3D.new()
-	patch_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	patch_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	patch_mat.albedo_color = Color(0.14, 0.16, 0.17, 0.07)
-	patch_mat.roughness = 0.18
-	patch_mat.metallic = 0.0
-	patch_mat.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
-	patch_mat.metallic_specular = 0.52
-	_terrain_root.add_child(_make_multimesh_instance(patch_mesh, patch_transforms, [], patch_mat, false))
-
-func _add_side_door_leaf(pos: Vector3, yaw_degrees: float) -> void:
-	return
-
-func _add_cave_doors() -> void:
-	if _state == null:
-		return
-	# Door layout lock:
-	# left wall -> open gateway from previous chamber
-	# right wall -> closed gateway to deeper cave (opens when door_hp <= 0)
-	var left_pos: Vector3 = Vector3(_board_min.x - tile_world_size * 1.45, 0.0, _camera_base_target.z - tile_world_size * 0.6)
-	var right_pos: Vector3 = Vector3(_board_max.x + tile_world_size * 1.45, 0.0, _camera_base_target.z + tile_world_size * 0.6)
-	var right_is_closed: bool = _state.door_hp > 0
-
-	if not _has_asset_scene("door_arch"):
-		return
-	var left_tf: Transform3D = Transform3D(
-		Basis(Vector3.UP, deg_to_rad(90.0)).scaled(Vector3(1.10, 1.22, 1.06)),
-		left_pos + Vector3(0.0, 0.06, 0.0)
-	)
-	_add_asset_instance(_terrain_root, "door_arch", left_tf, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
-
-	var right_scale: Vector3 = Vector3(1.10, 1.26, 1.06) if right_is_closed else Vector3(1.02, 1.14, 0.98)
-	var right_tf: Transform3D = Transform3D(
-		Basis(Vector3.UP, deg_to_rad(-90.0)).scaled(right_scale),
-		right_pos + Vector3(0.0, 0.06, 0.0)
-	)
-	_add_asset_instance(_terrain_root, "door_arch", right_tf, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
-
-	var left_door_glow: OmniLight3D = OmniLight3D.new()
-	left_door_glow.position = left_pos + Vector3(0.0, 0.94, 0.0)
-	left_door_glow.light_color = Color(0.24, 0.54, 0.84, 1.0)
-	left_door_glow.light_energy = 0.42
-	left_door_glow.omni_range = 2.8
-	left_door_glow.shadow_enabled = false
-	_terrain_root.add_child(left_door_glow)
-
-	var right_door_glow: OmniLight3D = OmniLight3D.new()
-	right_door_glow.position = right_pos + Vector3(0.0, 0.94, 0.0)
-	right_door_glow.light_color = Color(0.84, 0.50, 0.22, 1.0)
-	right_door_glow.light_energy = 0.56 if right_is_closed else 0.34
-	right_door_glow.omni_range = 3.2
-	right_door_glow.shadow_enabled = false
-	_terrain_root.add_child(right_door_glow)
-
-func _add_ground_boulders() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	var rock_mesh_a: SphereMesh = SphereMesh.new()
-	rock_mesh_a.radius = 0.20
-	rock_mesh_a.height = 0.28
-	rock_mesh_a.radial_segments = 10
-	rock_mesh_a.rings = 6
-	var rock_mesh_b: SphereMesh = SphereMesh.new()
-	rock_mesh_b.radius = 0.14
-	rock_mesh_b.height = 0.22
-	rock_mesh_b.radial_segments = 9
-	rock_mesh_b.rings = 5
-	var rock_transforms_a: Array[Transform3D] = []
-	var rock_transforms_b: Array[Transform3D] = []
-	var used_tiles: Dictionary = {}
-	var rock_count: int = maxi(6, int((_state.width + _state.height) * 0.24))
-	var attempts: int = rock_count * 6
-	for idx in range(attempts):
-		if rock_transforms_a.size() + rock_transforms_b.size() >= rock_count:
-			break
-		var sx: int = int(floor(_noise01(idx * 23 + 7, idx * 13 + 3) * float(_state.width)))
-		var sy: int = int(floor(_noise01(idx * 37 + 11, idx * 17 + 9) * float(_state.height)))
-		var tile: Vector2i = Vector2i(clampi(sx, 0, _state.width - 1), clampi(sy, 0, _state.height - 1))
-		if _state.is_blocked(tile):
-			continue
-		var edge_dist: int = mini(mini(tile.x, _state.width - 1 - tile.x), mini(tile.y, _state.height - 1 - tile.y))
-		if edge_dist > 2:
-			continue
-		if _is_near_used_tile(tile, used_tiles, 1):
-			continue
-		used_tiles[_tile_key(tile)] = true
-		var center: Vector3 = _tile_world_position(tile)
-		var top: float = _tile_ground_top(tile)
-		var rx: float = (_noise01(idx * 41 + 13, idx * 31 + 17) - 0.5) * 0.58
-		var rz: float = (_noise01(idx * 19 + 2, idx * 59 + 5) - 0.5) * 0.58
-		var scale_v: float = 0.28 + _noise01(idx * 61 + 21, idx * 47 + 27) * 0.58
-		var rot: float = _noise01(idx * 79 + 7, idx * 97 + 11) * TAU
-		var rock_basis: Basis = Basis(Vector3.UP, rot).scaled(Vector3(1.0, 0.72, 1.0) * scale_v)
-		var tf: Transform3D = Transform3D(rock_basis, center + Vector3(rx, top + 0.02, rz))
-		if _noise01(idx * 13 + 2, idx * 29 + 5) > 0.55:
-			rock_transforms_a.append(tf)
-		else:
-			rock_transforms_b.append(tf)
-	if rock_transforms_a.is_empty() and rock_transforms_b.is_empty():
-		return
-	var rock_mat: ShaderMaterial = _stone_shader_material(
-		CAVE_FLOOR_ALT.lerp(Color(0.16, 0.13, 0.11, 1.0), 0.20),
-		CAVE_WALL_ALT,
-		Color(0.10, 0.10, 0.09, 1.0),
-		15.0
-	)
-	if not rock_transforms_a.is_empty():
-		_terrain_root.add_child(_make_multimesh_instance(rock_mesh_a, rock_transforms_a, [], rock_mat, false))
-	if not rock_transforms_b.is_empty():
-		_terrain_root.add_child(_make_multimesh_instance(rock_mesh_b, rock_transforms_b, [], rock_mat, false))
-
-func _add_torch_sconces() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	var positions: Array[Vector3] = [
-		Vector3(_board_min.x - 1.4, 0.0, _board_min.z - 1.1),
-		Vector3(_board_max.x + 1.3, 0.0, _board_min.z - 1.0),
-	]
-	for pos in positions:
-		var stand: MeshInstance3D = MeshInstance3D.new()
-		var stand_mesh: CylinderMesh = CylinderMesh.new()
-		stand_mesh.top_radius = 0.08
-		stand_mesh.bottom_radius = 0.12
-		stand_mesh.height = 0.48
-		stand_mesh.radial_segments = 12
-		stand.mesh = stand_mesh
-		stand.position = pos + Vector3(0.0, 0.22, 0.0)
-		var stand_mat: StandardMaterial3D = StandardMaterial3D.new()
-		stand_mat.albedo_color = Color(0.20, 0.15, 0.10, 1.0)
-		stand_mat.roughness = 0.82
-		stand_mat.metallic = 0.08
-		stand.material_override = stand_mat
-		stand.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_terrain_root.add_child(stand)
-
-		var flame: MeshInstance3D = MeshInstance3D.new()
-		var flame_mesh: SphereMesh = SphereMesh.new()
-		flame_mesh.radius = 0.09
-		flame_mesh.height = 0.16
-		flame_mesh.radial_segments = 10
-		flame_mesh.rings = 5
-		flame.mesh = flame_mesh
-		flame.position = pos + Vector3(0.0, 0.52, 0.0)
-		var flame_mat: StandardMaterial3D = StandardMaterial3D.new()
-		flame_mat.albedo_color = Color(1.0, 0.78, 0.44, 1.0)
-		flame_mat.roughness = 0.12
-		flame_mat.emission_enabled = true
-		flame_mat.emission = Color(1.0, 0.58, 0.18, 1.0)
-		flame_mat.emission_energy_multiplier = 1.15
-		flame.material_override = flame_mat
-		flame.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_terrain_root.add_child(flame)
-
-		# Emissive-only sconces keep camera movement responsive.
-
 func _add_chamber_accent_lights() -> void:
 	if _state == null:
 		return
+	_wall_lights.clear()
+	_play_area_fill_light = null
 	var board_w: float = float(_state.width) * tile_world_size
 	var board_h: float = float(_state.height) * tile_world_size
-	var accents: Array[Dictionary] = [
-		{"offset": Vector3(-board_w * 0.54, 1.10, -board_h * 0.58), "color": Color(0.20, 0.56, 1.0, 1.0), "energy": 0.74, "range": 7.0},
-		{"offset": Vector3(board_w * 0.54, 1.06, -board_h * 0.58), "color": Color(0.74, 0.26, 1.0, 1.0), "energy": 0.74, "range": 7.0},
-		{"offset": Vector3(0.0, 1.20, -board_h * 0.66), "color": Color(0.90, 0.56, 0.24, 1.0), "energy": 0.54, "range": 7.8},
+	var inside: float = tile_world_size * 0.48
+	var center_x: float = (_board_min.x + _board_max.x) * 0.5
+	var center_z: float = (_board_min.z + _board_max.z) * 0.5
+	var entries: Array[Dictionary] = [
+		{"pos": Vector3(_board_min.x + inside, 0.0, center_z), "energy": 2.25, "range": 10.4, "phase": 0.0},
+		{"pos": Vector3(_board_max.x - inside, 0.0, center_z), "energy": 2.35, "range": 10.8, "phase": 1.3},
+		{"pos": Vector3(_board_min.x + inside, 0.0, _board_min.z + inside), "energy": 1.52, "range": 8.2, "phase": 2.4},
+		{"pos": Vector3(_board_max.x - inside, 0.0, _board_min.z + inside), "energy": 1.52, "range": 8.2, "phase": 3.2},
+		{"pos": Vector3(_board_min.x + inside, 0.0, _board_max.z - inside), "energy": 1.45, "range": 8.0, "phase": 4.1},
+		{"pos": Vector3(_board_max.x - inside, 0.0, _board_max.z - inside), "energy": 1.45, "range": 8.0, "phase": 5.0},
 	]
-	for entry in accents:
+	for entry in entries:
+		var pos: Vector3 = entry["pos"]
+		var local_x: float = pos.x - _camera_base_target.x
+		var local_z: float = pos.z - _camera_base_target.z
+		var ground_y: float = _sample_ground_height_at_local(local_x, local_z, board_w, board_h)
 		var light: OmniLight3D = OmniLight3D.new()
-		light.position = _camera_base_target + entry["offset"]
-		light.light_color = entry["color"]
+		light.name = "HiddenWallTorchLight"
+		light.position = Vector3(pos.x, ground_y + 2.25, pos.z)
+		light.light_color = Color(1.0, 0.74, 0.46, 1.0)
 		light.light_energy = float(entry["energy"])
 		light.set_meta("base_energy", float(entry["energy"]))
+		light.set_meta("flicker_phase", float(entry["phase"]))
 		light.omni_range = float(entry["range"])
 		light.shadow_enabled = false
 		_terrain_root.add_child(light)
-		_point_lights.append(light)
+		_wall_lights.append(light)
 
-func _add_cave_perimeter() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
+	_play_area_fill_light = OmniLight3D.new()
+	_play_area_fill_light.name = "HiddenPlayAreaWarmFill"
+	_play_area_fill_light.position = _camera_base_target + Vector3(0.0, 6.2, 0.0)
+	_play_area_fill_light.light_color = Color(0.86, 0.78, 0.66, 1.0)
+	_play_area_fill_light.light_energy = 2.75
+	_play_area_fill_light.omni_range = maxf(board_w, board_h) * 1.05
+	_play_area_fill_light.shadow_enabled = false
+	_terrain_root.add_child(_play_area_fill_light)
+
+func _ensure_hero_shot_root() -> void:
+	if _hero_shot_root != null and is_instance_valid(_hero_shot_root):
 		return
+	_hero_shot_root = Node3D.new()
+	_hero_shot_root.name = "HeroShotRoot"
+	add_child(_hero_shot_root)
+
+func _clear_hero_shot_composition() -> void:
+	if _hero_shot_root != null and is_instance_valid(_hero_shot_root):
+		_clear_children(_hero_shot_root)
+	_hero_shot_lights.clear()
+
+func _find_hero_focal_tile() -> Vector2i:
 	if _state == null:
-		return
-	if _has_asset_scene("cave_wall"):
-		_add_cave_perimeter_assets()
-		return
-	_add_cave_boundary_walls()
-	_add_cave_buttresses()
-	_add_cave_tunnel_mouths()
+		return Vector2i(-1, -1)
+	var best_tile: Vector2i = _state.door_tile if _state.is_inside(_state.door_tile) else Vector2i(int(floor(float(_state.width) * 0.5)), int(floor(float(_state.height) * 0.5)))
+	var best_score: int = 999999
+	for block_a_variant in _state.blocks.values():
+		var block_a: Dictionary = block_a_variant
+		var owner_a: int = int(block_a.get("owner", -1))
+		var tile_a: Vector2i = block_a.get("pos", Vector2i(-1, -1))
+		if owner_a <= 0 or not _state.is_inside(tile_a):
+			continue
+		for block_b_variant in _state.blocks.values():
+			var block_b: Dictionary = block_b_variant
+			var owner_b: int = int(block_b.get("owner", -1))
+			if owner_b <= 0 or owner_b == owner_a:
+				continue
+			var tile_b: Vector2i = block_b.get("pos", Vector2i(-1, -1))
+			if not _state.is_inside(tile_b):
+				continue
+			var dist: int = abs(tile_a.x - tile_b.x) + abs(tile_a.y - tile_b.y)
+			if dist >= best_score:
+				continue
+			var mid: Vector2i = Vector2i(int(round(float(tile_a.x + tile_b.x) * 0.5)), int(round(float(tile_a.y + tile_b.y) * 0.5)))
+			if _state.is_inside(mid) and not _state.wall_tiles.has(_tile_key(mid)):
+				best_score = dist
+				best_tile = mid
+	return best_tile
 
-func _add_cave_perimeter_assets() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
+func _apply_hero_shot_lighting(focal_tile: Vector2i) -> void:
+	var focal: Vector3 = _tile_world_position(focal_tile)
+	var focal_top: float = _tile_floor_top(focal_tile)
+	if _environment != null and _environment.environment != null:
+		var env: Environment = _environment.environment
+		env.background_color = Color(0.032, 0.032, 0.036, 1.0)
+		env.ambient_light_color = Color(0.54, 0.54, 0.52, 1.0)
+		env.ambient_light_energy = 0.66
+		env.adjustment_brightness = 1.03
+		env.adjustment_contrast = 1.12
+		env.adjustment_saturation = 0.90
+	if _key_light != null:
+		_key_light.light_color = Color(0.82, 0.80, 0.76, 1.0)
+		_key_light.light_energy = 0.28
+		_key_light.shadow_enabled = true
+	if _fill_light != null:
+		_fill_light.light_energy = 0.72
+		_fill_light.omni_range = 42.0
+	if _rim_light != null:
+		_rim_light.light_color = Color(0.34, 0.40, 0.50, 1.0)
+		_rim_light.light_energy = 0.20
+
+	var torch_pos: Vector3 = focal + Vector3(-2.4, focal_top + 2.5, -2.1)
+	_add_hero_omni_light("HeroShotFocalTorch", torch_pos, Color(1.0, 0.63, 0.30, 1.0), 4.7, 8.8, true)
+	_add_hero_omni_light("HeroShotBoardReadabilityFill", _camera_base_target + Vector3(0.0, 7.4, 0.0), Color(0.74, 0.72, 0.68, 1.0), 1.20, maxf(float(_state.width), float(_state.height)) * tile_world_size * 0.92, false)
+	_add_hero_omni_light("HeroShotOozeRim", focal + Vector3(2.6, focal_top + 1.35, 1.9), Color(0.45, 0.90, 0.64, 1.0), 0.74, 5.4, false)
+	_add_hero_omni_light("HeroShotDoorAccent", _tile_world_position(_state.door_tile) + Vector3(0.0, _tile_floor_top(_state.door_tile) + 1.55, 0.0), Color(1.0, 0.70, 0.40, 1.0), 1.15, 5.8, true)
+
+func _add_hero_omni_light(name: String, position: Vector3, color: Color, energy: float, light_range: float, shadows: bool) -> void:
+	var light: OmniLight3D = OmniLight3D.new()
+	light.name = name
+	light.position = position
+	light.light_color = color
+	light.light_energy = energy
+	light.set_meta("base_energy", energy)
+	light.set_meta("flicker_phase", float(_hero_shot_lights.size()) * 1.71)
+	light.omni_range = light_range
+	light.shadow_enabled = shadows
+	light.shadow_bias = 0.035
+	_hero_shot_root.add_child(light)
+	_hero_shot_lights.append(light)
+
+func _add_hero_shot_story_props(focal_tile: Vector2i) -> void:
+	var prop_tile: Vector2i = _find_nearby_empty_floor_tile(focal_tile, 3, Vector2i(-1, 1))
+	var altar_tile: Vector2i = _find_nearby_empty_floor_tile(focal_tile, 4, Vector2i(2, -1))
+	var rubble_tile: Vector2i = _find_nearby_empty_floor_tile(focal_tile, 3, Vector2i(1, 0))
+	if _state.is_inside(prop_tile):
+		_add_hero_skeleton_and_weapon(prop_tile)
+	if _state.is_inside(altar_tile):
+		_add_hero_cracked_altar(altar_tile)
+	if _state.is_inside(rubble_tile):
+		_add_hero_rubble_cluster(rubble_tile)
+
+func _find_nearby_empty_floor_tile(origin: Vector2i, radius: int, preference: Vector2i) -> Vector2i:
+	var best_tile: Vector2i = Vector2i(-1, -1)
+	var best_score: int = 999999
+	for y in range(origin.y - radius, origin.y + radius + 1):
+		for x in range(origin.x - radius, origin.x + radius + 1):
+			var tile: Vector2i = Vector2i(x, y)
+			if not _state.is_inside(tile):
+				continue
+			if _state.wall_tiles.has(_tile_key(tile)) or _tile_has_block(tile):
+				continue
+			var dx: int = tile.x - origin.x
+			var dy: int = tile.y - origin.y
+			var dist: int = abs(dx) + abs(dy)
+			if dist <= 0 or dist > radius:
+				continue
+			var preference_score: int = abs(dx - preference.x) + abs(dy - preference.y)
+			var score: int = dist * 10 + preference_score
+			if score < best_score:
+				best_score = score
+				best_tile = tile
+	return best_tile
+
+func _tile_has_block(tile: Vector2i) -> bool:
 	if _state == null:
-		return
-	var board_w: float = float(_state.width) * tile_world_size
-	var board_h: float = float(_state.height) * tile_world_size
-	var jitter_scale: float = 0.0 if _phase_one_world_only() else 1.0
-	# Composition-first massing: fewer, larger cave forms with asymmetric intrusion.
-	var cluster_data: Array[Dictionary] = [
-		{"offset": Vector3(-board_w * 0.58, 0.26, -board_h * 0.54), "yaw": 154.0, "scale": Vector3(2.72, 3.50, 1.94)},
-		{"offset": Vector3(-board_w * 0.08, 0.24, -board_h * 0.60), "yaw": 176.0, "scale": Vector3(2.86, 3.68, 2.00)},
-		{"offset": Vector3(board_w * 0.44, 0.22, -board_h * 0.56), "yaw": 202.0, "scale": Vector3(2.62, 3.42, 1.90)},
-		{"offset": Vector3(-board_w * 0.72, 0.14, -board_h * 0.02), "yaw": -100.0, "scale": Vector3(2.12, 3.12, 1.58)},
-		{"offset": Vector3(board_w * 0.72, 0.14, -board_h * 0.08), "yaw": 100.0, "scale": Vector3(2.10, 3.08, 1.56)},
-		{"offset": Vector3(-board_w * 0.50, 0.10, board_h * 0.20), "yaw": -72.0, "scale": Vector3(1.86, 2.76, 1.42)},
-		{"offset": Vector3(board_w * 0.20, 0.04, board_h * 0.52), "yaw": 206.0, "scale": Vector3(2.00, 2.40, 1.34)},
-		{"offset": Vector3(-board_w * 0.26, 0.02, board_h * 0.60), "yaw": 148.0, "scale": Vector3(1.92, 2.34, 1.30)},
-		{"offset": Vector3(0.06, -0.06, board_h * 0.66), "yaw": 180.0, "scale": Vector3(1.78, 2.16, 1.18)},
-	]
-	for i in range(cluster_data.size()):
-		var cluster: Dictionary = cluster_data[i]
-		var seed: int = i + _state.level_index * 31
-		var p: Vector3 = _camera_base_target + cluster["offset"]
-		p.x += (_noise01(seed * 19 + 7, seed * 29 + 11) - 0.5) * 0.40 * jitter_scale
-		p.y += (_noise01(seed * 37 + 5, seed * 41 + 13) - 0.5) * 0.20 * jitter_scale
-		p.z += (_noise01(seed * 43 + 9, seed * 47 + 3) - 0.5) * 0.38 * jitter_scale
-		var yaw: float = deg_to_rad(float(cluster["yaw"]) + (_noise01(seed * 53 + 17, seed * 59 + 19) - 0.5) * 16.0 * jitter_scale)
-		var scale: Vector3 = cluster["scale"]
-		scale.x *= 1.0 + ((_noise01(seed * 61 + 21, seed * 67 + 23) - 0.5) * 0.20 * jitter_scale)
-		scale.y *= 1.0 + ((_noise01(seed * 71 + 27, seed * 73 + 31) - 0.5) * 0.20 * jitter_scale)
-		scale.z *= 1.0 + ((_noise01(seed * 79 + 33, seed * 83 + 35) - 0.5) * 0.18 * jitter_scale)
-		_add_asset_instance(
-			_terrain_root,
-			"cave_wall",
-			Transform3D(Basis(Vector3.UP, yaw).scaled(scale), p),
-			GeometryInstance3D.SHADOW_CASTING_SETTING_ON if i <= 5 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		)
+		return false
+	for block_variant in _state.blocks.values():
+		var block: Dictionary = block_variant
+		if block.get("pos", Vector2i(-999, -999)) == tile:
+			return true
+	return false
 
-	# Door placements are owned by _add_cave_doors() to keep one deterministic
-	# progression entry (left open) and one progression exit (right closed/open).
+func _add_hero_skeleton_and_weapon(tile: Vector2i) -> void:
+	var center: Vector3 = _tile_world_position(tile)
+	var top: float = _tile_floor_top(tile)
+	var base: Vector3 = center + Vector3(-0.10, top + 0.070, 0.04)
+	var bone_mat: StandardMaterial3D = _hero_bone_material()
+	var metal_mat: StandardMaterial3D = _hero_metal_material()
+	_add_hero_bone("HeroShotSpine", base, 0.54, 0.030, 18.0, bone_mat)
+	_add_hero_bone("HeroShotRibA", base + Vector3(0.09, 0.015, 0.03), 0.30, 0.020, 74.0, bone_mat)
+	_add_hero_bone("HeroShotRibB", base + Vector3(-0.09, 0.015, -0.04), 0.28, 0.020, -58.0, bone_mat)
+	_add_hero_box("HeroShotSkull", base + Vector3(0.32, 0.025, 0.12), Vector3(0.16, 0.12, 0.13), bone_mat, -18.0)
+	_add_hero_bone("HeroShotBrokenSwordGrip", center + Vector3(0.23, top + 0.078, -0.26), 0.42, 0.018, -35.0, metal_mat)
+	_add_hero_box("HeroShotBrokenSwordTip", center + Vector3(0.39, top + 0.080, -0.41), Vector3(0.20, 0.025, 0.055), metal_mat, -35.0)
 
-func _add_cave_buttresses() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	var buttress_mesh: BoxMesh = BoxMesh.new()
-	buttress_mesh.size = Vector3(0.95, 1.35, 0.80)
-	var board_w: float = float(_state.width) * tile_world_size
-	var board_h: float = float(_state.height) * tile_world_size
-	var corners: Array[Vector3] = [
-		_camera_base_target + Vector3(-board_w * 0.52, 0.52, -board_h * 0.52),
-		_camera_base_target + Vector3(board_w * 0.52, 0.52, -board_h * 0.52),
-		_camera_base_target + Vector3(-board_w * 0.52, 0.52, board_h * 0.52),
-		_camera_base_target + Vector3(board_w * 0.52, 0.52, board_h * 0.52),
-	]
+func _add_hero_bone(name: String, position: Vector3, length: float, radius: float, yaw_degrees: float, mat: Material) -> void:
+	var mesh: CylinderMesh = CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = length
+	mesh.radial_segments = 8
+	var inst: MeshInstance3D = MeshInstance3D.new()
+	inst.name = name
+	inst.mesh = mesh
+	inst.position = position
+	inst.rotation_degrees = Vector3(90.0, yaw_degrees, 0.0)
+	inst.material_override = mat
+	inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	_hero_shot_root.add_child(inst)
+
+func _add_hero_cracked_altar(tile: Vector2i) -> void:
+	var center: Vector3 = _tile_world_position(tile)
+	var top: float = _tile_floor_top(tile)
+	var mat: StandardMaterial3D = _hero_dark_stone_material()
+	_add_hero_box("HeroShotCrackedAltarBase", center + Vector3(0.0, top + 0.13, 0.0), Vector3(0.74, 0.20, 0.48), mat, 8.0)
+	_add_hero_box("HeroShotCrackedAltarSlab", center + Vector3(0.04, top + 0.28, -0.02), Vector3(0.88, 0.12, 0.56), mat, 8.0)
+	_add_hero_box("HeroShotAltarBrokenCorner", center + Vector3(-0.36, top + 0.32, 0.21), Vector3(0.20, 0.10, 0.16), mat, -19.0)
+
+func _add_hero_rubble_cluster(tile: Vector2i) -> void:
+	var center: Vector3 = _tile_world_position(tile)
+	var top: float = _tile_floor_top(tile)
+	var mat: StandardMaterial3D = _hero_rubble_material()
+	for i in range(5):
+		var offset: Vector3 = Vector3(_noise01(tile.x * 31 + i, tile.y * 43) - 0.5, 0.0, _noise01(tile.x * 53, tile.y * 29 + i) - 0.5) * 0.58
+		var size: Vector3 = Vector3(0.18 + 0.10 * _noise01(tile.x + i, tile.y), 0.08 + 0.08 * _noise01(tile.x, tile.y + i), 0.14 + 0.11 * _noise01(tile.x - i, tile.y + i))
+		_add_hero_box("HeroShotRubble%d" % i, center + offset + Vector3(0.0, top + size.y * 0.5 + 0.035, 0.0), size, mat, float((i * 37 + tile.x * 11) % 90))
+
+func _add_hero_shot_ooze_presence(focal_tile: Vector2i) -> void:
+	var candidates: Array[Dictionary] = []
+	for block_variant in _state.blocks.values():
+		var block: Dictionary = block_variant
+		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
+		if not _state.is_inside(tile):
+			continue
+		var dist: int = abs(tile.x - focal_tile.x) + abs(tile.y - focal_tile.y)
+		if dist <= 3:
+			candidates.append({"tile": tile, "owner_id": int(block.get("owner", 0)), "dist": dist})
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("dist", 99)) < int(b.get("dist", 99))
+	)
+	var added: int = 0
+	for entry in candidates:
+		if added >= 4:
+			break
+		_add_hero_ooze_highlight_patch(entry["tile"], int(entry["owner_id"]), added)
+		added += 1
+
+func _add_hero_ooze_highlight_patch(tile: Vector2i, owner_id: int, index: int) -> void:
+	var mesh: SphereMesh = SphereMesh.new()
+	mesh.radial_segments = 24
+	mesh.rings = 12
+	mesh.radius = 0.5
+	mesh.height = 1.0
+	var inst: MeshInstance3D = MeshInstance3D.new()
+	inst.name = "HeroShotThickOozeMass"
+	inst.mesh = mesh
+	var center: Vector3 = _tile_world_position(tile)
+	var top: float = _tile_floor_top(tile)
+	var yaw: float = float((tile.x * 73 + tile.y * 37 + index * 19) % 360)
+	inst.position = center + Vector3(0.05 * sin(float(index)), top + OOZE_GROWTH_BASE_OFFSET + 0.015, 0.04 * cos(float(index) * 1.7))
+	inst.rotation_degrees = Vector3(0.0, yaw, 0.0)
+	inst.scale = Vector3(0.84, 0.105 + 0.018 * float(index % 2), 0.54)
+	inst.material_override = _hero_ooze_accent_material(owner_id)
+	inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	_hero_shot_root.add_child(inst)
+
+func _add_hero_box(name: String, position: Vector3, size: Vector3, mat: Material, yaw_degrees: float) -> void:
+	var mesh: BoxMesh = BoxMesh.new()
+	mesh.size = size
+	var inst: MeshInstance3D = MeshInstance3D.new()
+	inst.name = name
+	inst.mesh = mesh
+	inst.position = position
+	inst.rotation_degrees = Vector3(0.0, yaw_degrees, 0.0)
+	inst.material_override = mat
+	inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	_hero_shot_root.add_child(inst)
+
+func _hero_bone_material() -> StandardMaterial3D:
 	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.albedo_color = CAVE_WALL_BASE.lerp(Color(0.26, 0.22, 0.20, 1.0), 0.34)
-	mat.roughness = 0.82
+	mat.albedo_color = Color(0.70, 0.66, 0.55, 1.0)
+	mat.roughness = 0.84
 	mat.metallic = 0.0
-	for c in corners:
-		var buttress: MeshInstance3D = MeshInstance3D.new()
-		buttress.mesh = buttress_mesh
-		buttress.position = c
-		buttress.material_override = mat
-		buttress.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_terrain_root.add_child(buttress)
+	return mat
 
-func _add_cave_tunnel_mouths() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	var board_w: float = float(_state.width) * tile_world_size
-	var board_h: float = float(_state.height) * tile_world_size
-	var mouths: Array[Dictionary] = [
-		{"pos": _camera_base_target + Vector3(-board_w * 0.32, 0.88, -board_h * 0.54), "yaw": 14.0},
-		{"pos": _camera_base_target + Vector3(board_w * 0.30, 0.86, -board_h * 0.54), "yaw": -16.0},
-	]
-	for mouth in mouths:
-		var ring: MeshInstance3D = MeshInstance3D.new()
-		var ring_mesh: CylinderMesh = CylinderMesh.new()
-		ring_mesh.top_radius = 1.18
-		ring_mesh.bottom_radius = 1.42
-		ring_mesh.height = 0.76
-		ring_mesh.radial_segments = 20
-		ring.mesh = ring_mesh
-		ring.position = mouth["pos"]
-		ring.rotation_degrees = Vector3(90.0, float(mouth["yaw"]), 0.0)
-		var ring_mat: StandardMaterial3D = StandardMaterial3D.new()
-		ring_mat.albedo_color = Color(0.30, 0.24, 0.20, 1.0)
-		ring_mat.roughness = 0.68
-		ring_mat.metallic = 0.0
-		ring_mat.emission_enabled = true
-		ring_mat.emission = Color(0.70, 0.42, 0.18, 1.0)
-		ring_mat.emission_energy_multiplier = 0.12
-		ring.material_override = ring_mat
-		ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_terrain_root.add_child(ring)
+func _hero_metal_material() -> StandardMaterial3D:
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.albedo_color = Color(0.34, 0.35, 0.35, 1.0)
+	mat.roughness = 0.54
+	mat.metallic = 0.28
+	return mat
 
-func _add_cave_boundary_walls() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	var board_w: float = float(_state.width) * tile_world_size
-	var board_h: float = float(_state.height) * tile_world_size
-	var ring_r: float = maxf(board_w, board_h) * 1.08
-	var wall_height: float = maxf(board_w, board_h) * 0.78
-	var ring: MeshInstance3D = MeshInstance3D.new()
-	var ring_mesh: CylinderMesh = CylinderMesh.new()
-	ring_mesh.top_radius = ring_r
-	ring_mesh.bottom_radius = ring_r * 1.10
-	ring_mesh.height = wall_height
-	ring_mesh.radial_segments = 72
-	ring_mesh.rings = 8
-	ring.mesh = ring_mesh
-	ring.position = _camera_base_target + Vector3(0.0, wall_height * 0.50 - 0.26, 0.0)
-	var mat: ShaderMaterial = _stone_shader_material(
-		CAVE_WALL_BASE.lerp(Color(0.25, 0.21, 0.18, 1.0), 0.28),
-		CAVE_WALL_ALT.lerp(Color(0.13, 0.11, 0.10, 1.0), 0.24),
-		Color(0.10, 0.10, 0.11, 1.0),
-		5.8,
-		0.016,
-		0.16
-	)
-	ring.material_override = mat
-	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_terrain_root.add_child(ring)
+func _hero_dark_stone_material() -> StandardMaterial3D:
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.albedo_color = Color(0.24, 0.25, 0.25, 1.0)
+	mat.roughness = 0.92
+	mat.metallic = 0.0
+	return mat
 
-	var floor_edge_cover: MeshInstance3D = MeshInstance3D.new()
-	var cover_mesh: BoxMesh = BoxMesh.new()
-	cover_mesh.size = Vector3(board_w + 2.8, 0.18, board_h + 2.8)
-	floor_edge_cover.mesh = cover_mesh
-	floor_edge_cover.position = _camera_base_target + Vector3(0.0, -0.10, 0.0)
-	var cover_mat: StandardMaterial3D = StandardMaterial3D.new()
-	cover_mat.albedo_color = Color(0.11, 0.10, 0.10, 1.0)
-	cover_mat.roughness = 0.96
-	cover_mat.metallic = 0.0
-	floor_edge_cover.material_override = cover_mat
-	floor_edge_cover.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_terrain_root.add_child(floor_edge_cover)
+func _hero_rubble_material() -> StandardMaterial3D:
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.albedo_color = Color(0.30, 0.31, 0.31, 1.0)
+	mat.roughness = 0.94
+	mat.metallic = 0.0
+	return mat
 
-func _add_crystal_beds() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	if _has_asset_scene("role_crystal"):
-		var cluster_count_asset: int = 5
-		for idx in range(cluster_count_asset):
-			var seed_a_asset: int = idx * 59 + _state.level_index * 13
-			var seed_b_asset: int = idx * 41 + _state.level_index * 23
-			var edge_pick_asset: int = int(floor(_noise01(seed_a_asset + 7, seed_b_asset + 11) * 4.0))
-			var t_asset: float = _noise01(seed_a_asset + 19, seed_b_asset + 31)
-			var px_asset: float = _camera_base_target.x
-			var pz_asset: float = _camera_base_target.z
-			if edge_pick_asset == 0:
-				px_asset = lerpf(_board_min.x + 1.1, _board_max.x - 1.1, t_asset)
-				pz_asset = _board_min.z - 0.55
-			elif edge_pick_asset == 1:
-				px_asset = lerpf(_board_min.x + 1.1, _board_max.x - 1.1, t_asset)
-				pz_asset = _board_max.z + 0.55
-			elif edge_pick_asset == 2:
-				px_asset = _board_min.x - 0.55
-				pz_asset = lerpf(_board_min.z + 1.1, _board_max.z - 1.1, t_asset)
-			else:
-				px_asset = _board_max.x + 0.55
-				pz_asset = lerpf(_board_min.z + 1.1, _board_max.z - 1.1, t_asset)
-			var cluster_root_asset: Vector3 = Vector3(px_asset, 0.02, pz_asset)
-			var crystal_count_asset: int = 2 + int(floor(_noise01(seed_a_asset + 43, seed_b_asset + 53) * 3.0))
-			for n_asset in range(crystal_count_asset):
-				var angle_asset: float = _noise01(seed_a_asset + n_asset * 29, seed_b_asset + n_asset * 31) * TAU
-				var radius_asset: float = 0.05 + _noise01(seed_a_asset + n_asset * 37, seed_b_asset + n_asset * 41) * 0.24
-				var rot_y_asset: float = _noise01(seed_a_asset + n_asset * 43, seed_b_asset + n_asset * 47) * TAU
-				var scale_asset: float = 0.12 + _noise01(seed_a_asset + n_asset * 17, seed_b_asset + n_asset * 13) * 0.12
-				var hue_asset: float = 0.54 + _noise01(seed_a_asset + n_asset * 7, seed_b_asset + n_asset * 5) * 0.18
-				var glow_color_asset: Color = Color.from_hsv(hue_asset, 0.56, 0.86, 1.0)
-				var crystal_mat_asset: StandardMaterial3D = StandardMaterial3D.new()
-				crystal_mat_asset.albedo_color = glow_color_asset * 0.56
-				crystal_mat_asset.roughness = 0.34
-				crystal_mat_asset.metallic = 0.0
-				crystal_mat_asset.emission_enabled = true
-				crystal_mat_asset.emission = glow_color_asset
-				crystal_mat_asset.emission_energy_multiplier = 0.22
-				var crystal_tf_asset: Transform3D = Transform3D(
-					Basis(Vector3.UP, rot_y_asset).scaled(Vector3.ONE * scale_asset),
-					cluster_root_asset + Vector3(cos(angle_asset) * radius_asset, 0.0, sin(angle_asset) * radius_asset)
-				)
-				_add_asset_instance(
-					_terrain_root,
-					"role_crystal",
-					crystal_tf_asset,
-					GeometryInstance3D.SHADOW_CASTING_SETTING_OFF,
-					crystal_mat_asset
-				)
-		return
-
-	var cluster_count: int = 5
-	for idx in range(cluster_count):
-		var seed_a: int = idx * 59 + _state.level_index * 13
-		var seed_b: int = idx * 41 + _state.level_index * 23
-		var edge_pick: int = int(floor(_noise01(seed_a + 7, seed_b + 11) * 4.0))
-		var t: float = _noise01(seed_a + 19, seed_b + 31)
-		var px: float = _camera_base_target.x
-		var pz: float = _camera_base_target.z
-		if edge_pick == 0:
-			px = lerpf(_board_min.x + 1.1, _board_max.x - 1.1, t)
-			pz = _board_min.z - 0.55
-		elif edge_pick == 1:
-			px = lerpf(_board_min.x + 1.1, _board_max.x - 1.1, t)
-			pz = _board_max.z + 0.55
-		elif edge_pick == 2:
-			px = _board_min.x - 0.55
-			pz = lerpf(_board_min.z + 1.1, _board_max.z - 1.1, t)
-		else:
-			px = _board_max.x + 0.55
-			pz = lerpf(_board_min.z + 1.1, _board_max.z - 1.1, t)
-
-		var cluster_root: Vector3 = Vector3(px, 0.02, pz)
-		var crystal_count: int = 2 + int(floor(_noise01(seed_a + 43, seed_b + 53) * 3.0))
-		for n in range(crystal_count):
-			var crystal: MeshInstance3D = MeshInstance3D.new()
-			var c_mesh: CylinderMesh = CylinderMesh.new()
-			c_mesh.top_radius = 0.024
-			c_mesh.bottom_radius = 0.09 + _noise01(seed_a + n * 17, seed_b + n * 13) * 0.06
-			c_mesh.height = 0.28 + _noise01(seed_a + n * 19, seed_b + n * 23) * 0.40
-			c_mesh.radial_segments = 7
-			crystal.mesh = c_mesh
-			var angle: float = _noise01(seed_a + n * 29, seed_b + n * 31) * TAU
-			var radius: float = 0.05 + _noise01(seed_a + n * 37, seed_b + n * 41) * 0.24
-			var rot_y: float = _noise01(seed_a + n * 43, seed_b + n * 47) * TAU
-			crystal.position = cluster_root + Vector3(cos(angle) * radius, c_mesh.height * 0.5, sin(angle) * radius)
-			crystal.rotation_degrees = Vector3(0.0, rad_to_deg(rot_y), 0.0)
-			var hue: float = 0.54 + _noise01(seed_a + n * 7, seed_b + n * 5) * 0.18
-			var glow_color: Color = Color.from_hsv(hue, 0.56, 0.86, 1.0)
-			var c_mat: StandardMaterial3D = StandardMaterial3D.new()
-			c_mat.albedo_color = glow_color * 0.56
-			c_mat.roughness = 0.34
-			c_mat.metallic = 0.0
-			c_mat.emission_enabled = true
-			c_mat.emission = glow_color
-			c_mat.emission_energy_multiplier = 0.22
-			crystal.material_override = c_mat
-			crystal.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			_terrain_root.add_child(crystal)
-
-func _add_cave_glow_clusters() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	if _has_asset_scene("role_crystal"):
-		var cluster_count_asset: int = 2
-		for idx in range(cluster_count_asset):
-			var seed_a_asset: int = idx * 83 + _state.level_index * 19
-			var seed_b_asset: int = idx * 61 + _state.level_index * 47
-			var angle_asset: float = _noise01(seed_a_asset + 17, seed_b_asset + 23) * TAU
-			var radius_asset: float = maxf(float(_state.width), float(_state.height)) * tile_world_size * (0.62 + _noise01(seed_a_asset + 29, seed_b_asset + 37) * 0.22)
-			var x_asset: float = _camera_base_target.x + cos(angle_asset) * radius_asset
-			var z_asset: float = _camera_base_target.z + sin(angle_asset) * radius_asset
-			var cluster_pos_asset: Vector3 = Vector3(x_asset, 0.02, z_asset)
-			var hue_asset: float = _noise01(seed_a_asset + 31, seed_b_asset + 37)
-			var glow_color_asset: Color = Color.from_hsv(0.55 + hue_asset * 0.25, 0.58, 0.94, 1.0)
-			var crystal_count_asset: int = 3 + int(floor(_noise01(seed_a_asset + 11, seed_b_asset + 5) * 2.0))
-			for c_asset in range(crystal_count_asset):
-				var c_angle_asset: float = _noise01(seed_a_asset + c_asset * 37, seed_b_asset + c_asset * 41) * TAU
-				var c_radius_asset: float = 0.04 + _noise01(seed_a_asset + c_asset * 43, seed_b_asset + c_asset * 47) * 0.24
-				var c_rot_asset: float = _noise01(seed_a_asset + c_asset * 53, seed_b_asset + c_asset * 59) * TAU
-				var c_scale_asset: float = 0.14 + _noise01(seed_a_asset + c_asset * 29, seed_b_asset + c_asset * 13) * 0.16
-				var crystal_mat_asset: StandardMaterial3D = StandardMaterial3D.new()
-				crystal_mat_asset.albedo_color = glow_color_asset * 0.72
-				crystal_mat_asset.roughness = 0.24
-				crystal_mat_asset.metallic = 0.0
-				crystal_mat_asset.emission_enabled = true
-				crystal_mat_asset.emission = glow_color_asset
-				crystal_mat_asset.emission_energy_multiplier = 0.56
-				var crystal_tf_asset: Transform3D = Transform3D(
-					Basis(Vector3.UP, c_rot_asset).scaled(Vector3.ONE * c_scale_asset),
-					cluster_pos_asset + Vector3(cos(c_angle_asset) * c_radius_asset, 0.0, sin(c_angle_asset) * c_radius_asset)
-				)
-				_add_asset_instance(
-					_terrain_root,
-					"role_crystal",
-					crystal_tf_asset,
-					GeometryInstance3D.SHADOW_CASTING_SETTING_OFF,
-					crystal_mat_asset
-				)
-			var glow_light_asset: OmniLight3D = OmniLight3D.new()
-			glow_light_asset.position = cluster_pos_asset + Vector3(0.0, 0.72, 0.0)
-			glow_light_asset.light_color = glow_color_asset.lerp(Color(1.0, 1.0, 1.0, 1.0), 0.08)
-			glow_light_asset.light_energy = 0.42
-			glow_light_asset.set_meta("base_energy", 0.42)
-			glow_light_asset.omni_range = 3.6
-			glow_light_asset.shadow_enabled = false
-			_terrain_root.add_child(glow_light_asset)
-			_point_lights.append(glow_light_asset)
-		return
-
-	var cluster_count: int = 2
-	for idx in range(cluster_count):
-		var seed_a: int = idx * 83 + _state.level_index * 19
-		var seed_b: int = idx * 61 + _state.level_index * 47
-		var angle: float = _noise01(seed_a + 17, seed_b + 23) * TAU
-		var radius: float = maxf(float(_state.width), float(_state.height)) * tile_world_size * (0.62 + _noise01(seed_a + 29, seed_b + 37) * 0.22)
-		var x: float = _camera_base_target.x + cos(angle) * radius
-		var z: float = _camera_base_target.z + sin(angle) * radius
-		var y: float = 0.58
-		var cluster_pos: Vector3 = Vector3(x, y, z)
-
-		var hue: float = _noise01(seed_a + 31, seed_b + 37)
-		var glow_color: Color = Color.from_hsv(0.55 + hue * 0.25, 0.58, 0.94, 1.0)
-		var crystal_count: int = 3 + int(floor(_noise01(seed_a + 11, seed_b + 5) * 2.0))
-		for c in range(crystal_count):
-			var crystal: MeshInstance3D = MeshInstance3D.new()
-			var crystal_mesh: CylinderMesh = CylinderMesh.new()
-			crystal_mesh.top_radius = 0.03
-			crystal_mesh.bottom_radius = 0.10 + _noise01(seed_a + c * 29, seed_b + c * 13) * 0.08
-			crystal_mesh.height = 0.26 + _noise01(seed_a + c * 17, seed_b + c * 19) * 0.46
-			crystal_mesh.radial_segments = 7
-			crystal.mesh = crystal_mesh
-			var c_angle: float = _noise01(seed_a + c * 37, seed_b + c * 41) * TAU
-			var c_radius: float = 0.04 + _noise01(seed_a + c * 43, seed_b + c * 47) * 0.24
-			crystal.position = cluster_pos + Vector3(cos(c_angle) * c_radius, crystal_mesh.height * 0.5, sin(c_angle) * c_radius)
-			crystal.rotation_degrees = Vector3(0.0, rad_to_deg(_noise01(seed_a + c * 53, seed_b + c * 59) * TAU), 0.0)
-
-			var crystal_mat: StandardMaterial3D = StandardMaterial3D.new()
-			crystal_mat.albedo_color = glow_color * 0.72
-			crystal_mat.roughness = 0.24
-			crystal_mat.metallic = 0.0
-			crystal_mat.emission_enabled = true
-			crystal_mat.emission = glow_color
-			crystal_mat.emission_energy_multiplier = 0.56
-			crystal.material_override = crystal_mat
-			crystal.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			_terrain_root.add_child(crystal)
-		var glow_light: OmniLight3D = OmniLight3D.new()
-		glow_light.position = cluster_pos + Vector3(0.0, 0.72, 0.0)
-		glow_light.light_color = glow_color.lerp(Color(1.0, 1.0, 1.0, 1.0), 0.08)
-		glow_light.light_energy = 0.42
-		glow_light.set_meta("base_energy", 0.42)
-		glow_light.omni_range = 3.6
-		glow_light.shadow_enabled = false
-		_terrain_root.add_child(glow_light)
-		_point_lights.append(glow_light)
-
-func _add_cave_shell() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	if _has_asset_scene("cave_wall"):
-		return
-	var board_w: float = float(_state.width) * tile_world_size
-	var board_h: float = float(_state.height) * tile_world_size
-	var wall_mat: ShaderMaterial = _stone_shader_material(
-		CAVE_WALL_BASE.lerp(Color(0.16, 0.15, 0.16, 1.0), 0.34),
-		CAVE_WALL_ALT.lerp(Color(0.08, 0.08, 0.09, 1.0), 0.24),
-		Color(0.08, 0.10, 0.11, 1.0),
-		5.0,
-		0.010,
-		0.24
-	)
-
-	var back_wall: MeshInstance3D = MeshInstance3D.new()
-	var back_mesh: BoxMesh = BoxMesh.new()
-	back_mesh.size = Vector3(board_w + 6.2, 5.4, 2.4)
-	back_wall.mesh = back_mesh
-	back_wall.position = _camera_base_target + Vector3(0.0, 1.75, -board_h * 0.5 - 2.45)
-	back_wall.material_override = wall_mat
-	back_wall.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	_terrain_root.add_child(back_wall)
-
-	var left_wall: MeshInstance3D = MeshInstance3D.new()
-	var left_mesh: BoxMesh = BoxMesh.new()
-	left_mesh.size = Vector3(2.8, 4.6, board_h + 5.2)
-	left_wall.mesh = left_mesh
-	left_wall.position = _camera_base_target + Vector3(-board_w * 0.5 - 2.35, 1.45, -0.15)
-	left_wall.material_override = wall_mat
-	left_wall.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	_terrain_root.add_child(left_wall)
-
-	var right_wall: MeshInstance3D = MeshInstance3D.new()
-	var right_mesh: BoxMesh = BoxMesh.new()
-	right_mesh.size = Vector3(2.8, 4.8, board_h + 5.6)
-	right_wall.mesh = right_mesh
-	right_wall.position = _camera_base_target + Vector3(board_w * 0.5 + 2.30, 1.52, -0.22)
-	right_wall.material_override = wall_mat
-	right_wall.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	_terrain_root.add_child(right_wall)
-
-	if ENABLE_CAVE_CEILING:
-		var ceiling: MeshInstance3D = MeshInstance3D.new()
-		var ceiling_mesh: BoxMesh = BoxMesh.new()
-		ceiling_mesh.size = Vector3(board_w + 6.4, 2.0, board_h + 6.8)
-		ceiling.mesh = ceiling_mesh
-		ceiling.position = _camera_base_target + Vector3(0.0, 3.95, -0.30)
-		ceiling.material_override = wall_mat
-		ceiling.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-		_terrain_root.add_child(ceiling)
-
-func _add_cave_foreground_occluders() -> void:
-	if _state == null:
-		return
-	var board_w: float = float(_state.width) * tile_world_size
-	var board_h: float = float(_state.height) * tile_world_size
-	if STRICT_ENV_ASSET_KIT_ONLY and not _has_asset_scene("cave_wall"):
-		return
-	if _has_asset_scene("cave_wall"):
-		var jitter_scale: float = 0.0 if _phase_one_world_only() else 1.0
-		var chunks: Array[Dictionary] = [
-			{"offset": Vector3(-board_w * 0.70, -0.04, board_h * 0.72), "yaw": -22.0, "scale": Vector3(2.04, 1.72, 1.44)},
-			{"offset": Vector3(board_w * 0.70, -0.04, board_h * 0.72), "yaw": 24.0, "scale": Vector3(2.04, 1.72, 1.44)},
-			{"offset": Vector3(board_w * 0.64, -0.18, board_h * 0.18), "yaw": 72.0, "scale": Vector3(1.54, 1.28, 1.16)},
-		]
-		for i in range(chunks.size()):
-			var seed: int = i + _state.level_index * 101
-			var c: Dictionary = chunks[i]
-			var pos: Vector3 = _camera_base_target + c["offset"]
-			pos.x += (_noise01(seed * 17 + 3, seed * 19 + 11) - 0.5) * 0.22 * jitter_scale
-			pos.z += (_noise01(seed * 23 + 7, seed * 29 + 13) - 0.5) * 0.16 * jitter_scale
-			pos.y += (_noise01(seed * 31 + 17, seed * 37 + 19) - 0.5) * 0.10 * jitter_scale
-			var yaw: float = deg_to_rad(float(c["yaw"]) + (_noise01(seed * 41 + 5, seed * 43 + 23) - 0.5) * 12.0 * jitter_scale)
-			var scale: Vector3 = c["scale"]
-			scale.x *= 1.0 + ((_noise01(seed * 47 + 29, seed * 53 + 31) - 0.5) * 0.18 * jitter_scale)
-			scale.y *= 1.0 + ((_noise01(seed * 59 + 37, seed * 61 + 41) - 0.5) * 0.16 * jitter_scale)
-			scale.z *= 1.0 + ((_noise01(seed * 67 + 43, seed * 71 + 47) - 0.5) * 0.16 * jitter_scale)
-			_add_asset_instance(
-				_terrain_root,
-				"cave_wall",
-				Transform3D(Basis(Vector3.UP, yaw).scaled(scale), pos),
-				GeometryInstance3D.SHADOW_CASTING_SETTING_ON if i <= 1 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			)
-		return
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-
-	var fallback_mesh: SphereMesh = SphereMesh.new()
-	fallback_mesh.radius = 0.82
-	fallback_mesh.height = 1.24
-	fallback_mesh.radial_segments = 12
-	fallback_mesh.rings = 7
-	var fallback_mat: ShaderMaterial = _stone_shader_material(
-		Color(0.20, 0.18, 0.17, 1.0),
-		Color(0.10, 0.10, 0.11, 1.0),
-		Color(0.10, 0.11, 0.12, 1.0),
-		7.8,
-		0.024,
-		0.64
-	)
-	var fallback_positions: Array[Vector3] = [
-		_camera_base_target + Vector3(-board_w * 0.70, -0.08, board_h * 0.70),
-		_camera_base_target + Vector3(board_w * 0.70, -0.08, board_h * 0.70),
-	]
-	for pos in fallback_positions:
-		var rock: MeshInstance3D = MeshInstance3D.new()
-		rock.mesh = fallback_mesh
-		rock.material_override = fallback_mat
-		rock.position = pos
-		rock.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_terrain_root.add_child(rock)
-
-func _add_far_cave_backdrop() -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _state == null:
-		return
-	var board_w: float = float(_state.width) * tile_world_size
-	var board_h: float = float(_state.height) * tile_world_size
-	if _has_asset_scene("cave_wall"):
-		var jitter_scale: float = 0.0 if _phase_one_world_only() else 1.0
-		var deep_back_z: float = _camera_base_target.z - board_h * 0.5 - 2.4
-		for i in range(4):
-			var t: float = float(i) / 3.0
-			var x: float = lerpf(_camera_base_target.x - board_w * 0.70, _camera_base_target.x + board_w * 0.70, t)
-			var seed: int = i + _state.level_index * 41
-			x += (_noise01(seed * 23 + 5, seed * 31 + 7) - 0.5) * 0.56 * jitter_scale
-			var y: float = -0.02 + (_noise01(seed * 37 + 11, seed * 43 + 13) * 0.54 * jitter_scale)
-			var basis: Basis = Basis(
-				Vector3.UP,
-				deg_to_rad(180.0 + (_noise01(seed * 47 + 17, seed * 53 + 19) - 0.5) * 12.0 * jitter_scale)
-			).scaled(Vector3(
-				2.18 + (_noise01(seed * 59 + 3, seed * 61 + 9) - 0.5) * 0.52 * jitter_scale,
-				3.22 + (_noise01(seed * 67 + 11, seed * 71 + 15) - 0.5) * 0.90 * jitter_scale,
-				1.90 + (_noise01(seed * 73 + 17, seed * 79 + 21) - 0.5) * 0.52 * jitter_scale
-			))
-			_add_asset_instance(
-				_terrain_root,
-				"cave_wall",
-				Transform3D(basis, Vector3(x, y, deep_back_z)),
-				GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			)
-
-		var vault_basis: Basis = Basis(Vector3.UP, deg_to_rad(180.0)).scaled(Vector3(2.86, 3.66, 2.46))
-		_add_asset_instance(
-			_terrain_root,
-			"cave_wall",
-			Transform3D(vault_basis, _camera_base_target + Vector3(0.0, -0.06, deep_back_z - 1.54)),
-			GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		)
-		var side_back_z: float = _camera_base_target.z + board_h * 0.02
-		var side_x: float = board_w * 0.5 + 2.7
-		for i in range(2):
-			var sign: float = -1.0 if i == 0 else 1.0
-			var side_basis: Basis = Basis(Vector3.UP, deg_to_rad(92.0 * sign)).scaled(Vector3(2.06, 2.62, 1.78))
-			_add_asset_instance(
-				_terrain_root,
-				"cave_wall",
-				Transform3D(side_basis, _camera_base_target + Vector3(sign * side_x, 0.00, side_back_z)),
-				GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			)
-		return
-
-	var wall_height: float = maxf(board_w, board_h) * 1.10
-	var inset: float = 3.4
-	var wall_thickness: float = 0.80
-	var wall_material: ShaderMaterial = _stone_shader_material(
-		Color(0.14, 0.13, 0.14, 1.0),
-		Color(0.08, 0.08, 0.09, 1.0),
-		Color(0.07, 0.08, 0.09, 1.0),
-		4.2,
-		0.010,
-		0.12
-	)
-
-	var wall_ns_mesh: BoxMesh = BoxMesh.new()
-	wall_ns_mesh.size = Vector3(board_w + inset * 2.0, wall_height, wall_thickness)
-	var wall_ew_mesh: BoxMesh = BoxMesh.new()
-	wall_ew_mesh.size = Vector3(wall_thickness, wall_height, board_h + inset * 2.0)
-	var wall_positions: Array[Dictionary] = [
-		{"mesh": wall_ns_mesh, "offset": Vector3(0.0, wall_height * 0.5 - 0.20, -board_h * 0.5 - inset)},
-		{"mesh": wall_ew_mesh, "offset": Vector3(board_w * 0.5 + inset, wall_height * 0.5 - 0.20, 0.0)},
-	]
-	for wall_data in wall_positions:
-		var wall: MeshInstance3D = MeshInstance3D.new()
-		wall.mesh = wall_data["mesh"]
-		wall.position = _camera_base_target + wall_data["offset"]
-		wall.material_override = wall_material
-		wall.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_terrain_root.add_child(wall)
-
-	if ENABLE_CAVE_CEILING:
-		var ceiling: MeshInstance3D = MeshInstance3D.new()
-		var ceiling_mesh: BoxMesh = BoxMesh.new()
-		ceiling_mesh.size = Vector3(board_w + inset * 2.0, 0.70, board_h + inset * 2.0)
-		ceiling.mesh = ceiling_mesh
-		ceiling.position = _camera_base_target + Vector3(0.0, wall_height + 0.32, 0.0)
-		var ceiling_mat: StandardMaterial3D = StandardMaterial3D.new()
-		ceiling_mat.albedo_color = Color(0.06, 0.06, 0.07, 1.0)
-		ceiling_mat.roughness = 0.96
-		ceiling_mat.metallic = 0.0
-		ceiling.material_override = ceiling_mat
-		ceiling.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_terrain_root.add_child(ceiling)
-
-func _add_atmospheric_haze(board_width: float, board_height: float) -> void:
-	if STRICT_ENV_ASSET_KIT_ONLY:
-		return
-	if _terrain_root == null:
-		return
-	_haze_layer = MeshInstance3D.new()
-	_haze_layer.name = "AtmosphericHaze"
-	var haze_mesh: QuadMesh = QuadMesh.new()
-	haze_mesh.size = Vector2(board_width * 1.22, board_height * 1.22)
-	_haze_layer.mesh = haze_mesh
-	_haze_layer.position = _camera_base_target + Vector3(0.0, 0.56, 0.0)
-	_haze_layer.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
-	_haze_layer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var haze_mat: ShaderMaterial = ShaderMaterial.new()
-	var haze_shader: Shader = Shader.new()
-	haze_shader.code = HAZE_SHADER_CODE
-	haze_mat.shader = haze_shader
-	haze_mat.set_shader_parameter("haze_color", Color(0.24, 0.22, 0.20, 0.060))
-	haze_mat.set_shader_parameter("noise_scale", 4.8)
-	haze_mat.set_shader_parameter("drift_speed", 0.015)
-	_haze_layer.material_override = haze_mat
-	_terrain_root.add_child(_haze_layer)
+func _hero_ooze_accent_material(owner_id: int) -> StandardMaterial3D:
+	var tint: Color = _owner_ooze_tint(owner_id)
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.albedo_color = tint.lerp(Color(0.02, 0.025, 0.02, 1.0), 0.18)
+	mat.roughness = 0.40
+	mat.metallic = 0.0
+	mat.metallic_specular = 0.34
+	mat.emission_enabled = true
+	mat.emission = tint.lerp(Color(0.70, 1.0, 0.50, 1.0), 0.18)
+	mat.emission_energy_multiplier = 0.14
+	_apply_standard_ooze_rim(mat, tint, 0.52, 0.38)
+	return mat
 
 func _make_multimesh_instance(
 	mesh: Mesh,
@@ -3347,12 +1592,14 @@ func _make_multimesh_instance(
 	var inst: MultiMeshInstance3D = MultiMeshInstance3D.new()
 	inst.multimesh = mm
 	inst.material_override = material
-	inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if cast_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var shadow_mode: GeometryInstance3D.ShadowCastingSetting = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if cast_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	inst.cast_shadow = shadow_mode
 	return inst
 
 func _owner_pool_material(owner_id: int, mask_tex: Texture2D) -> ShaderMaterial:
 	var cache_key: String = "%d|%d|%d" % [owner_id, _state.width, _state.height]
 	if _pool_material_cache.has(cache_key):
+		_perf_increment("pool_material_cache_hits")
 		var cached: ShaderMaterial = _pool_material_cache[cache_key]
 		cached.set_shader_parameter("mask_tex", mask_tex)
 		cached.set_shader_parameter("detail_tex", _slime_detail_texture())
@@ -3364,20 +1611,26 @@ func _owner_pool_material(owner_id: int, mask_tex: Texture2D) -> ShaderMaterial:
 			)
 		)
 		cached.set_shader_parameter("owner_color", _owner_ooze_tint(owner_id))
-		cached.set_shader_parameter("pulse_speed", 0.22)
-		cached.set_shader_parameter("bubble_strength", 0.0018)
-		cached.set_shader_parameter("emission_strength", 0.008)
-		cached.set_shader_parameter("detail_scale", 6.2)
-		cached.set_shader_parameter("body_thickness", 0.024)
-		cached.set_shader_parameter("lip_thickness", 0.032)
-		cached.set_shader_parameter("flow_scale", 1.34)
-		cached.set_shader_parameter("flow_speed", 0.008)
+		cached.set_shader_parameter("pulse_speed", 0.17)
+		cached.set_shader_parameter("bubble_strength", 0.0010)
+		cached.set_shader_parameter("emission_strength", 0.026)
+		cached.set_shader_parameter("detail_scale", 4.35)
+		cached.set_shader_parameter("body_thickness", 0.034)
+		cached.set_shader_parameter("lip_thickness", 0.044)
+		cached.set_shader_parameter("flow_scale", 1.08)
+		cached.set_shader_parameter("flow_speed", 0.0045)
 		cached.set_shader_parameter("flow_normal_strength", 0.30)
-		cached.set_shader_parameter("edge_darkening_strength", 0.18)
-		cached.set_shader_parameter("contact_darkening_strength", 0.10)
-		cached.set_shader_parameter("clearcoat_strength", 0.44)
-		cached.set_shader_parameter("specular_strength", 0.38)
+		cached.set_shader_parameter("edge_darkening_strength", 0.30)
+		cached.set_shader_parameter("contact_darkening_strength", 0.20)
+		cached.set_shader_parameter("clearcoat_strength", 0.34)
+		cached.set_shader_parameter("specular_strength", 0.25)
+		cached.set_shader_parameter("rim_highlight_strength", 0.24)
+		cached.set_shader_parameter("acid_glow_strength", 0.024)
+		cached.set_shader_parameter("edge_wobble_strength", 0.060)
+		cached.set_shader_parameter("inner_pulse_strength", 0.012)
+		cached.set_shader_parameter("bubble_pop_strength", 0.24)
 		return cached
+	_perf_increment("pool_material_builds")
 	var tint: Color = _owner_ooze_tint(owner_id)
 	var mat: ShaderMaterial = ShaderMaterial.new()
 	var shader: Shader = Shader.new()
@@ -3393,219 +1646,212 @@ func _owner_pool_material(owner_id: int, mask_tex: Texture2D) -> ShaderMaterial:
 			1.0 / float(maxi(1, mask_tex.get_height()))
 		)
 	)
-	mat.set_shader_parameter("pulse_speed", 0.22)
-	mat.set_shader_parameter("bubble_strength", 0.0018)
-	mat.set_shader_parameter("emission_strength", 0.008)
-	mat.set_shader_parameter("detail_scale", 6.2)
-	mat.set_shader_parameter("body_thickness", 0.024)
-	mat.set_shader_parameter("lip_thickness", 0.032)
-	mat.set_shader_parameter("flow_scale", 1.34)
-	mat.set_shader_parameter("flow_speed", 0.008)
+	mat.set_shader_parameter("pulse_speed", 0.17)
+	mat.set_shader_parameter("bubble_strength", 0.0010)
+	mat.set_shader_parameter("emission_strength", 0.026)
+	mat.set_shader_parameter("detail_scale", 4.35)
+	mat.set_shader_parameter("body_thickness", 0.034)
+	mat.set_shader_parameter("lip_thickness", 0.044)
+	mat.set_shader_parameter("flow_scale", 1.08)
+	mat.set_shader_parameter("flow_speed", 0.0045)
 	mat.set_shader_parameter("flow_normal_strength", 0.30)
-	mat.set_shader_parameter("edge_darkening_strength", 0.18)
-	mat.set_shader_parameter("contact_darkening_strength", 0.10)
-	mat.set_shader_parameter("clearcoat_strength", 0.44)
-	mat.set_shader_parameter("specular_strength", 0.38)
+	mat.set_shader_parameter("edge_darkening_strength", 0.30)
+	mat.set_shader_parameter("contact_darkening_strength", 0.20)
+	mat.set_shader_parameter("clearcoat_strength", 0.34)
+	mat.set_shader_parameter("specular_strength", 0.25)
+	mat.set_shader_parameter("rim_highlight_strength", 0.24)
+	mat.set_shader_parameter("acid_glow_strength", 0.024)
+	mat.set_shader_parameter("edge_wobble_strength", 0.060)
+	mat.set_shader_parameter("inner_pulse_strength", 0.012)
+	mat.set_shader_parameter("bubble_pop_strength", 0.24)
 	_pool_material_cache[cache_key] = mat
 	return mat
 
-func _ooze_growth_material(owner_tint: Color, role_tint: Color, role: String, accent: bool) -> StandardMaterial3D:
+func _ooze_shell_material(owner_tint: Color) -> StandardMaterial3D:
+	var readable_tint: Color = _normalize_ooze_color(owner_tint, OOZE_MIN_VALUE, OOZE_MIN_LUMA, OOZE_MAX_SATURATION)
+	var cache_key: String = _color_cache_key(readable_tint)
+	if _shell_material_cache.has(cache_key):
+		_perf_increment("shell_material_cache_hits")
+		return _shell_material_cache[cache_key] as StandardMaterial3D
+	_perf_increment("shell_material_builds")
 	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	var role_mix: float = 0.44
-	var roughness: float = 0.44
-	var clearcoat: float = 0.22
-	var emission_strength: float = 0.08
+	mat.albedo_color = readable_tint.lerp(Color(0.035, 0.045, 0.040, 1.0), 0.28)
+	mat.roughness = 0.54
+	mat.metallic = 0.0
+	mat.metallic_specular = 0.15
+	mat.clearcoat_enabled = true
+	mat.clearcoat = 0.12
+	mat.clearcoat_roughness = 0.58
+	mat.emission_enabled = true
+	mat.emission = readable_tint
+	mat.emission_energy_multiplier = 0.024
+	_apply_standard_ooze_rim(mat, readable_tint, 0.22, 0.28)
+	mat.cull_mode = BaseMaterial3D.CULL_BACK
+	_shell_material_cache[cache_key] = mat
+	return mat
+
+func _ooze_tile_mass_material(owner_tint: Color, role: String = "basic") -> StandardMaterial3D:
+	var readable_tint: Color = _normalize_ooze_color(owner_tint, OOZE_MIN_VALUE, OOZE_MIN_LUMA, OOZE_MAX_SATURATION)
+	var hue_bucket: float = floor(readable_tint.h * 20.0 + 0.5) / 20.0
+	var saturation_bucket: float = floor(readable_tint.s * 10.0 + 0.5) / 10.0
+	var value_bucket: float = floor(readable_tint.v * 10.0 + 0.5) / 10.0
+	var cache_key: String = "%0.2f,%0.1f,%0.1f|tile_mass|%s" % [hue_bucket, saturation_bucket, value_bucket, role]
+	if _shell_material_cache.has(cache_key):
+		_perf_increment("shell_material_cache_hits")
+		return _shell_material_cache[cache_key] as StandardMaterial3D
+	_perf_increment("shell_material_builds")
+	var role_tint: Color = _owner_role_growth_tint(readable_tint, role)
+	var mix_amount: float = 0.10
+	var roughness: float = 0.58
+	var emission_energy: float = 0.020
+	var rim_strength: float = 0.26
+	match role:
+		"core", "heart":
+			mix_amount = 0.05
+			roughness = 0.52
+			emission_energy = 0.030
+			rim_strength = 0.34
+		"melee":
+			mix_amount = 0.03
+			roughness = 0.64
+			emission_energy = 0.016
+			rim_strength = 0.24
+		"ranged":
+			mix_amount = 0.10
+			roughness = 0.56
+			emission_energy = 0.034
+			rim_strength = 0.34
+		"defense":
+			mix_amount = 0.03
+			roughness = 0.74
+			emission_energy = 0.012
+			rim_strength = 0.18
+		"gather":
+			mix_amount = 0.12
+			roughness = 0.60
+			emission_energy = 0.036
+			rim_strength = 0.34
+	var darken_amount: float = 0.10 if role == "basic" else 0.18
+	var body: Color = readable_tint.lerp(role_tint, mix_amount).lerp(Color(0.020, 0.028, 0.026, 1.0), darken_amount)
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.albedo_color = body
+	mat.roughness = roughness
+	mat.metallic = 0.0
+	mat.metallic_specular = 0.14
+	mat.clearcoat_enabled = true
+	mat.clearcoat = 0.14
+	mat.clearcoat_roughness = clampf(roughness + 0.10, 0.40, 0.82)
+	mat.emission_enabled = true
+	mat.emission = readable_tint.lerp(role_tint, 0.16)
+	mat.emission_energy_multiplier = emission_energy
+	_apply_standard_ooze_rim(mat, body, rim_strength, 0.32)
+	_shell_material_cache[cache_key] = mat
+	return mat
+
+func _ooze_growth_material(owner_tint: Color, role_tint: Color, role: String, accent: bool) -> StandardMaterial3D:
+	var readable_owner: Color = _normalize_ooze_color(owner_tint, OOZE_GROWTH_MIN_VALUE, OOZE_GROWTH_MIN_LUMA, OOZE_MAX_SATURATION)
+	var readable_role: Color = _normalize_ooze_color(role_tint, OOZE_GROWTH_MIN_VALUE, OOZE_GROWTH_MIN_LUMA, OOZE_MAX_SATURATION)
+	var growth_cache_key: String = "%s|%s|%s|%s" % [_color_cache_key(readable_owner), _color_cache_key(readable_role), role, str(accent)]
+	if _growth_material_template_cache.has(growth_cache_key):
+		_perf_increment("growth_material_template_hits")
+		return (_growth_material_template_cache[growth_cache_key] as StandardMaterial3D).duplicate(true)
+	_perf_increment("growth_material_template_builds")
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	var role_mix: float = 0.22
+	var roughness: float = 0.62
+	var clearcoat: float = 0.18
+	var emission_strength: float = 0.034
+	var rim_strength: float = 0.28
+	var rim_tint: float = 0.32
 	match role:
 		"heart":
-			role_mix = 0.18
-			roughness = 0.36
-			clearcoat = 0.26
-			emission_strength = 0.10
-		"melee":
-			role_mix = 0.58
-			roughness = 0.48
-			clearcoat = 0.20
-			emission_strength = 0.11
-		"ranged":
-			role_mix = 0.55
-			roughness = 0.40
+			role_mix = 0.08
+			roughness = 0.54
 			clearcoat = 0.24
-			emission_strength = 0.13
-		"defense":
-			role_mix = 0.46
-			roughness = 0.52
-			clearcoat = 0.18
-			emission_strength = 0.07
-		"gather":
-			role_mix = 0.52
-			roughness = 0.42
+			emission_strength = 0.056
+			rim_strength = 0.36
+			rim_tint = 0.30
+		"melee":
+			role_mix = 0.10
+			roughness = 0.70
+			clearcoat = 0.14
+			emission_strength = 0.030
+			rim_strength = 0.28
+			rim_tint = 0.26
+		"ranged":
+			role_mix = 0.12
+			roughness = 0.58
 			clearcoat = 0.22
-			emission_strength = 0.10
+			emission_strength = 0.060
+			rim_strength = 0.36
+			rim_tint = 0.38
+		"defense":
+			role_mix = 0.08
+			roughness = 0.82
+			clearcoat = 0.10
+			emission_strength = 0.022
+			rim_strength = 0.18
+			rim_tint = 0.18
+		"gather":
+			role_mix = 0.14
+			roughness = 0.64
+			clearcoat = 0.20
+			emission_strength = 0.060
+			rim_strength = 0.34
+			rim_tint = 0.36
 	if accent:
-		roughness = maxf(0.30, roughness - 0.08)
-		clearcoat = minf(0.34, clearcoat + 0.06)
-		emission_strength *= 1.26
-	var base_color: Color = owner_tint.lerp(role_tint, role_mix).lerp(Color(0.08, 0.09, 0.10, 1.0), 0.06)
+		roughness = maxf(0.48, roughness - 0.03)
+		clearcoat = minf(0.34, clearcoat + 0.02)
+		emission_strength *= 1.08
+	var base_color: Color = readable_owner.lerp(readable_role, role_mix).lerp(Color(0.018, 0.026, 0.024, 1.0), 0.16)
 	mat.albedo_color = base_color
 	mat.roughness = roughness
 	mat.metallic = 0.0
-	mat.metallic_specular = 0.20
+	mat.metallic_specular = 0.22
 	mat.clearcoat_enabled = true
 	mat.clearcoat = clearcoat
-	mat.clearcoat_roughness = clampf(roughness + 0.10, 0.20, 0.70)
+	mat.clearcoat_roughness = clampf(roughness + 0.12, 0.42, 0.86)
 	mat.emission_enabled = true
-	mat.emission = owner_tint.lerp(role_tint, minf(0.78, role_mix + 0.16))
-	mat.emission_energy_multiplier = emission_strength
-	return mat
+	mat.emission = readable_owner.lerp(readable_role, minf(0.78, role_mix + 0.16))
+	mat.emission_energy_multiplier = emission_strength * 0.92
+	_apply_standard_ooze_rim(mat, base_color, rim_strength, rim_tint)
+	_growth_material_template_cache[growth_cache_key] = mat
+	return mat.duplicate(true)
 
-func _role_crest_mesh(role: String) -> Mesh:
-	match role:
-		"melee":
-			var shard: PrismMesh = PrismMesh.new()
-			shard.left_to_right = 0.56
-			shard.size = Vector3(0.22, 0.38, 0.16)
-			return shard
-		"ranged":
-			var orb: SphereMesh = SphereMesh.new()
-			orb.radius = 0.14
-			orb.height = 0.22
-			orb.radial_segments = 10
-			orb.rings = 6
-			return orb
-		"defense":
-			var bastion: CapsuleMesh = CapsuleMesh.new()
-			bastion.radius = 0.12
-			bastion.height = 0.30
-			bastion.radial_segments = 10
-			bastion.rings = 6
-			return bastion
-		"gather":
-			var bulb: CapsuleMesh = CapsuleMesh.new()
-			bulb.radius = 0.12
-			bulb.height = 0.34
-			bulb.radial_segments = 12
-			bulb.rings = 7
-			return bulb
-		_:
-			var fallback: SphereMesh = SphereMesh.new()
-			fallback.radius = 0.15
-			fallback.height = 0.30
-			fallback.radial_segments = 10
-			fallback.rings = 6
-			return fallback
+func _normalize_ooze_color(source: Color, min_value: float, min_luma: float, max_saturation: float) -> Color:
+	var hue: float = source.h
+	var saturation: float = clampf(source.s, 0.0, max_saturation)
+	var value: float = maxf(source.v, min_value)
+	var lifted: Color = Color.from_hsv(hue, saturation, value, source.a)
+	var luma: float = _color_luma(lifted)
+	if luma < min_luma:
+		var lift_amount: float = clampf((min_luma - luma) * 1.35, 0.0, 0.20)
+		lifted = lifted.lerp(Color(1.0, 1.0, 1.0, source.a), lift_amount)
+	lifted.a = source.a
+	return lifted
 
-func _role_base_mesh(role: String) -> Mesh:
-	var dome: SphereMesh = SphereMesh.new()
-	dome.radius = 0.24
-	dome.height = 0.15
-	dome.radial_segments = 14
-	dome.rings = 8
-	match role:
-		"melee":
-			dome.radius = 0.25
-			dome.height = 0.16
-			return dome
-		"defense":
-			dome.radius = 0.27
-			dome.height = 0.17
-			return dome
-		"ranged":
-			dome.radius = 0.23
-			dome.height = 0.15
-			return dome
-		"gather":
-			dome.radius = 0.22
-			dome.height = 0.14
-			return dome
-		_:
-			return dome
+func _color_luma(color: Color) -> float:
+	return color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722
 
-func _role_base_material(role: String, role_tint: Color, owner_tint: Color) -> StandardMaterial3D:
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	match role:
-		"melee":
-			mat.albedo_color = owner_tint.lerp(role_tint, 0.40).lerp(Color(0.08, 0.08, 0.08, 1.0), 0.24)
-			mat.roughness = 0.22
-			mat.metallic = 0.01
-			mat.clearcoat_enabled = true
-			mat.clearcoat = 0.36
-			mat.clearcoat_roughness = 0.26
-			mat.emission_enabled = true
-			mat.emission = role_tint * 0.18
-			mat.emission_energy_multiplier = 0.08
-		"defense":
-			mat.albedo_color = owner_tint.lerp(role_tint, 0.34).lerp(Color(0.08, 0.08, 0.09, 1.0), 0.28)
-			mat.roughness = 0.30
-			mat.metallic = 0.01
-			mat.clearcoat_enabled = true
-			mat.clearcoat = 0.30
-			mat.clearcoat_roughness = 0.34
-			mat.emission_enabled = true
-			mat.emission = role_tint * 0.12
-			mat.emission_energy_multiplier = 0.05
-		"ranged":
-			mat.albedo_color = owner_tint.lerp(role_tint, 0.42).lerp(Color(0.09, 0.09, 0.10, 1.0), 0.24)
-			mat.roughness = 0.20
-			mat.metallic = 0.01
-			mat.clearcoat_enabled = true
-			mat.clearcoat = 0.40
-			mat.clearcoat_roughness = 0.24
-			mat.emission_enabled = true
-			mat.emission = role_tint * 0.22
-			mat.emission_energy_multiplier = 0.09
-		"gather":
-			mat.albedo_color = owner_tint.lerp(role_tint, 0.44).lerp(Color(0.09, 0.10, 0.08, 1.0), 0.22)
-			mat.roughness = 0.18
-			mat.metallic = 0.01
-			mat.clearcoat_enabled = true
-			mat.clearcoat = 0.44
-			mat.clearcoat_roughness = 0.22
-			mat.emission_enabled = true
-			mat.emission = role_tint * 0.20
-			mat.emission_energy_multiplier = 0.08
-		_:
-			mat.albedo_color = owner_tint.lerp(role_tint, 0.30).lerp(Color(0.08, 0.08, 0.09, 1.0), 0.30)
-			mat.roughness = 0.28
-			mat.metallic = 0.01
-			mat.clearcoat_enabled = true
-			mat.clearcoat = 0.30
-			mat.clearcoat_roughness = 0.32
-			mat.emission_enabled = true
-			mat.emission = role_tint * 0.12
-			mat.emission_energy_multiplier = 0.05
-	return mat
+func _apply_standard_ooze_rim(mat: StandardMaterial3D, base_color: Color, rim_strength: float, rim_tint: float) -> void:
+	if mat == null:
+		return
+	_set_material_property_if_present(mat, "rim_enabled", true)
+	_set_material_property_if_present(mat, "rim", rim_strength)
+	_set_material_property_if_present(mat, "rim_tint", rim_tint)
+	_set_material_property_if_present(mat, "backlight_enabled", true)
+	_set_material_property_if_present(mat, "backlight", base_color.lerp(Color(1.0, 1.0, 1.0, 1.0), 0.22) * 0.12)
 
-func _marker_material(color: Color) -> StandardMaterial3D:
-	var key: String = "%0.3f|%0.3f|%0.3f|%0.3f" % [color.r, color.g, color.b, color.a]
-	if _marker_material_cache.has(key):
-		return _marker_material_cache[key]
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = color
-	mat.emission_enabled = true
-	mat.emission = Color(color.r, color.g, color.b, 1.0)
-	mat.emission_energy_multiplier = 0.32
-	_marker_material_cache[key] = mat
-	return mat
+func _set_material_property_if_present(mat: Material, property_name: String, value: Variant) -> void:
+	if mat == null:
+		return
+	for property_info in mat.get_property_list():
+		if String(property_info.get("name", "")) == property_name:
+			mat.set(property_name, value)
+			return
 
 func _extract_queued_tiles(queued_actions: Array) -> Dictionary:
-	var tiles: Dictionary = {}
-	if _state == null:
-		return tiles
-	for action in queued_actions:
-		var kind: String = String(action.get("type", ""))
-		if kind == "place_tile":
-			var place_tile: Vector2i = action.get("target", Vector2i(-1, -1))
-			if place_tile != Vector2i(-1, -1):
-				tiles[_tile_key(place_tile)] = place_tile
-		elif kind == "convert_tile" or kind == "upgrade_tile":
-			var block_id: int = int(action.get("block_id", -1))
-			if _state.blocks.has(block_id):
-				var tile: Vector2i = _state.blocks[block_id].get("pos", Vector2i(-1, -1))
-				if tile != Vector2i(-1, -1):
-					tiles[_tile_key(tile)] = tile
-	return tiles
+	return _marker_layer.extract_queued_tiles(_state, queued_actions)
 
 func _owner_centroid(blocks: Array) -> Vector3:
 	if blocks.is_empty():
@@ -3629,8 +1875,23 @@ func _tile_world_position(tile: Vector2i) -> Vector3:
 		_board_min.z + (float(tile.y) + 0.5) * tile_world_size
 	)
 
+func _terrain_ground_top_for_tile(tile: Vector2i, board_top: float) -> float:
+	if _state == null:
+		return board_top
+	var w: float = maxf(float(_state.width), 1.0)
+	var h: float = maxf(float(_state.height), 1.0)
+	var nx: float = (float(tile.x) + 0.5) / w - 0.5
+	var nz: float = (float(tile.y) + 0.5) / h - 0.5
+	var gradient: float = nx * 0.050 - nz * 0.042
+	var bowl: float = (0.19 - (nx * nx + nz * nz)) * 0.040
+	var undulation: float = sin((nx + 0.18) * PI * 2.4) * 0.022 + cos((nz - 0.12) * PI * 2.1) * 0.018
+	return board_top + gradient + bowl + undulation
+
 func _tile_ground_top(tile: Vector2i) -> float:
 	return float(_ground_tops.get(_tile_key(tile), 0.0))
+
+func _tile_floor_top(tile: Vector2i) -> float:
+	return float(_floor_surface_tops.get(_tile_key(tile), _tile_ground_top(tile)))
 
 func _owner_tint(owner_id: int) -> Color:
 	if _state == null:
@@ -3641,9 +1902,38 @@ func _owner_tint(owner_id: int) -> Color:
 		return PLAYER_TINT
 	return Color(0.86, 0.35, 0.45, 1.0)
 
+func _owner_is_left_side(owner_id: int) -> bool:
+	if _state == null:
+		return owner_id == GameState.PLAYER_ID
+	var core: Dictionary = _state.get_core(owner_id)
+	if not core.is_empty():
+		var tile: Vector2i = core.get("pos", Vector2i(-1, -1))
+		if _state.is_inside(tile):
+			return tile.x < int(floor(float(_state.width) / 2.0))
+	return owner_id == GameState.PLAYER_ID
+
 func _owner_ooze_tint(owner_id: int) -> Color:
-	var raw: Color = _owner_tint(owner_id)
-	return raw.lerp(Color(0.10, 0.11, 0.12, 1.0), 0.18)
+	var raw_tint: Color
+	if _owner_is_left_side(owner_id):
+		raw_tint = Color(0.12, 0.58, 0.18, 1.0)
+	else:
+		raw_tint = Color(0.62, 0.05, 0.12, 1.0)
+	return _normalize_ooze_color(raw_tint, OOZE_MIN_VALUE, OOZE_MIN_LUMA, OOZE_MAX_SATURATION)
+
+func _owner_role_growth_tint(owner_tint: Color, role: String) -> Color:
+	match role:
+		"heart":
+			return owner_tint.lerp(Color(0.78, 0.96, 0.58, 1.0), 0.04)
+		"melee":
+			return owner_tint.lerp(Color(0.03, 0.04, 0.035, 1.0), 0.16)
+		"ranged":
+			return owner_tint.lerp(Color(0.72, 1.0, 0.72, 1.0), 0.05)
+		"defense":
+			return owner_tint.lerp(Color(0.025, 0.030, 0.028, 1.0), 0.24)
+		"gather":
+			return owner_tint.lerp(Color(0.76, 1.0, 0.44, 1.0), 0.07)
+		_:
+			return owner_tint
 
 func _stone_shader_material(
 	base: Color,
@@ -3651,7 +1941,12 @@ func _stone_shader_material(
 	damp: Color,
 	uv_scale: float,
 	height_amp: float = 0.0,
-	detail_mix: float = 0.72
+	detail_mix: float = 0.72,
+	tile_variation_strength: float = 0.035,
+	seam_strength: float = 0.40,
+	detail_color_strength: float = 0.018,
+	min_midtone: float = 0.250,
+	max_midtone: float = 0.430
 ) -> ShaderMaterial:
 	var mat: ShaderMaterial = ShaderMaterial.new()
 	var shader: Shader = Shader.new()
@@ -3665,8 +1960,13 @@ func _stone_shader_material(
 	mat.set_shader_parameter("detail_roughness_tex", _stone_roughness_texture())
 	mat.set_shader_parameter("detail_normal_tex", _stone_normal_texture())
 	mat.set_shader_parameter("detail_mix", detail_mix)
-	mat.set_shader_parameter("normal_strength", 0.68)
+	mat.set_shader_parameter("normal_strength", 0.82)
 	mat.set_shader_parameter("height_amp", height_amp)
+	mat.set_shader_parameter("tile_variation_strength", tile_variation_strength)
+	mat.set_shader_parameter("seam_strength", seam_strength)
+	mat.set_shader_parameter("detail_color_strength", detail_color_strength)
+	mat.set_shader_parameter("min_midtone", min_midtone)
+	mat.set_shader_parameter("max_midtone", max_midtone)
 	return mat
 
 func _stone_texture() -> Texture2D:
@@ -3685,11 +1985,11 @@ func _stone_texture() -> Texture2D:
 			var n2: float = _noise01(x * 31 + y * 29, x * 37 + y * 41)
 			var crack: float = absf(sin(float(x) * 0.18 + n1 * 3.2) * cos(float(y) * 0.16 - n2 * 2.8))
 			var blend: float = clampf(n0 * 0.52 + n1 * 0.34 + n2 * 0.14, 0.0, 1.0)
-			var col: Color = Color(0.24, 0.22, 0.21, 1.0).lerp(Color(0.10, 0.10, 0.11, 1.0), blend)
+			var col: Color = Color(0.38, 0.39, 0.39, 1.0).lerp(Color(0.24, 0.25, 0.25, 1.0), blend * 0.42)
 			if crack > 0.78:
-				col = col.lerp(Color(0.07, 0.07, 0.08, 1.0), 0.52)
+				col = col.lerp(Color(0.18, 0.19, 0.19, 1.0), 0.32)
 			if n2 < 0.16:
-				col = col.lerp(Color(0.30, 0.28, 0.25, 1.0), 0.22)
+				col = col.lerp(Color(0.43, 0.44, 0.44, 1.0), 0.16)
 			image.set_pixel(x, y, col)
 	_stone_texture_cache = ImageTexture.create_from_image(image)
 	return _stone_texture_cache
@@ -3784,16 +2084,21 @@ func _role_tint(tile_type: String) -> Color:
 			return Color(0.72, 0.76, 0.80, 1.0)
 
 func _animate_lights() -> void:
-	var pulse: float = 0.97 + 0.03 * sin(_visual_time * 0.70)
-	if _fill_light != null:
-		_fill_light.light_energy = float(STABILIZATION_LIGHT_BASELINE["fill_energy"]) + 0.04 * sin(_visual_time * 0.55)
-	for light in _point_lights:
-		if light == null or not is_instance_valid(light):
-			continue
-		var base_energy: float = float(light.get_meta("base_energy")) if light.has_meta("base_energy") else light.light_energy
-		light.light_energy = base_energy * pulse
-	if _key_light != null:
-		_key_light.light_energy = float(STABILIZATION_LIGHT_BASELINE["key_energy"]) + 0.03 * sin(_visual_time * 0.30)
+	var animated_point_lights: Array[OmniLight3D] = []
+	for wall_light in _wall_lights:
+		if wall_light != null and is_instance_valid(wall_light):
+			animated_point_lights.append(wall_light)
+	for point_light in _point_lights:
+		if point_light != null and is_instance_valid(point_light):
+			animated_point_lights.append(point_light)
+	_lighting.animate_lights(
+		_visual_time,
+		_key_light,
+		_fill_light,
+		_rim_light,
+		animated_point_lights,
+		STABILIZATION_LIGHT_BASELINE
+	)
 
 func _orbit_camera(delta: Vector2) -> void:
 	_camera_yaw_target -= delta.x * 0.008
@@ -3843,24 +2148,14 @@ func _apply_startup_visual_contract(static_stamp: String) -> void:
 	_ensure_lighting_contract()
 
 func _ensure_lighting_contract() -> void:
-	if _environment != null and _environment.environment != null:
-		var env: Environment = _environment.environment
-		env.background_mode = Environment.BG_COLOR
-		env.background_color = Color(STABILIZATION_ENV_BASELINE["background_color"])
-		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-		env.ambient_light_color = Color(STABILIZATION_ENV_BASELINE["ambient_color"])
-		env.ambient_light_energy = float(STABILIZATION_ENV_BASELINE["ambient_energy"])
-		env.adjustment_enabled = true
-		env.adjustment_brightness = float(STABILIZATION_ENV_BASELINE["brightness"])
-		env.adjustment_contrast = float(STABILIZATION_ENV_BASELINE["contrast"])
-		env.adjustment_saturation = float(STABILIZATION_ENV_BASELINE["saturation"])
-		env.fog_enabled = bool(STABILIZATION_ENV_BASELINE["fog_enabled"])
-		env.fog_density = float(STABILIZATION_ENV_BASELINE["fog_density"])
-	if _key_light != null:
-		_key_light.light_energy = maxf(_key_light.light_energy, float(STABILIZATION_LIGHT_BASELINE["key_energy"]) - 0.10)
-	if _fill_light != null:
-		_fill_light.light_energy = maxf(_fill_light.light_energy, float(STABILIZATION_LIGHT_BASELINE["fill_energy"]) - 0.08)
-		_fill_light.omni_range = maxf(_fill_light.omni_range, float(STABILIZATION_LIGHT_BASELINE["fill_range"]))
+	_lighting.apply_lighting_contract(
+		_environment,
+		_key_light,
+		_fill_light,
+		_rim_light,
+		STABILIZATION_ENV_BASELINE,
+		STABILIZATION_LIGHT_BASELINE
+	)
 
 func _reset_camera_if_needed() -> void:
 	var default_distance: float = _default_camera_distance()
@@ -3901,6 +2196,8 @@ func _default_camera_distance() -> float:
 func _update_camera_transform(force: bool) -> void:
 	if _camera == null or _state == null:
 		return
+	if not is_instance_valid(_camera) or not _camera.is_inside_tree():
+		return
 	if force:
 		_camera_yaw = _camera_yaw_target
 		_camera_pitch = _camera_pitch_target
@@ -3922,143 +2219,46 @@ func _update_camera_transform(force: bool) -> void:
 		sin(_camera_pitch),
 		cp * cos(_camera_yaw)
 	) * _camera_distance
-	_camera.position = target + offset
-	_camera.look_at(target + Vector3(0.0, 0.34, 0.0), Vector3.UP)
+	var camera_pos: Vector3 = target + offset
+	_camera.look_at_from_position(camera_pos, target + Vector3(0.0, 0.34, 0.0), Vector3.UP)
 	if _key_light != null:
 		_key_light.position = target + Vector3(-8.5, 16.0, -7.0)
-	if _rim_light != null:
-		_rim_light.position = target + Vector3(0.0, 12.6, 0.0)
+	if _rim_light != null and is_instance_valid(_rim_light) and _rim_light.is_inside_tree():
+		var rim_pos: Vector3 = camera_pos + Vector3(0.0, 2.2, 0.0)
+		_rim_light.look_at_from_position(rim_pos, target + Vector3(0.0, 0.40, 0.0), Vector3.UP)
 	if _fill_light != null:
-		_fill_light.position = target + Vector3(0.0, 5.6, 0.0)
+		_fill_light.position = target + Vector3(offset.x * 0.18, 5.4, offset.z * 0.18)
 
 func _load_asset_manifest() -> void:
-	_asset_manifest.clear()
-	_geometry_asset_registry.clear()
-	_geometry_asset_normalize.clear()
-	_texture_asset_registry.clear()
-	_asset_scene_cache.clear()
 	_asset_material_cache.clear()
-
-	var file: FileAccess = FileAccess.open(ASSET_MANIFEST_PATH, FileAccess.READ)
-	if file == null:
-		push_warning("World3D asset manifest missing: %s" % ASSET_MANIFEST_PATH)
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if typeof(parsed) != TYPE_DICTIONARY:
-		push_warning("World3D asset manifest invalid JSON dictionary: %s" % ASSET_MANIFEST_PATH)
-		return
-
-	_asset_manifest = parsed
-	var textures_variant: Variant = _asset_manifest.get("textures", {})
-	if typeof(textures_variant) == TYPE_DICTIONARY:
-		var textures: Dictionary = textures_variant
-		for key_variant in textures.keys():
-			var key: String = String(key_variant)
-			var value: Variant = textures[key_variant]
-			if typeof(value) == TYPE_STRING:
-				var path: String = String(value)
-				if not path.is_empty():
-					_texture_asset_registry[key] = path
-			elif typeof(value) == TYPE_DICTIONARY:
-				var entry: Dictionary = value
-				var entry_path: String = String(entry.get("path", ""))
-				if not entry_path.is_empty():
-					_texture_asset_registry[key] = entry_path
-
-	var geometry_variant: Variant = _asset_manifest.get("geometry", {})
-	if typeof(geometry_variant) != TYPE_DICTIONARY:
-		return
-	var geometry: Dictionary = geometry_variant
-	for key_variant in geometry.keys():
-		var key: String = String(key_variant)
-		var entry_variant: Variant = geometry[key_variant]
-		if typeof(entry_variant) != TYPE_DICTIONARY:
-			continue
-		var entry: Dictionary = entry_variant
-		var path: String = String(entry.get("path", ""))
-		if path.is_empty():
-			continue
-		_geometry_asset_registry[key] = path
-		var normalize: Dictionary = {}
-		var normalize_variant: Variant = entry.get("normalize", {})
-		if typeof(normalize_variant) == TYPE_DICTIONARY:
-			var normalize_entry: Dictionary = normalize_variant
-			if normalize_entry.has("scale"):
-				normalize["scale"] = _manifest_vec3(normalize_entry.get("scale"), Vector3.ONE)
-			if normalize_entry.has("rotation_degrees"):
-				normalize["rotation_degrees"] = _manifest_vec3(normalize_entry.get("rotation_degrees"), Vector3.ZERO)
-			if normalize_entry.has("offset"):
-				normalize["offset"] = _manifest_vec3(normalize_entry.get("offset"), Vector3.ZERO)
-		if not normalize.is_empty():
-			_geometry_asset_normalize[key] = normalize
-
-func _manifest_vec3(value: Variant, fallback: Vector3) -> Vector3:
-	if typeof(value) == TYPE_VECTOR3:
-		return value as Vector3
-	if typeof(value) != TYPE_ARRAY:
-		return fallback
-	var arr: Array = value
-	if arr.size() < 3:
-		return fallback
-	return Vector3(float(arr[0]), float(arr[1]), float(arr[2]))
+	_assets.load_manifest(ASSET_MANIFEST_PATH)
 
 func _texture_path_for(key: String) -> String:
-	return String(_texture_asset_registry.get(key, ""))
+	return _assets.texture_path_for(key)
 
-func _asset_path_for(key: String) -> String:
-	return String(_geometry_asset_registry.get(key, ""))
+func _asset_paths_for(key: String) -> Array[String]:
+	return _assets.asset_paths_for(key)
+
+func _asset_scene_for_path(path: String) -> PackedScene:
+	return _assets.asset_scene_for_path(path)
 
 func _asset_scene_for(key: String) -> PackedScene:
-	if _asset_scene_cache.has(key):
-		return _asset_scene_cache[key] as PackedScene
-	var path: String = _asset_path_for(key)
-	if path.is_empty():
-		_asset_scene_cache[key] = null
-		return null
-	var scene: PackedScene = null
-	if ResourceLoader.exists(path):
-		var res: Resource = load(path)
-		scene = res as PackedScene
-	if scene == null and path.to_lower().ends_with(".glb"):
-		scene = _runtime_scene_from_gltf(path)
-	_asset_scene_cache[key] = scene
-	return scene
+	return _assets.asset_scene_for(key)
 
-func _runtime_scene_from_gltf(res_path: String) -> PackedScene:
-	var abs_path: String = ProjectSettings.globalize_path(res_path)
-	if not FileAccess.file_exists(abs_path):
-		return null
-	var gltf: GLTFDocument = GLTFDocument.new()
-	var state: GLTFState = GLTFState.new()
-	var err: int = gltf.append_from_file(abs_path, state)
-	if err != OK:
-		return null
-	var generated: Node = gltf.generate_scene(state)
-	if generated == null:
-		return null
-	var packed: PackedScene = PackedScene.new()
-	var pack_err: int = packed.pack(generated)
-	generated.free()
-	if pack_err != OK:
-		return null
-	return packed
+func _asset_variant_path_for_transform(key: String, tf: Transform3D) -> String:
+	return _assets.asset_variant_path_for_transform(key, tf)
 
 func _has_asset_scene(key: String) -> bool:
-	return _asset_scene_for(key) != null
+	return _assets.has_asset_scene(key)
 
-func _instantiate_asset_scene(key: String) -> Node3D:
-	var scene: PackedScene = _asset_scene_for(key)
-	if scene == null:
-		return null
-	var instance: Node = scene.instantiate()
-	if instance is Node3D:
-		return instance as Node3D
-	var holder: Node3D = Node3D.new()
-	holder.name = "AssetHolder_%s" % key
-	holder.add_child(instance)
-	return holder
+func _instantiate_asset_scene(key: String, path_override: String = "") -> Node3D:
+	return _assets.instantiate_asset_scene(key, path_override)
 
-func _set_geometry_visuals(node: Node, cast_shadow: int, material_override: Material = null) -> void:
+func _set_geometry_visuals(
+	node: Node,
+	cast_shadow: GeometryInstance3D.ShadowCastingSetting,
+	material_override: Material = null
+) -> void:
 	if node is GeometryInstance3D:
 		(node as GeometryInstance3D).cast_shadow = cast_shadow
 	if material_override != null and node is MeshInstance3D:
@@ -4067,82 +2267,270 @@ func _set_geometry_visuals(node: Node, cast_shadow: int, material_override: Mate
 		_set_geometry_visuals(child, cast_shadow, material_override)
 
 func _normalized_asset_transform(key: String, base_tf: Transform3D) -> Transform3D:
-	if not _geometry_asset_normalize.has(key):
-		return base_tf
-	var normalize: Dictionary = _geometry_asset_normalize[key]
-	var scale: Vector3 = normalize.get("scale", Vector3.ONE)
-	var rotation_deg: Vector3 = normalize.get("rotation_degrees", Vector3.ZERO)
-	var local_offset: Vector3 = normalize.get("offset", Vector3.ZERO)
-	var local_basis: Basis = Basis.from_euler(Vector3(
-		deg_to_rad(rotation_deg.x),
-		deg_to_rad(rotation_deg.y),
-		deg_to_rad(rotation_deg.z)
-	)).scaled(scale)
-	return base_tf * Transform3D(local_basis, local_offset)
+	return _assets.normalized_asset_transform(key, base_tf)
 
 func _default_asset_material_for(key: String) -> Material:
 	if _asset_material_cache.has(key):
+		_perf_increment("asset_material_cache_hits")
 		return _asset_material_cache[key] as Material
+	_perf_increment("asset_material_builds")
 	var material: Material = null
 	match key:
 		"blocker_wall":
 			material = _stone_shader_material(
-				Color(0.26, 0.23, 0.21, 1.0),
-				Color(0.11, 0.10, 0.10, 1.0),
-				Color(0.09, 0.11, 0.13, 1.0),
-				7.8,
-				0.034,
-				0.84
+				Color(0.335, 0.342, 0.346, 1.0),
+				Color(0.225, 0.232, 0.236, 1.0),
+				Color(0.145, 0.152, 0.156, 1.0),
+				8.0,
+				0.002,
+				0.030,
+				0.018,
+				0.34,
+				0.006,
+				0.215,
+				0.345
 			)
-		"cave_wall":
+		"cave_wall", "cave_corner":
 			material = _stone_shader_material(
-				Color(0.22, 0.21, 0.22, 1.0),
-				Color(0.08, 0.08, 0.09, 1.0),
-				Color(0.09, 0.11, 0.13, 1.0),
-				7.2,
-				0.046,
-				0.96
+				Color(0.330, 0.337, 0.340, 1.0),
+				Color(0.218, 0.225, 0.229, 1.0),
+				Color(0.140, 0.148, 0.152, 1.0),
+				8.4,
+				0.002,
+				0.030,
+				0.016,
+				0.32,
+				0.006,
+				0.205,
+				0.335
 			)
 		"board_edge_trim":
 			material = _stone_shader_material(
-				Color(0.19, 0.18, 0.18, 1.0),
-				Color(0.08, 0.08, 0.09, 1.0),
-				Color(0.08, 0.10, 0.12, 1.0),
+				Color(0.35, 0.36, 0.36, 1.0),
+				Color(0.23, 0.24, 0.24, 1.0),
+				Color(0.15, 0.16, 0.16, 1.0),
 				8.4,
-				0.034,
-				0.72
+				0.002,
+				0.030,
+				0.018,
+				0.34,
+				0.006,
+				0.215,
+				0.345
 			)
 		"door_arch":
 			var door_mat: StandardMaterial3D = StandardMaterial3D.new()
-			door_mat.albedo_color = Color(0.13, 0.10, 0.08, 1.0)
+			door_mat.albedo_color = Color(0.34, 0.35, 0.35, 1.0)
 			door_mat.roughness = 0.70
 			door_mat.metallic = 0.04
 			door_mat.emission_enabled = true
-			door_mat.emission = Color(0.78, 0.46, 0.20, 1.0)
-			door_mat.emission_energy_multiplier = 0.18
+			door_mat.emission = Color(0.72, 0.62, 0.46, 1.0)
+			door_mat.emission_energy_multiplier = 0.10
 			material = door_mat
 		"node_base":
 			material = _stone_shader_material(
-				CAVE_WALL_BASE.lerp(Color(0.32, 0.26, 0.22, 1.0), 0.20),
-				CAVE_WALL_ALT.lerp(Color(0.17, 0.13, 0.11, 1.0), 0.20),
-				Color(0.12, 0.12, 0.11, 1.0),
+				Color(0.36, 0.37, 0.37, 1.0),
+				Color(0.22, 0.23, 0.23, 1.0),
+				Color(0.14, 0.15, 0.15, 1.0),
 				6.2,
-				0.018,
-				0.66
+				0.004,
+				0.030,
+				0.020,
+				0.34,
+				0.008,
+				0.220,
+				0.350
+			)
+		"core_growth", "basic_tile", "melee_growth", "ranged_growth", "defense_growth", "gather_growth":
+			material = _ooze_growth_material(
+				Color(0.30, 0.86, 0.42, 1.0),
+				Color(0.38, 0.92, 0.52, 1.0),
+				"heart" if key == "core_growth" else ("gather" if key == "basic_tile" else key.replace("_growth", "")),
+				false
 			)
 	_asset_material_cache[key] = material
 	return material
+
+func validate_wall_tile_visual_alignment() -> Dictionary:
+	return _static_environment.validate_wall_tile_visual_alignment(_state, _rendered_inner_wall_tiles)
+
+func validate_ooze_wall_blocking(alpha_threshold: float = 0.02) -> Dictionary:
+	return _dynamic_ooze.validate_ooze_wall_blocking(self, _state, _owner_mask_texture_cache, alpha_threshold)
+
+func validate_render_truth_contract() -> Dictionary:
+	if _state == null:
+		return {"ok": true}
+	var layout_truth: Dictionary = validate_layout_truth_contract()
+	var wall_truth: Dictionary = validate_wall_blocking_contract()
+	var territory_truth: Dictionary = validate_territory_visual_alignment()
+	var layering_truth: Dictionary = validate_ooze_layering_contract()
+	var ok: bool = (
+		bool(layout_truth.get("ok", false))
+		and bool(wall_truth.get("ok", false))
+		and bool(territory_truth.get("ok", false))
+		and bool(layering_truth.get("ok", false))
+	)
+	return {
+		"ok": ok,
+		"layout": layout_truth,
+		"walls": wall_truth,
+		"territory": territory_truth,
+		"layering": layering_truth,
+	}
+
+func validate_layout_truth_contract() -> Dictionary:
+	if _state == null:
+		return {"ok": true}
+	var layout: Dictionary = _state.get_level_layout()
+	var board_size: Array = layout.get("board_size", [_state.width, _state.height])
+	var board_ok: bool = board_size.size() >= 2 and int(board_size[0]) == _state.width and int(board_size[1]) == _state.height
+
+	var objective_positions: Dictionary = layout.get("objective_positions", {})
+	var entrance_arr: Array = objective_positions.get("entrance", [_state.entrance_tile.x, _state.entrance_tile.y])
+	var door_arr: Array = objective_positions.get("door", [_state.door_tile.x, _state.door_tile.y])
+	var entrance_ok: bool = entrance_arr.size() >= 2 and Vector2i(int(entrance_arr[0]), int(entrance_arr[1])) == _state.entrance_tile
+	var door_ok: bool = door_arr.size() >= 2 and Vector2i(int(door_arr[0]), int(door_arr[1])) == _state.door_tile
+
+	var layout_walls: Dictionary = {}
+	for wall_raw in layout.get("inner_walls", []):
+		if typeof(wall_raw) != TYPE_ARRAY:
+			continue
+		var wall_arr: Array = wall_raw
+		if wall_arr.size() < 2:
+			continue
+		layout_walls[_tile_key(Vector2i(int(wall_arr[0]), int(wall_arr[1])))] = true
+	var missing_from_layout: Array = []
+	var extra_in_layout: Array = []
+	for key_variant in _state.wall_tiles.keys():
+		var key: String = String(key_variant)
+		if not layout_walls.has(key):
+			missing_from_layout.append(key)
+	for key_variant in layout_walls.keys():
+		var key: String = String(key_variant)
+		if not _state.wall_tiles.has(key):
+			extra_in_layout.append(key)
+
+	var bounds: Dictionary = _layout_outer_bounds_tiles()
+	var min_tile: Vector2i = bounds.get("min", Vector2i(0, 0))
+	var max_tile: Vector2i = bounds.get("max", Vector2i(_state.width - 1, _state.height - 1))
+	var bounds_ok: bool = (
+		_state.is_inside(min_tile)
+		and _state.is_inside(max_tile)
+		and min_tile.x <= max_tile.x
+		and min_tile.y <= max_tile.y
+	)
+	return {
+		"ok": board_ok and entrance_ok and door_ok and missing_from_layout.is_empty() and extra_in_layout.is_empty() and bounds_ok,
+		"board_size_ok": board_ok,
+		"entrance_ok": entrance_ok,
+		"door_ok": door_ok,
+		"bounds_ok": bounds_ok,
+		"missing_walls_from_layout": missing_from_layout,
+		"extra_walls_in_layout": extra_in_layout,
+	}
+
+func validate_territory_visual_alignment() -> Dictionary:
+	return _dynamic_ooze.validate_territory_visual_alignment(_state, _rendered_owner_tiles_by_owner)
+
+func validate_ooze_layering_contract() -> Dictionary:
+	return _dynamic_ooze.validate_ooze_layering_contract(self, _state)
+
+func validate_wall_blocking_contract() -> Dictionary:
+	if _state == null:
+		return {"ok": true}
+	var blocked_ownership: int = 0
+	for block_variant in _state.blocks.values():
+		var block: Dictionary = block_variant
+		var tile: Vector2i = block.get("pos", Vector2i(-1, -1))
+		if _state.is_inside(tile) and _state.is_blocked(tile):
+			blocked_ownership += 1
+	var visual_alignment: Dictionary = validate_wall_tile_visual_alignment()
+	var ooze_blocking: Dictionary = validate_ooze_wall_blocking()
+	var ok: bool = bool(visual_alignment.get("ok", false)) and bool(ooze_blocking.get("ok", false)) and blocked_ownership == 0
+	return {
+		"ok": ok,
+		"blocked_owned_tiles": blocked_ownership,
+		"wall_visual_alignment": visual_alignment,
+		"ooze_wall_blocking": ooze_blocking,
+	}
+
+func get_performance_counters() -> Dictionary:
+	var out: Dictionary = _perf_counters.duplicate(true)
+	for key_variant in _perf_counters.keys():
+		var key: String = String(key_variant)
+		if not key.begins_with("profile_") or not key.ends_with("_usec"):
+			continue
+		var count_key: String = key.replace("_usec", "_count")
+		var avg_key: String = key.replace("_usec", "_avg_ms")
+		out[avg_key] = float(_perf_counters[key]) / 1000.0 / float(maxi(1, int(_perf_counters.get(count_key, 0))))
+	var marker_counters: Dictionary = _marker_layer.get_performance_counters()
+	for key_variant in marker_counters.keys():
+		var key: String = String(key_variant)
+		out[key] = marker_counters[key_variant]
+	out["world3d_total_node_count"] = _count_nodes_recursive(self)
+	out["terrain_root_child_count"] = _terrain_root.get_child_count() if _terrain_root != null else 0
+	out["dynamic_root_child_count"] = _dynamic_root.get_child_count() if _dynamic_root != null else 0
+	out["dynamic_root_total_node_count"] = _count_nodes_recursive(_dynamic_root)
+	out["growth_pool_root_child_count"] = _growth_pool_root.get_child_count() if _growth_pool_root != null else 0
+	out["marker_root_child_count"] = _marker_root.get_child_count() if _marker_root != null else 0
+	out["marker_root_total_node_count"] = _count_nodes_recursive(_marker_root)
+	out["light_root_child_count"] = _dynamic_light_root.get_child_count() if _dynamic_light_root != null else 0
+	out["dynamic_light_pool_entries"] = _dynamic_light_pool.size()
+	out["point_light_tracking_count"] = _point_lights.size()
+	out["growth_animation_count"] = _growth_anim_entries.size()
+	out["active_growth_asset_count"] = _active_growth_asset_nodes.size()
+	out["pooled_growth_asset_count"] = _growth_asset_pool_node_count()
+	out["mask_cache_entries"] = _owner_mask_texture_cache.size()
+	out["pool_material_cache_entries"] = _pool_material_cache.size()
+	out["shell_material_cache_entries"] = _shell_material_cache.size()
+	out["growth_material_template_cache_entries"] = _growth_material_template_cache.size()
+	out["asset_material_cache_entries"] = _asset_material_cache.size()
+	out["ooze_surface_mesh_cache_entries"] = _ooze_surface_mesh_cache.size()
+	out["avg_frame_ms"] = _frame_time_accum / float(maxi(1, _frame_time_samples))
+	out["max_frame_ms"] = _frame_time_max_ms
+	out["frame_time_samples"] = _frame_time_samples
+	out["avg_growth_animation_ms"] = _growth_animation_time_accum_ms / float(maxi(1, _growth_animation_time_samples))
+	out["max_growth_animation_ms"] = _growth_animation_time_max_ms
+	out["growth_animation_time_samples"] = _growth_animation_time_samples
+	out["avg_dynamic_rebuild_ms"] = _dynamic_rebuild_time_accum_ms / float(maxi(1, _dynamic_rebuild_time_samples))
+	out["max_dynamic_rebuild_ms"] = _dynamic_rebuild_time_max_ms
+	out["last_dynamic_rebuild_ms"] = _dynamic_rebuild_time_last_ms
+	out["dynamic_rebuild_time_samples"] = _dynamic_rebuild_time_samples
+	return out
+
+func reset_performance_counters() -> void:
+	_perf_counters.clear()
+	_marker_layer.reset_performance_counters()
+	_frame_time_accum = 0.0
+	_frame_time_samples = 0
+	_frame_time_max_ms = 0.0
+	_growth_animation_time_accum_ms = 0.0
+	_growth_animation_time_samples = 0
+	_growth_animation_time_max_ms = 0.0
+	_dynamic_rebuild_time_accum_ms = 0.0
+	_dynamic_rebuild_time_samples = 0
+	_dynamic_rebuild_time_max_ms = 0.0
+	_dynamic_rebuild_time_last_ms = 0.0
+
+func _perf_increment(key: String, amount: int = 1) -> void:
+	_perf_counters[key] = int(_perf_counters.get(key, 0)) + amount
+
+func _perf_record_time(key: String, start_usec: int) -> void:
+	var elapsed: int = maxi(0, Time.get_ticks_usec() - start_usec)
+	_perf_increment("%s_usec" % key, elapsed)
+	_perf_increment("%s_count" % key, 1)
 
 func _add_asset_instance(
 	parent: Node3D,
 	key: String,
 	tf: Transform3D,
-	cast_shadow: int = GeometryInstance3D.SHADOW_CASTING_SETTING_ON,
+	cast_shadow: GeometryInstance3D.ShadowCastingSetting = GeometryInstance3D.SHADOW_CASTING_SETTING_ON,
 	material_override: Material = null
 ) -> Node3D:
 	if parent == null:
 		return null
-	var inst: Node3D = _instantiate_asset_scene(key)
+	var variant_path: String = _asset_variant_path_for_transform(key, tf)
+	var inst: Node3D = _instantiate_asset_scene(key, variant_path)
 	if inst == null:
 		return null
 	parent.add_child(inst)
@@ -4151,9 +2539,85 @@ func _add_asset_instance(
 	_set_geometry_visuals(inst, cast_shadow, effective_material)
 	return inst
 
+func _claim_dynamic_growth_asset_instance(
+	parent: Node3D,
+	key: String,
+	tf: Transform3D,
+	cast_shadow: GeometryInstance3D.ShadowCastingSetting = GeometryInstance3D.SHADOW_CASTING_SETTING_ON,
+	material_override: Material = null
+) -> Node3D:
+	if parent == null:
+		return null
+	var pool: Array = _growth_asset_pool.get(key, [])
+	var inst: Node3D = null
+	while not pool.is_empty():
+		var candidate: Node3D = pool.pop_back() as Node3D
+		if candidate != null and is_instance_valid(candidate):
+			inst = candidate
+			break
+	_growth_asset_pool[key] = pool
+	if inst == null:
+		_perf_increment("growth_asset_pool_misses")
+		var variant_path: String = _asset_variant_path_for_transform(key, tf)
+		inst = _instantiate_asset_scene(key, variant_path)
+		if inst == null:
+			return null
+	else:
+		_perf_increment("growth_asset_pool_hits")
+	if inst.get_parent() != parent:
+		if inst.get_parent() != null:
+			inst.get_parent().remove_child(inst)
+		parent.add_child(inst)
+	inst.visible = true
+	inst.transform = _normalized_asset_transform(key, tf)
+	var effective_material: Material = material_override if material_override != null else _default_asset_material_for(key)
+	_set_geometry_visuals(inst, cast_shadow, effective_material)
+	inst.set_meta("dynamic_growth_asset_key", key)
+	_active_growth_asset_nodes.append(inst)
+	return inst
+
+func _release_active_growth_asset_nodes() -> void:
+	for node in _active_growth_asset_nodes:
+		if node == null or not is_instance_valid(node):
+			continue
+		var key: String = String(node.get_meta("dynamic_growth_asset_key", ""))
+		if key.is_empty():
+			continue
+		node.visible = false
+		if _growth_pool_root != null and is_instance_valid(_growth_pool_root):
+			if node.get_parent() != _growth_pool_root:
+				if node.get_parent() != null:
+					node.get_parent().remove_child(node)
+				_growth_pool_root.add_child(node)
+		elif node.get_parent() != null:
+			node.get_parent().remove_child(node)
+		var pool: Array = _growth_asset_pool.get(key, [])
+		pool.append(node)
+		_growth_asset_pool[key] = pool
+		_perf_increment("growth_asset_pool_releases")
+	_active_growth_asset_nodes.clear()
+
+func _growth_asset_pool_node_count() -> int:
+	var total: int = 0
+	for pool_variant in _growth_asset_pool.values():
+		var pool: Array = pool_variant
+		total += pool.size()
+	return total
+
 func _clear_children(node: Node) -> void:
+	if node == null:
+		return
 	for child in node.get_children():
-		child.queue_free()
+		node.remove_child(child)
+		child.free()
+
+func _count_nodes_recursive(node: Node) -> int:
+	if node == null:
+		return 0
+	var count: int = 1
+	for child in node.get_children():
+		count += _count_nodes_recursive(child)
+	return count
 
 func _owned_neighbor_count(tile: Vector2i, tile_set: Dictionary) -> int:
 	var count: int = 0
@@ -4161,15 +2625,6 @@ func _owned_neighbor_count(tile: Vector2i, tile_set: Dictionary) -> int:
 		if tile_set.has(_tile_key(n)):
 			count += 1
 	return count
-
-func _is_near_used_tile(tile: Vector2i, used_tiles: Dictionary, radius: int) -> bool:
-	for oy in range(-radius, radius + 1):
-		for ox in range(-radius, radius + 1):
-			if ox == 0 and oy == 0:
-				continue
-			if used_tiles.has(_tile_key(tile + Vector2i(ox, oy))):
-				return true
-	return false
 
 func _tile_noise(x: int, y: int, salt: int) -> int:
 	var n: int = int(x * 73856093) ^ int(y * 19349663) ^ int(salt * 83492791)
@@ -4180,3 +2635,20 @@ func _noise01(x: int, y: int) -> float:
 
 func _tile_key(tile: Vector2i) -> String:
 	return "%d,%d" % [tile.x, tile.y]
+
+func _tile_from_key(key: String) -> Vector2i:
+	var parts: PackedStringArray = key.split(",")
+	if parts.size() < 2:
+		return Vector2i(-1, -1)
+	return Vector2i(int(parts[0]), int(parts[1]))
+
+func _join_string_keys(keys: Array) -> String:
+	var out: String = ""
+	for key_variant in keys:
+		if not out.is_empty():
+			out += ";"
+		out += String(key_variant)
+	return out
+
+func _color_cache_key(color: Color) -> String:
+	return "%0.2f,%0.2f,%0.2f,%0.2f" % [color.r, color.g, color.b, color.a]

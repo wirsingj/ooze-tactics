@@ -51,28 +51,28 @@ func _apply_background() -> void:
 		background.texture = load(FALLBACK_BG_PATH)
 
 func _apply_menu_theme() -> void:
-	var theme := Theme.new()
+	var ui_theme: Theme = Theme.new()
 	var font := _load_runtime_font(MENU_FONT_PATH)
 	if font != null:
-		theme.set_default_font(font)
-	theme.set_default_font_size(13)
+		ui_theme.set_default_font(font)
+	ui_theme.set_default_font_size(13)
 
 	var normal := _make_stylebox(BTN_NORMAL_PATH, 14, 8)
 	var hover := _make_stylebox(BTN_HOVER_PATH, 14, 8)
 	var pressed := _make_stylebox(BTN_PRESSED_PATH, 14, 8)
 	var selected := _make_stylebox(BTN_SELECTED_PATH, 14, 8)
 
-	theme.set_stylebox("normal", "Button", normal)
-	theme.set_stylebox("hover", "Button", hover)
-	theme.set_stylebox("pressed", "Button", pressed)
-	theme.set_stylebox("focus", "Button", selected)
-	theme.set_color("font_color", "Button", Color(0.95, 0.92, 0.84))
-	theme.set_color("font_hover_color", "Button", Color(1.0, 0.98, 0.9))
-	theme.set_color("font_pressed_color", "Button", Color(0.92, 0.9, 0.84))
-	theme.set_color("font_color", "Label", Color(0.95, 0.94, 0.87))
-	theme.set_color("font_color", "CheckBox", Color(0.95, 0.94, 0.87))
+	ui_theme.set_stylebox("normal", "Button", normal)
+	ui_theme.set_stylebox("hover", "Button", hover)
+	ui_theme.set_stylebox("pressed", "Button", pressed)
+	ui_theme.set_stylebox("focus", "Button", selected)
+	ui_theme.set_color("font_color", "Button", Color(0.95, 0.92, 0.84))
+	ui_theme.set_color("font_hover_color", "Button", Color(1.0, 0.98, 0.9))
+	ui_theme.set_color("font_pressed_color", "Button", Color(0.92, 0.9, 0.84))
+	ui_theme.set_color("font_color", "Label", Color(0.95, 0.94, 0.87))
+	ui_theme.set_color("font_color", "CheckBox", Color(0.95, 0.94, 0.87))
 
-	self.theme = theme
+	self.theme = ui_theme
 	if buttons_panel != null:
 		var panel_style := StyleBoxFlat.new()
 		panel_style.bg_color = Color(0.02, 0.02, 0.03, 0.50)

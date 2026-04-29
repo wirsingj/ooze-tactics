@@ -16,20 +16,26 @@ No runtime geometry/texture path strings are hardcoded in `scripts/ui/World3DRen
 
 ## Runtime Geometry Mapping
 
-| Runtime key | Manifest path | Source kind | In-game usage |
-|---|---|---|---|
-| `blocker_wall` | `assets/meshes/generated/blocker_cluster.glb` | generated | Tactical blockers / chokepoints |
-| `cave_wall` | `assets/meshes/generated/cave_wall_segment.glb` | generated | Cave perimeter wall segment |
-| `cave_corner` | `assets/meshes/generated/cave_wall_corner.glb` | generated | Cave corner wall segment |
-| `door_arch` | `assets/meshes/imported/kenney_door_gate.glb` | imported | Dungeon door objective arch |
-| `floor_tile_rock` | `assets/meshes/generated/floor_tile_rock.glb` | generated | Cave floor tile variation |
-| `node_base` | `assets/meshes/generated/node_base.glb` | generated | Node/core pedestal |
-| `heart_crystal` | `assets/meshes/generated/crystal_hero.glb` | generated | Heart/core visual |
-| `role_crystal` | `assets/meshes/generated/crystal_small.glb` | generated | Role marker crystal |
-| `board_edge_trim` | `assets/meshes/imported/kenney_board_edge_trim.glb` | imported | Board edge framing |
-| `prop_gem` | `assets/meshes/imported/kenney_prop_coin.glb` | imported | Gem resource marker |
-| `prop_scroll` | `assets/meshes/imported/kenney_prop_chest.glb` | imported | Scroll resource marker |
-| `prop_rat` | `assets/meshes/imported/kenney_prop_rocks.glb` | imported | Rat/resource marker proxy |
+| Runtime key | Manifest path | Variant paths | Source kind | In-game usage |
+|---|---|---|---|---|
+| `blocker_wall` | `assets/meshes/generated/inner_wall_blocker_A.glb` | - | generated | Tactical blockers / chokepoints |
+| `cave_wall` | `assets/meshes/generated/outer_cave_wall_A.glb` | `assets/meshes/generated/outer_cave_wall_B.glb` | generated | Cave perimeter wall segment (deterministic A/B runtime mix) |
+| `cave_corner` | `assets/meshes/generated/cave_corner_transition_A.glb` | - | generated | Cave corner transition segment |
+| `door_arch` | `assets/meshes/imported/kenney_door_gate.glb` | - | imported | Dungeon door objective arch |
+| `floor_tile_rock` | `assets/meshes/generated/floor_tile_rock_A.glb` | `assets/meshes/generated/floor_tile_rock_B.glb` | generated | Cave floor tile variation (deterministic A/B runtime mix) |
+| `core_growth` | `assets/meshes/generated/core_growth.glb` | - | generated | Core/heart ooze growth asset placed on living ooze territory |
+| `basic_tile` | `assets/meshes/generated/basic_tile.glb` | - | generated | Low-profile base ooze expression for continuity kit |
+| `melee_growth` | `assets/meshes/generated/melee_growth.glb` | - | generated | Melee ooze tendril growth asset |
+| `ranged_growth` | `assets/meshes/generated/ranged_growth.glb` | - | generated | Ranged ooze stalk/bulb growth asset |
+| `defense_growth` | `assets/meshes/generated/defense_growth.glb` | - | generated | Defense ooze layered mass growth asset |
+| `gather_growth` | `assets/meshes/generated/gather_growth.glb` | - | generated | Gather ooze nodule cluster growth asset |
+| `node_base` | `assets/meshes/generated/node_base.glb` | - | generated | Node/core pedestal |
+| `heart_crystal` | `assets/meshes/generated/crystal_hero.glb` | - | generated | Heart/core visual |
+| `role_crystal` | `assets/meshes/generated/crystal_small.glb` | - | generated | Role marker crystal |
+| `board_edge_trim` | `assets/meshes/imported/kenney_board_edge_trim.glb` | - | imported | Board edge framing |
+| `prop_gem` | `assets/meshes/imported/kenney_prop_coin.glb` | - | imported | Gem resource marker |
+| `prop_scroll` | `assets/meshes/imported/kenney_prop_chest.glb` | - | imported | Scroll resource marker |
+| `prop_rat` | `assets/meshes/imported/kenney_prop_rocks.glb` | - | imported | Rat/resource marker proxy |
 
 ## Runtime Texture Mapping
 
@@ -59,4 +65,6 @@ No runtime geometry/texture path strings are hardcoded in `scripts/ui/World3DRen
 ## Notes
 
 - Mixed generated/imported assets are explicitly declared per entry in the manifest via `source_kind`.
+- Where `geometry.*.variants` is present, `World3DRenderer` chooses variants deterministically from transform position and asset key.
+- Ooze gameplay growth roles (`core_growth`, `basic_tile`, `melee_growth`, `ranged_growth`, `defense_growth`, `gather_growth`) are served from generated deterministic GLBs and rendered on top of the continuous base ooze territory layer.
 - Any runtime asset-path change must update `data/world3d_asset_manifest.json` first, then this doc.

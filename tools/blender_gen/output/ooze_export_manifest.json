@@ -1,0 +1,21 @@
+{
+  "repo_root": "C:\\Users\\wirsi\\OneDrive\\Desktop\\git\\ooze-tactics",
+  "export_dir": "assets/meshes/generated",
+  "assets": [
+    "assets/meshes/generated/basic_tile.glb",
+    "assets/meshes/generated/core_growth.glb",
+    "assets/meshes/generated/melee_growth.glb",
+    "assets/meshes/generated/ranged_growth.glb",
+    "assets/meshes/generated/defense_growth.glb",
+    "assets/meshes/generated/gather_growth.glb"
+  ],
+  "contact_sheet": "tools/blender_gen/output/ooze_role_contact_sheet.png",
+  "replacement_map": {
+    "basic_tile.glb": "Low spreading acid puddle with raised lip and a few crawling feeder tendrils.",
+    "core_growth.glb": "Dominant living heart organ with swollen lobes, rooted veins, and a clear crown silhouette.",
+    "melee_growth.glb": "Directional grabbing tendrils with hooked claw tips and aggressive forward reach.",
+    "ranged_growth.glb": "Arched spitter stalk with acid sac, forward nozzle, and planted roots.",
+    "defense_growth.glb": "Low wide hardened shell bunker with layered crust ridges.",
+    "gather_growth.glb": "Collector node with sensory feelers and low siphon pods."
+  }
+}

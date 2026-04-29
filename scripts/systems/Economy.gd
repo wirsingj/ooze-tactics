@@ -44,6 +44,7 @@ func compute_income_and_upkeep(state: GameState) -> Dictionary:
 	for owner_id in state.players.keys():
 		var is_alive: bool = bool(state.players[owner_id].get("alive", true))
 		var base_income: int = BASE_TURN_ENERGY if is_alive else 0
+		base_income = maxi(0, base_income + int(state.players[owner_id].get("income_delta", 0)))
 		if int(owner_id) == GameState.PLAYER_ID and is_alive:
 			base_income += income_flat
 		income_by_owner[owner_id] = base_income

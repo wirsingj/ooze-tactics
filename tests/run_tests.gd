@@ -13,6 +13,10 @@ func _init() -> void:
 	_test_blob_growth_rule()
 	_test_support_placement_rule()
 	_test_corridor_support_relaxation()
+	_test_wall_tiles_block_growth_everywhere()
+	_test_room_wide_chamber_left_wall_is_solid()
+	_test_board_topology_distances_respect_walls()
+	_test_ai_objective_distances_respect_walls()
 	_test_support_and_stability()
 	_test_defense_guard_identity()
 	_test_ranged_contact_penalty_and_splash_role()
@@ -29,6 +33,7 @@ func _init() -> void:
 	_test_ooze_ai_approaching_phase_allows_safe_backline_gather()
 	_test_ooze_ai_frontline_defense_density_brake()
 	_test_ooze_ai_safe_backline_downgrade()
+	_test_intent_planner_empty_ai_actions_become_pass()
 	_test_enemy_alignment_no_friendly_fire()
 	_test_enemy_alignment_dev_mode_hostility()
 	_test_team_color_uniqueness_for_active_owners()
@@ -46,6 +51,7 @@ func _init() -> void:
 	_test_spectator_stall_ignored()
 	_test_spectator_team_loss_condition()
 	_test_dev_spectator_disables_turn_limit()
+	_test_vertical_slice_run_structure()
 	_test_runflow_upgrade_draw_determinism()
 	_test_upgrade_modifiers_affect_combat_economy_and_placement()
 	_test_preview_truth_mixed_conflict_and_reclaim()
@@ -239,6 +245,96 @@ func _test_corridor_support_relaxation() -> void:
 		"Open-area rejection should still use support failure reason"
 	)
 
+func _test_wall_tiles_block_growth_everywhere() -> void:
+	var state: GameState = GameState.new()
+	state.width = 8
+	state.height = 6
+	state.players[1]["nutrients"] = 20
+	var wall_tile: Vector2i = Vector2i(3, 2)
+	state.set_walls([[wall_tile.x, wall_tile.y]])
+	state.spawn_block(1, Vector2i(2, 2), true, 8, "basic")
+	state.spawn_block(1, Vector2i(2, 1), false, 8, "basic")
+	state.spawn_block(1, Vector2i(2, 3), false, 8, "basic")
+
+	var validator: ActionValidator = ActionValidator.new()
+	var plan: Dictionary = validator.build_owner_plan(state, [], 1)
+	var queue_check: Dictionary = validator.validate_place_target(state, 1, wall_tile, "basic", 1, 1, plan)
+	_assert(not bool(queue_check.get("ok", false)), "Queue validation should reject growth onto wall tiles")
+	_assert(String(queue_check.get("reason", "")) == "blocked cave wall", "Queue validation should preserve wall-specific rejection")
+
+	var combat: Combat = Combat.new()
+	var before: int = state.blocks.size()
+	var report: Dictionary = combat.resolve_with_report([{
+		"type": "place_tile",
+		"owner": 1,
+		"target": wall_tile,
+		"tile_type": "basic",
+		"cost": 1,
+		"min_adjacent": 1,
+		"_preview_id": "wall_probe",
+	}], state)
+	_assert(state.blocks.size() == before, "Final combat resolution should not place ooze on wall tiles")
+	var results: Dictionary = report.get("results_by_preview_id", {})
+	_assert(results.has("wall_probe") and not bool(results["wall_probe"].get("applied", true)), "Wall placement probe should be reported as failed")
+
+func _test_room_wide_chamber_left_wall_is_solid() -> void:
+	var file: FileAccess = FileAccess.open("res://data/rooms/templates.json", FileAccess.READ)
+	_assert(file != null, "Room templates should be readable")
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	_assert(typeof(parsed) == TYPE_ARRAY, "Room templates should parse as an array")
+	var wide_chamber: Dictionary = {}
+	for entry in parsed:
+		if typeof(entry) == TYPE_DICTIONARY and String(entry.get("id", "")) == "room_wide_chamber":
+			wide_chamber = entry
+			break
+	_assert(not wide_chamber.is_empty(), "room_wide_chamber template should exist")
+
+	var generator: LevelGenerator = LevelGenerator.new()
+	var state: GameState = generator.build_level(1, 0, [wide_chamber], [], {"dev_spectator_mode": true})
+	for y in range(4, 13):
+		var wall_tile: Vector2i = Vector2i(11, y)
+		_assert(state.is_blocked(wall_tile), "room_wide_chamber left inner wall should block %s" % wall_tile)
+
+func _test_board_topology_distances_respect_walls() -> void:
+	var state: GameState = GameState.new()
+	state.width = 7
+	state.height = 5
+	state.entrance_tile = Vector2i(0, 2)
+	state.door_tile = Vector2i(6, 2)
+	state.set_walls([[3, 0], [3, 1], [3, 3], [3, 4]])
+
+	var gap_distance: int = BoardTopology.path_distance(state, Vector2i(1, 2), Vector2i(5, 2))
+	_assert(gap_distance == 4, "BoardTopology should route through an open wall gap")
+
+	state.set_walls([[3, 0], [3, 1], [3, 2], [3, 3], [3, 4]])
+	var sealed_distance: int = BoardTopology.path_distance(state, Vector2i(1, 2), Vector2i(5, 2))
+	_assert(sealed_distance == BoardTopology.UNREACHABLE_DISTANCE, "BoardTopology should not path through sealed walls")
+
+func _test_ai_objective_distances_respect_walls() -> void:
+	var state: GameState = GameState.new()
+	state.width = 7
+	state.height = 5
+	state.entrance_tile = Vector2i(0, 2)
+	state.door_tile = Vector2i(6, 2)
+	state.door_hp = 8
+	state.door_max_hp = 8
+	state.add_owner(2, "Enemy", 10, GameState.TEAM_ENEMY, true)
+	state.set_walls([[3, 0], [3, 1], [3, 2], [3, 3], [3, 4]])
+	state.spawn_block(1, Vector2i(1, 2), true, 8, "basic")
+	var enemy_heart: int = state.spawn_block(2, Vector2i(5, 2), true, 8, "basic")
+	state.blocks[enemy_heart]["is_heart"] = true
+
+	var ai = OOZE_AI_SCRIPT.new()
+	ai._rebuild_decision_objective_cache(state, 1)
+	_assert(
+		ai._nearest_hostile_heart_distance(state, 1, Vector2i(1, 2)) == BoardTopology.UNREACHABLE_DISTANCE,
+		"AI hostile-heart distance should be unreachable through a sealed wall"
+	)
+	_assert(
+		ai._primary_objective_distance(state, 1, Vector2i(1, 2)) == BoardTopology.UNREACHABLE_DISTANCE,
+		"AI primary objective distance should not use door/heart Manhattan shortcuts through walls"
+	)
+
 func _test_support_and_stability() -> void:
 	var state_a: GameState = GameState.new()
 	state_a.width = 8
@@ -362,6 +458,22 @@ func _test_ooze_ai_frontline_pressure() -> void:
 			break
 
 	_assert(has_frontline_investment, "Ooze AI should make at least one frontline action when possible")
+
+func _test_intent_planner_empty_ai_actions_become_pass() -> void:
+	var state: GameState = GameState.new()
+	state.width = 8
+	state.height = 6
+	state.add_owner(2, "Empty AI", 0, GameState.TEAM_ENEMY, true)
+	state.spawn_block(2, Vector2i(5, 3), true, 9, "basic")
+
+	var ai = OOZE_AI_SCRIPT.new()
+	var direct_actions: Array = ai.choose_actions(state, 2, 1)
+	_assert(direct_actions.is_empty(), "Zero-energy AI precondition should produce no direct actions")
+
+	var intents: Array = IntentPlanner.new().build_enemy_intents(state, ai, {2: 1}, 1)
+	_assert(intents.size() == 1, "Intent planner should preserve an empty AI owner with one pass intent")
+	_assert(String(intents[0].get("type", "")) == "pass", "Empty AI owner intent should be a pass")
+	_assert(int(intents[0].get("owner", -1)) == 2, "Pass intent should belong to the skipped AI owner")
 
 func _test_ooze_ai_engaged_upgrade_commitment() -> void:
 	var state: GameState = GameState.new()
@@ -1301,6 +1413,60 @@ func _test_dev_spectator_disables_turn_limit() -> void:
 	_assert(int(options.get("turn_limit", -1)) == 0, "Dev spectator mode should disable turn limit for long-form AI observation")
 	run_flow.free()
 
+func _test_vertical_slice_run_structure() -> void:
+	var run_flow_script: GDScript = preload("res://scripts/systems/RunFlow.gd")
+	var run_flow: Node = run_flow_script.new()
+	var generator: LevelGenerator = LevelGenerator.new()
+	run_flow.begin_run()
+	run_flow.run_seed = 45678
+
+	var expected_map_types: Dictionary = {
+		1: "level_1_duel",
+		2: "level_2_chokepoints",
+		3: "level_3_multi_front",
+		4: "level_4_pressure",
+		5: "level_5_miniboss",
+	}
+	for level in range(1, 6):
+		run_flow.current_level = level
+		var options: Dictionary = run_flow.build_level_options()
+		var state: GameState = generator.build_level(level, run_flow.get_level_seed(), [], [], options)
+		_assert(
+			String(state.level_layout.get("map_type", "")) == String(expected_map_types[level]),
+			"Vertical slice level %d should use its curated layout type" % level
+		)
+		_assert(state.turn_limit > 0, "Vertical slice level %d should have a playable turn limit" % level)
+		_assert(state.door_max_hp == int(options.get("door_hp", 0)), "Door HP should come from level setup")
+
+	run_flow.current_level = 4
+	var level4_state: GameState = generator.build_level(4, run_flow.get_level_seed(), [], [], run_flow.build_level_options())
+	var found_adventurer: bool = false
+	for node_variant in level4_state.resource_nodes:
+		var node: Dictionary = node_variant
+		if String(node.get("kind", "")) == "adventurer":
+			found_adventurer = bool(node.get("upgrade_reward", false))
+			break
+	_assert(found_adventurer, "Level 4 should include a risky fallen adventurer upgrade pickup")
+
+	run_flow.current_level = 5
+	var level5_state: GameState = generator.build_level(5, run_flow.get_level_seed(), [], [], run_flow.build_level_options())
+	var boss_heart_hp: int = 0
+	var boss_specialized_tiles: int = 0
+	for block in level5_state.get_owner_blocks(2):
+		if bool(block.get("is_heart", false)):
+			boss_heart_hp = maxi(boss_heart_hp, int(block.get("max_hp", 0)))
+		if String(block.get("tile_type", "basic")) != "basic":
+			boss_specialized_tiles += 1
+	_assert(String(level5_state.players[2].get("name", "")) == "Sealed Heart", "Level 5 enemy should be labeled as the miniboss")
+	_assert(boss_heart_hp >= 18, "Level 5 miniboss heart should have visibly higher HP")
+	_assert(boss_specialized_tiles >= 2, "Level 5 miniboss should start with specialized support tiles")
+
+	_assert(run_flow.should_offer_upgrade_after_victory(4, false), "Upgrade choice should be offered after level 4")
+	_assert(not run_flow.should_offer_upgrade_after_victory(5, false), "Upgrade choice should not gate after final slice level")
+	run_flow.prepare_victory(5, "boss dissolved")
+	_assert(String(run_flow.result_title) == "VERTICAL SLICE COMPLETE", "Level 5 victory should present slice completion")
+	run_flow.free()
+
 func _test_runflow_upgrade_draw_determinism() -> void:
 	var run_flow_script: GDScript = preload("res://scripts/systems/RunFlow.gd")
 	var run_a = run_flow_script.new()
@@ -1642,7 +1808,7 @@ func _test_turn_performance_smoke() -> void:
 		for x in range(2, state.width - 2):
 			if (x + y) % 3 != 0:
 				continue
-			var owner: int = 1 if x < int(state.width / 2) else 2
+			var owner: int = 1 if x < int(floor(float(state.width) / 2.0)) else 2
 			state.spawn_block(owner, Vector2i(x, y), false, 9, "basic")
 
 	var tick: TickSystem = TickSystem.new()

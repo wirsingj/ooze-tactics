@@ -1114,8 +1114,8 @@ func _tile_key(tile: Vector2i) -> String:
 	return "%d,%d" % [tile.x, tile.y]
 
 func _tile_variant(tile: Vector2i) -> int:
-	var seed: int = int(tile.x * 92821) ^ int(tile.y * 68917)
-	return int(posmod(absi(seed), BASE_VARIANTS))
+	var variant_seed: int = int(tile.x * 92821) ^ int(tile.y * 68917)
+	return int(posmod(absi(variant_seed), BASE_VARIANTS))
 
 func _tile_noise(x: int, y: int, level_index: int) -> int:
 	var n: int = int(x * 73856093) ^ int(y * 19349663) ^ int(level_index * 83492791)

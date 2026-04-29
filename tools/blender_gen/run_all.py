@@ -21,6 +21,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from asset_generators import ASSET_REPLACEMENT_MAP, build_and_export_all  # noqa: E402
+from ooze_production_assets import ASSET_NOTES, build_and_export_ooze_assets  # noqa: E402
 
 
 def _as_repo_relative(path: Path) -> str:
@@ -33,12 +34,29 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     exported_paths = build_and_export_all(export_dir)
+    # Keep the full-kit runner aligned with the production-direction ooze kit.
+    # The legacy all-assets generator still exports older ooze forms first.
+    ooze_paths = build_and_export_ooze_assets(export_dir)
+    exported_by_name = {path.name: path for path in exported_paths}
+    for path in ooze_paths:
+        exported_by_name[path.name] = path
+    exported_paths = list(exported_by_name.values())
+
+    exported_names = {path.name for path in exported_paths}
+    replacement_map = {
+        asset_name: description
+        for asset_name, description in ASSET_REPLACEMENT_MAP.items()
+        if asset_name in exported_names
+    }
+    for asset_name, description in ASSET_NOTES.items():
+        if asset_name in exported_names:
+            replacement_map[asset_name] = description
 
     manifest = {
         "repo_root": str(REPO_ROOT),
         "export_dir": _as_repo_relative(export_dir),
         "assets": [_as_repo_relative(path) for path in exported_paths],
-        "replacement_map": ASSET_REPLACEMENT_MAP,
+        "replacement_map": replacement_map,
     }
 
     manifest_path = output_dir / "export_manifest.json"
@@ -52,7 +70,7 @@ def main() -> int:
         "This maps generated Blender assets to current primitive-driven render responsibilities.",
         "",
     ]
-    for asset_name, description in ASSET_REPLACEMENT_MAP.items():
+    for asset_name, description in replacement_map.items():
         replacement_lines.append(f"- `{asset_name}` -> {description}")
 
     replacement_map_path.write_text("\n".join(replacement_lines) + "\n", encoding="utf-8")

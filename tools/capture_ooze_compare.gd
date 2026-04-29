@@ -10,13 +10,18 @@ func _run() -> void:
 	var options: Dictionary = _parse_options()
 	var out_path: String = String(options.get("out_path", DEFAULT_OUT_PATH))
 	var turns_to_run: int = int(options.get("turns_to_run", DEFAULT_TURNS))
+	var camera_yaw: float = float(options.get("camera_yaw", 0.0))
+	var camera_pitch: float = float(options.get("camera_pitch", 48.0))
+	var camera_distance: float = float(options.get("camera_distance", 26.0))
 
 	var run_flow: Node = root.get_node_or_null("/root/RunFlow")
-	if run_flow != null:
-		if run_flow.has_method("set_graphics_style"):
-			run_flow.call("set_graphics_style", "3d")
-		else:
-			run_flow.set("graphics_style", "3d")
+	if run_flow == null or not run_flow.has_method("set_graphics_style"):
+		push_error("RunFlow.set_graphics_style API unavailable")
+		quit(9)
+		return
+	run_flow.call("set_graphics_style", "3d")
+	if run_flow.has_method("begin_dev_run"):
+		run_flow.call("begin_dev_run", 1, 1, false, true)
 
 	var packed: PackedScene = load("res://scenes/Main.tscn")
 	if packed == null:
@@ -46,8 +51,26 @@ func _run() -> void:
 
 	await _advance_turns(controller, turns_to_run)
 
+	if world_root.has_method("validate_wall_blocking_contract"):
+		var wall_check: Dictionary = world_root.call("validate_wall_blocking_contract")
+		print("wall_blocking_ok=%s" % str(wall_check.get("ok", false)))
+		if not bool(wall_check.get("ok", false)):
+			push_error("Wall blocking contract failed: %s" % JSON.stringify(wall_check))
+			quit(10)
+			return
+	if world_root.has_method("validate_render_truth_contract"):
+		var render_truth: Dictionary = world_root.call("validate_render_truth_contract")
+		print("render_truth_ok=%s" % str(render_truth.get("ok", false)))
+		if not bool(render_truth.get("ok", false)):
+			push_error("Render truth contract failed: %s" % JSON.stringify(render_truth))
+			quit(11)
+			return
+	if world_root.has_method("get_performance_counters"):
+		print("world3d_perf_counters=%s" % JSON.stringify(world_root.call("get_performance_counters")))
+	print("board_topology_cache_stats=%s" % JSON.stringify(BoardTopology.cache_stats()))
+
 	if world_root.has_method("apply_capture_camera_preset"):
-		world_root.call("apply_capture_camera_preset")
+		world_root.call("apply_capture_camera_preset", camera_yaw, camera_pitch, camera_distance)
 	controller.call("_queue_world_redraw")
 	for _i in range(8):
 		await process_frame
@@ -80,6 +103,9 @@ func _parse_options() -> Dictionary:
 	var options: Dictionary = {
 		"out_path": DEFAULT_OUT_PATH,
 		"turns_to_run": DEFAULT_TURNS,
+		"camera_yaw": 0.0,
+		"camera_pitch": 48.0,
+		"camera_distance": 26.0,
 	}
 	var args: Array = OS.get_cmdline_user_args()
 	for i in range(args.size()):
@@ -87,6 +113,12 @@ func _parse_options() -> Dictionary:
 			options["out_path"] = String(args[i + 1])
 		elif args[i] == "--turns" and i + 1 < args.size():
 			options["turns_to_run"] = maxi(1, int(args[i + 1]))
+		elif args[i] == "--yaw" and i + 1 < args.size():
+			options["camera_yaw"] = float(args[i + 1])
+		elif args[i] == "--pitch" and i + 1 < args.size():
+			options["camera_pitch"] = float(args[i + 1])
+		elif args[i] == "--distance" and i + 1 < args.size():
+			options["camera_distance"] = maxf(4.0, float(args[i + 1]))
 	return options
 
 func _wait_until_ready(controller: Node) -> bool:
@@ -106,14 +138,28 @@ func _wait_until_ready(controller: Node) -> bool:
 	return false
 
 func _advance_turns(controller: Node, turns_to_run: int) -> void:
+	var actor_counts: Dictionary = {}
 	for _turn in range(turns_to_run):
 		if bool(controller.get("run_over")):
 			break
-		controller.call("_resolve_turn")
-		if controller.has_method("clear_turn_pulse_for_capture"):
-			controller.call("clear_turn_pulse_for_capture")
+		var spectator_mode: bool = bool(controller.call("_is_spectator_mode"))
+		if spectator_mode:
+			controller.call("_ensure_active_actor_for_spectator_turn")
+			var acting_owner_id: int = int(controller.get("active_owner_id"))
+			controller.call("_run_next_spectator_turn")
+			if controller.has_method("clear_turn_pulse_for_capture"):
+				controller.call("clear_turn_pulse_for_capture")
+			controller.call("_advance_active_actor")
+			var actor_key: String = str(acting_owner_id)
+			actor_counts[actor_key] = int(actor_counts.get(actor_key, 0)) + 1
+		else:
+			controller.call("_resolve_turn")
+			if controller.has_method("clear_turn_pulse_for_capture"):
+				controller.call("clear_turn_pulse_for_capture")
 		controller.call("_queue_world_redraw")
 		await process_frame
+	if not actor_counts.is_empty():
+		print("capture_actor_counts=", JSON.stringify(actor_counts))
 
 func _file_has_bytes(abs_path: String) -> bool:
 	var file: FileAccess = FileAccess.open(abs_path, FileAccess.READ)

@@ -19,6 +19,13 @@ __pycache__/
 *.tmp
 *.bak
 
+# Local visual/performance capture outputs
+tools/visual_compare/*.png
+tools/visual_compare/*.png.import
+tools/visual_compare/*.txt
+tools/blender_gen/output/*contact_sheet*.png
+tools/blender_gen/output/*contact_sheet*.png.import
+
 # OS/editor noise
 .DS_Store
 Thumbs.db

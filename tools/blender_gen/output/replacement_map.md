@@ -2,13 +2,14 @@
 
 This maps generated Blender assets to current primitive-driven render responsibilities.
 
-- `crystal_small.glb` -> Replaces small crystal markers/props generated as Prism/Cylinder meshes in World3DRenderer crystal and role marker paths.
-- `crystal_hero.glb` -> Replaces large focal crystal placeholders for heart/nexus/centerpiece nodes.
-- `node_base.glb` -> Replaces circular node/pylon base placeholders currently built from primitive cylinders.
-- `blocker_wall.glb` -> Replaces blocker cube/sphere/cylinder/prism primitive variants in _rebuild_static_world blocker placement.
-- `cave_wall_segment.glb` -> Replaces cave perimeter wall chunks currently built from box primitives in _add_cave_perimeter.
-- `cave_door_arch.glb` -> Replaces doorway arch and door framing primitives in _add_cave_doors.
-- `board_edge_trim.glb` -> Replaces board frame/edge trim box primitives created in _rebuild_static_world.
-- `ooze_puddle_a.glb` -> Replaces procedural/debug ooze puddle primitives for authored ooze zone silhouettes.
-- `ooze_puddle_b.glb` -> Replaces procedural/debug ooze puddle primitives for authored ooze zone silhouettes.
-- `ooze_puddle_c.glb` -> Replaces procedural/debug ooze puddle primitives for authored ooze zone silhouettes.
+- `floor_tile_cobbled_A.glb` -> Primary ancient cobbled dungeon floor tile.
+- `floor_tile_cobbled_B.glb` -> Secondary cracked cobbled dungeon floor tile.
+- `floor_tile_cobbled_C.glb` -> Tertiary worn cobbled dungeon floor tile.
+- `outer_wall_stone_A.glb` -> Primary modular outer dungeon boundary wall.
+- `outer_wall_stone_B.glb` -> Secondary modular outer dungeon boundary wall.
+- `inner_wall_stone_A.glb` -> Inner gameplay wall tile as ancient masonry.
+- `inner_wall_stone_B.glb` -> Variant inner gameplay wall tile as broken masonry.
+- `door_arch_dungeon.glb` -> Large old dungeon door arch objective.
+- `rubble_blocker_A.glb` -> Collapsed masonry blocker variant.
+- `rubble_blocker_B.glb` -> Low broken wall and rubble blocker variant.
+- `pillar_ruin_A.glb` -> Ruined pillar blocker variant.

@@ -340,7 +340,7 @@ func _strategy_heart_defense_bonus(state: GameState, owner_id: int, tile: Vector
 	var heart_dist: int = _nearest_allied_heart_distance(state, owner_id, tile)
 	if heart_dist >= 99:
 		return 0
-	var bonus: int = maxi(0, 8 - heart_dist) * weight / 4
+	var bonus: int = int(floor(float(maxi(0, 8 - heart_dist) * weight) / 4.0))
 	if phase == PHASE_SAFE_EXPANSION and heart_dist >= 5:
 		bonus -= int(round(float(weight) * 0.35))
 	return bonus
@@ -358,7 +358,7 @@ func _nearest_allied_heart_distance(state: GameState, owner_id: int, tile: Vecto
 		var other_owner: int = int(block.get("owner", 0))
 		if other_owner != owner_id and state.are_hostile(owner_id, other_owner):
 			continue
-		best = mini(best, _distance_to_tile(tile, block.get("pos", Vector2i(-1, -1))))
+		best = mini(best, BoardTopology.path_distance(state, tile, block.get("pos", Vector2i(-1, -1))))
 	return best if best < 999999 else 99
 
 func _compute_strategy_profile(state: GameState, owner_id: int) -> Dictionary:
@@ -496,31 +496,74 @@ func _decision_cache_matches(state: GameState, owner_id: int) -> bool:
 		and int(_decision_objective_cache.get("owner", -1)) == owner_id
 	)
 
-func _nearest_distance_to_positions(tile: Vector2i, positions: Array) -> int:
-	if positions.is_empty():
-		return 99
-	var best: int = 999999
-	for pos_variant in positions:
-		var pos: Vector2i = pos_variant
-		best = mini(best, _distance_to_tile(tile, pos))
-	return best if best < 999999 else 99
-
 func _build_distance_map_to_positions(state: GameState, positions: Array) -> Dictionary:
-	var out: Dictionary = {}
-	for y in range(state.height):
-		for x in range(state.width):
-			var tile: Vector2i = Vector2i(x, y)
-			out[tile] = _nearest_distance_to_positions(tile, positions)
-	return out
+	return BoardTopology.distance_map_to_positions(state, positions)
+
+func _build_local_threat_map(state: GameState, owner_id: int) -> Dictionary:
+	var t_start: int = _prof_begin()
+	var threat_map: Dictionary = {}
+	for enemy_variant in state.blocks.values():
+		var enemy: Dictionary = enemy_variant
+		var enemy_owner: int = int(enemy.get("owner", 0))
+		if not state.are_hostile(owner_id, enemy_owner):
+			continue
+		var enemy_pos: Vector2i = enemy.get("pos", Vector2i(-1, -1))
+		if not BoardTopology.is_traversable(state, enemy_pos):
+			continue
+		var weight: int = 2
+		var enemy_type: String = String(enemy.get("tile_type", "basic"))
+		if enemy_type == "melee":
+			weight += 4
+		elif enemy_type == "ranged":
+			weight += 2
+		elif enemy_type == "defense":
+			weight += 3
+		var enemy_support: int = _count_owned_support(state, enemy_owner, enemy_pos, 2)
+		if enemy_support >= 5:
+			weight += 2
+		var distances: Dictionary = _limited_distance_map(state, enemy_pos, THREAT_SCAN_RADIUS)
+		for tile_variant in distances.keys():
+			var tile: Vector2i = tile_variant
+			var dist: int = int(distances[tile_variant])
+			if dist > THREAT_SCAN_RADIUS:
+				continue
+			threat_map[tile] = int(threat_map.get(tile, 0)) + weight + maxi(0, THREAT_SCAN_RADIUS + 1 - dist)
+	_prof_end("local_threat_cache_build", t_start)
+	return threat_map
+
+func _limited_distance_map(state: GameState, start: Vector2i, max_distance: int) -> Dictionary:
+	var distances: Dictionary = {}
+	var queue: Array[Vector2i] = []
+	var head: int = 0
+	distances[start] = 0
+	queue.append(start)
+	while head < queue.size():
+		var tile: Vector2i = queue[head]
+		head += 1
+		var dist: int = int(distances[tile])
+		if dist >= max_distance:
+			continue
+		for step in BoardTopology.CARDINAL_STEPS:
+			var next_tile: Vector2i = tile + step
+			if distances.has(next_tile):
+				continue
+			if not BoardTopology.is_traversable(state, next_tile):
+				continue
+			distances[next_tile] = dist + 1
+			queue.append(next_tile)
+	return distances
 
 func _rebuild_decision_objective_cache(state: GameState, owner_id: int) -> void:
 	var hostile_heart_positions: Array = []
 	var allied_heart_positions: Array = []
+	var hostile_positions: Array = []
 	for block_variant in state.blocks.values():
 		var block: Dictionary = block_variant
+		var block_owner: int = int(block.get("owner", 0))
+		if state.are_hostile(owner_id, block_owner):
+			hostile_positions.append(block.get("pos", Vector2i(-1, -1)))
 		if bool(block.get("is_heart", false)):
-			var heart_owner: int = int(block.get("owner", 0))
-			if state.are_hostile(owner_id, heart_owner):
+			if state.are_hostile(owner_id, block_owner):
 				hostile_heart_positions.append(block.get("pos", Vector2i(-1, -1)))
 			else:
 				allied_heart_positions.append(block.get("pos", Vector2i(-1, -1)))
@@ -535,6 +578,9 @@ func _rebuild_decision_objective_cache(state: GameState, owner_id: int) -> void:
 	var heart_distance_map: Dictionary = _build_distance_map_to_positions(state, hostile_heart_positions)
 	var allied_heart_distance_map: Dictionary = _build_distance_map_to_positions(state, allied_heart_positions)
 	var resource_distance_map: Dictionary = _build_distance_map_to_positions(state, open_resource_positions)
+	var hostile_distance_map: Dictionary = _build_distance_map_to_positions(state, hostile_positions)
+	var door_distance_map: Dictionary = _build_distance_map_to_positions(state, [state.door_tile])
+	var local_threat_map: Dictionary = _build_local_threat_map(state, owner_id)
 
 	var door_relevant: bool = _can_attack_door(state, owner_id) and state.door_hp > 0
 	var primary_objective_distance_map: Dictionary = {}
@@ -543,7 +589,7 @@ func _rebuild_decision_objective_cache(state: GameState, owner_id: int) -> void:
 			var tile: Vector2i = Vector2i(x, y)
 			var heart_dist: int = int(heart_distance_map.get(tile, 99))
 			if door_relevant:
-				primary_objective_distance_map[tile] = mini(heart_dist, _distance_to_tile(tile, state.door_tile))
+				primary_objective_distance_map[tile] = mini(heart_dist, int(door_distance_map.get(tile, 99)))
 			else:
 				primary_objective_distance_map[tile] = heart_dist
 
@@ -558,10 +604,14 @@ func _rebuild_decision_objective_cache(state: GameState, owner_id: int) -> void:
 		"owner": owner_id,
 		"hostile_heart_positions": hostile_heart_positions,
 		"allied_heart_positions": allied_heart_positions,
+		"hostile_positions": hostile_positions,
 		"open_resource_positions": open_resource_positions,
 		"heart_distance_map": heart_distance_map,
 		"allied_heart_distance_map": allied_heart_distance_map,
 		"resource_distance_map": resource_distance_map,
+		"hostile_distance_map": hostile_distance_map,
+		"local_threat_map": local_threat_map,
+		"door_distance_map": door_distance_map,
 		"primary_objective_distance_map": primary_objective_distance_map,
 		"objective_frontier_distance": frontier_distance,
 	}
@@ -674,6 +724,7 @@ func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array
 	if energy <= 0:
 		_prof_end("choose_total", choose_total_start_usec)
 		return actions
+	var max_actions_this_turn: int = maxi(1, int(state.players[owner_id].get("max_actions", MAX_ACTIONS)))
 
 	if _profiling_enabled:
 		_profile_turns += 1
@@ -718,7 +769,7 @@ func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array
 			frontline_upgraded = true
 			upgrades_committed += 1
 
-		if actions.size() < MAX_ACTIONS and conversions_used < MAX_CONVERSIONS_PER_TURN:
+		if actions.size() < max_actions_this_turn and conversions_used < MAX_CONVERSIONS_PER_TURN:
 			var second_line_upgrade: Dictionary = _best_second_line_ranged_upgrade_action(state, owner_id, energy, reserved_convert_blocks)
 			if not second_line_upgrade.is_empty():
 				var support_action: Dictionary = second_line_upgrade["action"]
@@ -754,7 +805,7 @@ func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array
 
 	if _should_prioritize_early_economy(state, owner_id):
 		var gather_goal: int = maxi(0, EARLY_GATHER_TARGET - _count_gather_tiles(state, owner_id))
-		while gather_goal > 0 and actions.size() < MAX_ACTIONS and energy >= int(Combat.TILE_RULES["gather"]["cost"]):
+		while gather_goal > 0 and actions.size() < max_actions_this_turn and energy >= int(Combat.TILE_RULES["gather"]["cost"]):
 			var gather_candidate: Dictionary = _best_resource_place_action(state, owner_id, min_adjacent, actions, energy, reserved_place_tiles, true)
 			if gather_candidate.is_empty():
 				break
@@ -764,7 +815,7 @@ func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array
 			energy -= _action_energy_cost(gather_action)
 			gather_goal -= 1
 
-	while actions.size() < MAX_ACTIONS and energy > 0:
+	while actions.size() < max_actions_this_turn and energy > 0:
 		var candidate: Dictionary = {}
 
 		if not engaged and desired_upgrade_count > 0 and upgrades_committed < desired_upgrade_count and conversions_used < MAX_CONVERSIONS_PER_TURN:
@@ -1083,7 +1134,7 @@ func _best_objective_upgrade_action(state: GameState, owner_id: int, energy: int
 		var pos: Vector2i = block["pos"]
 		var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, pos)
 		var heart_dist: int = _nearest_hostile_heart_distance(state, owner_id, pos)
-		var door_dist: int = _distance_to_tile(pos, state.door_tile)
+		var door_dist: int = _door_distance(state, owner_id, pos)
 		var door_relevant: bool = _can_attack_door(state, owner_id) and state.door_hp > 0
 
 		var objective_dist: int = heart_dist
@@ -1219,7 +1270,7 @@ func _best_progression_upgrade_action(state: GameState, owner_id: int, energy: i
 
 		var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, pos)
 		var heart_dist: int = _nearest_hostile_heart_distance(state, owner_id, pos)
-		var door_dist: int = _distance_to_tile(pos, state.door_tile)
+		var door_dist: int = _door_distance(state, owner_id, pos)
 		var door_relevant: bool = _can_attack_door(state, owner_id) and state.door_hp > 0
 		var objective_dist: int = heart_dist
 		if door_relevant:
@@ -1471,6 +1522,7 @@ func _best_frontline_conversion_action(state: GameState, owner_id: int, energy: 
 					"energy_delta": delta,
 				}
 			}
+	_prof_end("conversion_scoring", t_start)
 	return best
 
 func _best_frontline_place_action(
@@ -1488,46 +1540,50 @@ func _best_frontline_place_action(
 	var baseline_objective_dist: int = _owner_objective_frontier_distance(state, owner_id)
 	var best: Dictionary = {}
 	var best_score: int = -999999
-	for y in range(state.height):
-		for x in range(state.width):
-			scanned_tiles += 1
-			var tile: Vector2i = Vector2i(x, y)
-			if not state.is_empty_ground(tile):
-				continue
-			var tile_key: String = _tile_key(tile)
-			if planned_tiles.has(tile_key):
-				continue
-			if reserved_place_tiles.has(tile_key):
-				continue
-			if not _growth_target_ok(state, owner_id, tile, min_adjacent, planned_tiles):
-				continue
+	var candidate_tiles: Array[Vector2i] = _growth_candidate_tiles(state, owner_id, planned_tiles, reserved_place_tiles)
+	for tile in candidate_tiles:
+		scanned_tiles += 1
+		if not _growth_target_ok(state, owner_id, tile, min_adjacent, planned_tiles):
+			continue
 
-			var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, tile)
-			var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, tile)
-			if adjacent_enemy <= 0 and nearest_enemy_dist > 2:
-				continue
+		var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, tile)
+		var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, tile)
+		if adjacent_enemy <= 0 and nearest_enemy_dist > 2:
+			continue
 
-			var support: int = _count_owned_support(state, owner_id, tile, 2, planned_tiles)
-			var zone: String = _tile_zone(state, owner_id, tile)
-			var phase: int = _local_threat_phase(state, owner_id, tile, nearest_enemy_dist, adjacent_enemy)
-			var tile_type: String = _preferred_place_type_for_zone(state, owner_id, tile, zone, adjacent_enemy, nearest_enemy_dist, support, energy)
+		var support: int = _count_owned_support(state, owner_id, tile, 2, planned_tiles)
+		var zone: String = _tile_zone(state, owner_id, tile)
+		var phase: int = _local_threat_phase(state, owner_id, tile, nearest_enemy_dist, adjacent_enemy)
+		var tile_type: String = _preferred_place_type_for_zone(state, owner_id, tile, zone, adjacent_enemy, nearest_enemy_dist, support, energy)
 
-			var cost: int = int(Combat.TILE_RULES[tile_type]["cost"])
-			if cost > energy:
-				continue
+		var cost: int = int(Combat.TILE_RULES[tile_type]["cost"])
+		if cost > energy:
+			continue
 
-			var score: int = 50
-			score += adjacent_enemy * 24
-			score += maxi(0, 8 - nearest_enemy_dist) * 5
-			score += support * 3
-			score += _chokepoint_score(state, tile) * CHOKEPOINT_WEIGHT
-			score += _door_objective_score(state, owner_id, tile)
-			score += _heart_objective_score(state, owner_id, tile)
-			score += _resource_objective_score(state, owner_id, tile, phase, tile_type)
-			score += _strategy_tile_bonus(state, owner_id, tile, phase, zone, tile_type)
-			score += _objective_progress_delta_score(state, owner_id, tile, baseline_objective_dist, false)
-			score += _zone_role_score(zone, tile_type)
-			score += _flank_pressure_bonus_score(
+		var score: int = 50
+		score += adjacent_enemy * 24
+		score += maxi(0, 8 - nearest_enemy_dist) * 5
+		score += support * 3
+		score += _chokepoint_score(state, tile) * CHOKEPOINT_WEIGHT
+		score += _door_objective_score(state, owner_id, tile)
+		score += _heart_objective_score(state, owner_id, tile)
+		score += _resource_objective_score(state, owner_id, tile, phase, tile_type)
+		score += _strategy_tile_bonus(state, owner_id, tile, phase, zone, tile_type)
+		score += _objective_progress_delta_score(state, owner_id, tile, baseline_objective_dist, false)
+		score += _zone_role_score(zone, tile_type)
+		score += _flank_pressure_bonus_score(
+			state,
+			owner_id,
+			tile,
+			zone,
+			phase,
+			support,
+			nearest_enemy_dist,
+			adjacent_enemy,
+			baseline_objective_dist
+		)
+		if tile_type == "basic":
+			score += _basic_claim_opening_score(
 				state,
 				owner_id,
 				tile,
@@ -1538,50 +1594,38 @@ func _best_frontline_place_action(
 				adjacent_enemy,
 				baseline_objective_dist
 			)
-			if tile_type == "basic":
-				score += _basic_claim_opening_score(
-					state,
-					owner_id,
-					tile,
-					zone,
-					phase,
-					support,
-					nearest_enemy_dist,
-					adjacent_enemy,
-					baseline_objective_dist
-				)
-			if support <= 1:
-				score -= 8
-			if tile_type == "defense":
-				score += 8
-				score -= _defense_density_penalty(state, owner_id, tile, phase)
-			elif tile_type == "ranged":
-				score -= _ranged_position_penalty(state, owner_id, tile, zone, phase)
-			elif tile_type == "melee":
-				if phase == PHASE_ACTIVE_FRONTLINE:
-					score += 18
-				elif phase == PHASE_APPROACHING_CONTACT:
-					score += 10
-				elif adjacent_enemy > 0 or nearest_enemy_dist <= 2:
-					score += 14
-				else:
-					score -= 18
-			if tile_type != "basic":
-				score -= _specialization_spread_penalty(state, owner_id, tile, tile_type, phase, zone, nearest_enemy_dist, support)
+		if support <= 1:
+			score -= 8
+		if tile_type == "defense":
+			score += 8
+			score -= _defense_density_penalty(state, owner_id, tile, phase)
+		elif tile_type == "ranged":
+			score -= _ranged_position_penalty(state, owner_id, tile, zone, phase)
+		elif tile_type == "melee":
+			if phase == PHASE_ACTIVE_FRONTLINE:
+				score += 18
+			elif phase == PHASE_APPROACHING_CONTACT:
+				score += 10
+			elif adjacent_enemy > 0 or nearest_enemy_dist <= 2:
+				score += 14
+			else:
+				score -= 18
+		if tile_type != "basic":
+			score -= _specialization_spread_penalty(state, owner_id, tile, tile_type, phase, zone, nearest_enemy_dist, support)
 
-			if score > best_score:
-				best_score = score
-				best = {
-					"score": score,
-					"action": {
-						"type": "place_tile",
-						"owner": owner_id,
-						"target": tile,
-						"tile_type": tile_type,
-						"cost": cost,
-						"min_adjacent": min_adjacent,
-					},
-				}
+		if score > best_score:
+			best_score = score
+			best = {
+				"score": score,
+				"action": {
+					"type": "place_tile",
+					"owner": owner_id,
+					"target": tile,
+					"tile_type": tile_type,
+					"cost": cost,
+					"min_adjacent": min_adjacent,
+				},
+			}
 	_prof_end("full_board_scan", scan_start)
 	_prof_add_count("full_board_tiles_scanned", scanned_tiles)
 	_prof_end("placement_scoring", t_start)
@@ -1604,44 +1648,48 @@ func _best_pressure_growth_action(
 	var baseline_objective_dist: int = _owner_objective_frontier_distance(state, owner_id)
 	var best: Dictionary = {}
 	var best_score: int = -999999
-	for y in range(state.height):
-		for x in range(state.width):
-			scanned_tiles += 1
-			var tile: Vector2i = Vector2i(x, y)
-			if not state.is_empty_ground(tile):
-				continue
-			var tile_key: String = _tile_key(tile)
-			if planned_tiles.has(tile_key):
-				continue
-			if reserved_place_tiles.has(tile_key):
-				continue
-			if not _growth_target_ok(state, owner_id, tile, min_adjacent, planned_tiles):
-				continue
+	var candidate_tiles: Array[Vector2i] = _growth_candidate_tiles(state, owner_id, planned_tiles, reserved_place_tiles)
+	for tile in candidate_tiles:
+		scanned_tiles += 1
+		if not _growth_target_ok(state, owner_id, tile, min_adjacent, planned_tiles):
+			continue
 
-			var support: int = _count_owned_support(state, owner_id, tile, 2, planned_tiles)
-			var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, tile)
-			var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, tile)
-			var zone: String = _tile_zone(state, owner_id, tile)
-			var phase: int = _local_threat_phase(state, owner_id, tile, nearest_enemy_dist, adjacent_enemy)
+		var support: int = _count_owned_support(state, owner_id, tile, 2, planned_tiles)
+		var nearest_enemy_dist: int = _nearest_enemy_distance(state, owner_id, tile)
+		var adjacent_enemy: int = _adjacent_enemy_count(state, owner_id, tile)
+		var zone: String = _tile_zone(state, owner_id, tile)
+		var phase: int = _local_threat_phase(state, owner_id, tile, nearest_enemy_dist, adjacent_enemy)
 
-			var tile_type: String = _preferred_place_type_for_zone(state, owner_id, tile, zone, adjacent_enemy, nearest_enemy_dist, support, energy)
+		var tile_type: String = _preferred_place_type_for_zone(state, owner_id, tile, zone, adjacent_enemy, nearest_enemy_dist, support, energy)
 
-			var cost: int = int(Combat.TILE_RULES[tile_type]["cost"])
-			if cost > energy:
-				continue
+		var cost: int = int(Combat.TILE_RULES[tile_type]["cost"])
+		if cost > energy:
+			continue
 
-			var score: int = 0
-			score += maxi(0, 12 - nearest_enemy_dist) * 7
-			score += adjacent_enemy * 14
-			score += support * 3
-			score += _chokepoint_score(state, tile) * CHOKEPOINT_WEIGHT
-			score += _door_objective_score(state, owner_id, tile)
-			score += _heart_objective_score(state, owner_id, tile)
-			score += _resource_objective_score(state, owner_id, tile, phase, tile_type)
-			score += _strategy_tile_bonus(state, owner_id, tile, phase, zone, tile_type)
-			score += _objective_progress_delta_score(state, owner_id, tile, baseline_objective_dist, not engaged)
-			score += _zone_role_score(zone, tile_type)
-			score += _flank_pressure_bonus_score(
+		var score: int = 0
+		score += maxi(0, 12 - nearest_enemy_dist) * 7
+		score += adjacent_enemy * 14
+		score += support * 3
+		score += _chokepoint_score(state, tile) * CHOKEPOINT_WEIGHT
+		score += _door_objective_score(state, owner_id, tile)
+		score += _heart_objective_score(state, owner_id, tile)
+		score += _resource_objective_score(state, owner_id, tile, phase, tile_type)
+		score += _strategy_tile_bonus(state, owner_id, tile, phase, zone, tile_type)
+		score += _objective_progress_delta_score(state, owner_id, tile, baseline_objective_dist, not engaged)
+		score += _zone_role_score(zone, tile_type)
+		score += _flank_pressure_bonus_score(
+			state,
+			owner_id,
+			tile,
+			zone,
+			phase,
+			support,
+			nearest_enemy_dist,
+			adjacent_enemy,
+			baseline_objective_dist
+		)
+		if tile_type == "basic":
+			score += _basic_claim_opening_score(
 				state,
 				owner_id,
 				tile,
@@ -1652,58 +1700,46 @@ func _best_pressure_growth_action(
 				adjacent_enemy,
 				baseline_objective_dist
 			)
-			if tile_type == "basic":
-				score += _basic_claim_opening_score(
-					state,
-					owner_id,
-					tile,
-					zone,
-					phase,
-					support,
-					nearest_enemy_dist,
-					adjacent_enemy,
-					baseline_objective_dist
-				)
-			if engaged and tile_type == "basic" and zone != "frontline":
-				score -= ENGAGED_BASIC_EXPANSION_PENALTY
-			if phase == PHASE_SAFE_EXPANSION and tile_type == "basic":
-				score += 10
-			if phase == PHASE_SAFE_EXPANSION and tile_type == "gather":
-				score += 16
-			if tile_type == "defense":
-				score -= _defense_density_penalty(state, owner_id, tile, phase)
-			if _is_second_line_tile(state, owner_id, tile) and tile_type == "ranged":
-				score += 10
-			if tile_type == "ranged":
-				score -= _ranged_position_penalty(state, owner_id, tile, zone, phase)
-			if phase == PHASE_ACTIVE_FRONTLINE and tile_type == "melee" and adjacent_enemy > 0 and support >= 2:
-				score += 16
-			if phase == PHASE_SAFE_EXPANSION and tile_type == "melee":
-				score -= 24
-			elif zone == "backline" and tile_type == "melee":
-				score -= 14
-			if tile_type != "basic":
-				score -= _specialization_spread_penalty(state, owner_id, tile, tile_type, phase, zone, nearest_enemy_dist, support)
-			if support <= 1:
-				score -= 14
+		if engaged and tile_type == "basic" and zone != "frontline":
+			score -= ENGAGED_BASIC_EXPANSION_PENALTY
+		if phase == PHASE_SAFE_EXPANSION and tile_type == "basic":
+			score += 10
+		if phase == PHASE_SAFE_EXPANSION and tile_type == "gather":
+			score += 16
+		if tile_type == "defense":
+			score -= _defense_density_penalty(state, owner_id, tile, phase)
+		if _is_second_line_tile(state, owner_id, tile) and tile_type == "ranged":
+			score += 10
+		if tile_type == "ranged":
+			score -= _ranged_position_penalty(state, owner_id, tile, zone, phase)
+		if phase == PHASE_ACTIVE_FRONTLINE and tile_type == "melee" and adjacent_enemy > 0 and support >= 2:
+			score += 16
+		if phase == PHASE_SAFE_EXPANSION and tile_type == "melee":
+			score -= 24
+		elif zone == "backline" and tile_type == "melee":
+			score -= 14
+		if tile_type != "basic":
+			score -= _specialization_spread_penalty(state, owner_id, tile, tile_type, phase, zone, nearest_enemy_dist, support)
+		if support <= 1:
+			score -= 14
 
-			var resource_dist: int = _nearest_open_resource_distance(state, tile)
-			if resource_dist <= 6:
-				score += maxi(0, 6 - resource_dist) * 2
+		var resource_dist: int = _nearest_open_resource_distance(state, tile)
+		if resource_dist <= 6:
+			score += maxi(0, 6 - resource_dist) * 2
 
-			if score > best_score:
-				best_score = score
-				best = {
-					"score": score,
-					"action": {
-						"type": "place_tile",
-						"owner": owner_id,
-						"target": tile,
-						"tile_type": tile_type,
-						"cost": cost,
-						"min_adjacent": min_adjacent,
-					},
-				}
+		if score > best_score:
+			best_score = score
+			best = {
+				"score": score,
+				"action": {
+					"type": "place_tile",
+					"owner": owner_id,
+					"target": tile,
+					"tile_type": tile_type,
+					"cost": cost,
+					"min_adjacent": min_adjacent,
+				},
+			}
 	_prof_end("full_board_scan", scan_start)
 	_prof_add_count("full_board_tiles_scanned", scanned_tiles)
 	_prof_end("placement_scoring", t_start)
@@ -2403,7 +2439,7 @@ func _distance_to_nearest_owned_frontline(state: GameState, owner_id: int, tile:
 		var pos: Vector2i = block["pos"]
 		if not _is_frontline_tile(state, owner_id, pos):
 			continue
-		best = mini(best, _distance_to_tile(tile, pos))
+		best = mini(best, BoardTopology.path_distance(state, tile, pos))
 	return best
 
 func _has_friendly_screen_toward_nearest_enemy(state: GameState, owner_id: int, tile: Vector2i) -> bool:
@@ -2431,7 +2467,7 @@ func _nearest_hostile_tile(state: GameState, owner_id: int, tile: Vector2i) -> V
 		if not state.are_hostile(owner_id, int(block.get("owner", 0))):
 			continue
 		var enemy_tile: Vector2i = block["pos"]
-		var dist: int = _distance_to_tile(tile, enemy_tile)
+		var dist: int = BoardTopology.path_distance(state, tile, enemy_tile)
 		if dist < best_dist:
 			best_dist = dist
 			best_tile = enemy_tile
@@ -2614,7 +2650,7 @@ func _zone_role_score(zone: String, tile_type: String) -> int:
 	return 0
 
 func _door_objective_score(state: GameState, owner_id: int, tile: Vector2i) -> int:
-	var dist: int = _distance_to_tile(tile, state.door_tile)
+	var dist: int = _door_distance(state, owner_id, tile)
 	var base: int = maxi(0, 10 - dist)
 	if _can_attack_door(state, owner_id):
 		return base * DOOR_ADVANCE_WEIGHT
@@ -2629,13 +2665,13 @@ func _hostile_near_door_count(state: GameState, owner_id: int, radius: int) -> i
 	for block in state.blocks.values():
 		if not state.are_hostile(owner_id, int(block["owner"])):
 			continue
-		if _distance_to_tile(state.door_tile, block["pos"]) <= radius:
+		if BoardTopology.path_distance(state, state.door_tile, block["pos"], radius) <= radius:
 			count += 1
 	return count
 
 func _resource_objective_score(state: GameState, owner_id: int, tile: Vector2i, phase: int, tile_type: String = "basic") -> int:
 	var gather_conversion_resource_max_dist: int = _tp_int("gather_conversion_resource_max_dist", GATHER_CONVERSION_RESOURCE_MAX_DIST)
-	var best_dist: int = 999999
+	var best_dist: int = _nearest_open_resource_distance(state, tile)
 	var on_open_resource: bool = false
 	for node in state.resource_nodes:
 		if bool(node.get("consumed", false)):
@@ -2643,11 +2679,9 @@ func _resource_objective_score(state: GameState, owner_id: int, tile: Vector2i, 
 		var resource_tile: Vector2i = node.get("pos", Vector2i(-1, -1))
 		if not state.is_inside(resource_tile):
 			continue
-		var dist: int = _distance_to_tile(tile, resource_tile)
-		best_dist = mini(best_dist, dist)
-		if dist == 0:
+		if resource_tile == tile:
 			on_open_resource = true
-	if best_dist >= 999999:
+	if best_dist >= 99:
 		return 0
 
 	var max_dist: int = _tp_int("resource_objective_max_distance", RESOURCE_OBJECTIVE_MAX_DISTANCE)
@@ -2684,13 +2718,18 @@ func _adjacent_open_ground_count(state: GameState, tile: Vector2i) -> int:
 	return count
 
 func _local_threat_score(state: GameState, owner_id: int, tile: Vector2i) -> int:
+	if _decision_cache_matches(state, owner_id):
+		var local_threat_map: Dictionary = _decision_objective_cache.get("local_threat_map", {})
+		if local_threat_map.has(tile):
+			return int(local_threat_map.get(tile, 0))
+		return 0
 	var threat: int = 0
 	for enemy in state.blocks.values():
 		var enemy_owner: int = int(enemy["owner"])
 		if not state.are_hostile(owner_id, enemy_owner):
 			continue
 		var enemy_pos: Vector2i = enemy["pos"]
-		var dist: int = _distance_to_tile(tile, enemy_pos)
+		var dist: int = BoardTopology.path_distance(state, tile, enemy_pos, THREAT_SCAN_RADIUS)
 		if dist > THREAT_SCAN_RADIUS:
 			continue
 		var weight: int = 2
@@ -2995,6 +3034,43 @@ func _planned_tiles_for_owner(actions: Array, owner_id: int) -> Dictionary:
 		out[_tile_key(tile)] = true
 	return out
 
+func _growth_candidate_tiles(state: GameState, owner_id: int, planned_tiles: Dictionary, reserved_place_tiles: Dictionary) -> Array[Vector2i]:
+	var seen: Dictionary = {}
+	for block in state.get_owner_blocks(owner_id):
+		_add_growth_candidate_neighbors(state, block["pos"], planned_tiles, reserved_place_tiles, seen)
+	for key in planned_tiles.keys():
+		_add_growth_candidate_neighbors(state, _tile_from_key(String(key)), planned_tiles, reserved_place_tiles, seen)
+
+	var out: Array[Vector2i] = []
+	for tile in seen.values():
+		out.append(tile)
+	out.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		if a.y != b.y:
+			return a.y < b.y
+		return a.x < b.x
+	)
+	return out
+
+func _add_growth_candidate_neighbors(
+	state: GameState,
+	origin: Vector2i,
+	planned_tiles: Dictionary,
+	reserved_place_tiles: Dictionary,
+	seen: Dictionary
+) -> void:
+	for step in BoardTopology.CARDINAL_STEPS:
+		var tile: Vector2i = origin + step
+		var key: String = _tile_key(tile)
+		if seen.has(key):
+			continue
+		if planned_tiles.has(key):
+			continue
+		if reserved_place_tiles.has(key):
+			continue
+		if not state.is_empty_ground(tile):
+			continue
+		seen[key] = tile
+
 func _growth_target_ok(state: GameState, owner_id: int, tile: Vector2i, min_adjacent: int, planned_tiles: Dictionary) -> bool:
 	var t_start: int = _prof_begin()
 	var ok: bool = bool(state.evaluate_growth_target(owner_id, tile, min_adjacent, planned_tiles).get("ok", false))
@@ -3021,21 +3097,30 @@ func _action_energy_cost(action: Dictionary) -> int:
 # Pressure and map-shape helpers.
 func _nearest_enemy_distance(state: GameState, owner_id: int, tile: Vector2i) -> int:
 	var t_start: int = _prof_begin()
-	var best: int = 999999
-	for enemy in state.blocks.values():
-		if not state.are_hostile(owner_id, int(enemy["owner"])):
-			continue
-		best = mini(best, _distance_to_tile(tile, enemy["pos"]))
+	var best: int = 99
+	if _decision_cache_matches(state, owner_id):
+		var hostile_distance_map: Dictionary = _decision_objective_cache.get("hostile_distance_map", {})
+		if hostile_distance_map.has(tile):
+			best = int(hostile_distance_map.get(tile, 99))
+		else:
+			best = 99
+	else:
+		var hostile_positions: Array = []
+		for enemy in state.blocks.values():
+			if not state.are_hostile(owner_id, int(enemy["owner"])):
+				continue
+			hostile_positions.append(enemy["pos"])
+		best = BoardTopology.distance_to_nearest(state, tile, hostile_positions)
 	_prof_end("enemy_proximity_calculations", t_start)
 	_prof_add_count("enemy_proximity_calls")
-	return best if best < 999999 else 99
+	return best
 
 func _enemy_pressure_score(state: GameState, owner_id: int, tile: Vector2i) -> int:
 	var pressure: int = 0
 	for enemy in state.blocks.values():
 		if not state.are_hostile(owner_id, int(enemy["owner"])):
 			continue
-		var d: int = _distance_to_tile(tile, enemy["pos"])
+		var d: int = BoardTopology.path_distance(state, tile, enemy["pos"], THREAT_SCAN_RADIUS)
 		pressure += maxi(0, 7 - d)
 	return pressure
 
@@ -3060,10 +3145,17 @@ func _nearest_open_resource_distance(state: GameState, tile: Vector2i) -> int:
 	for node in state.resource_nodes:
 		if bool(node.get("consumed", false)):
 			continue
-		best = mini(best, _distance_to_tile(tile, node["pos"]))
+		best = mini(best, BoardTopology.path_distance(state, tile, node["pos"]))
 	_prof_end("objective_distance_calculations", t_start)
 	_prof_add_count("objective_distance_calls")
 	return best if best < 999999 else 99
+
+func _door_distance(state: GameState, owner_id: int, tile: Vector2i) -> int:
+	if _decision_cache_matches(state, owner_id):
+		var door_distance_map: Dictionary = _decision_objective_cache.get("door_distance_map", {})
+		if door_distance_map.has(tile):
+			return int(door_distance_map.get(tile, 99))
+	return BoardTopology.path_distance(state, tile, state.door_tile)
 
 func _is_second_line_tile(state: GameState, owner_id: int, tile: Vector2i) -> bool:
 	if _is_frontline_tile(state, owner_id, tile):
@@ -3267,7 +3359,7 @@ func _nearby_hostile_specialist_count(state: GameState, owner_id: int, tile: Vec
 		var other_owner: int = int(block.get("owner", 0))
 		if not state.are_hostile(owner_id, other_owner):
 			continue
-		if _distance_to_tile(tile, block["pos"]) > radius:
+		if BoardTopology.path_distance(state, tile, block["pos"], radius) > radius:
 			continue
 		if bool(block.get("is_heart", false)):
 			count += 2
@@ -3318,7 +3410,7 @@ func _primary_objective_distance(state: GameState, owner_id: int, tile: Vector2i
 			return cached_primary_dist
 	var heart_dist: int = _nearest_hostile_heart_distance(state, owner_id, tile)
 	if _can_attack_door(state, owner_id) and state.door_hp > 0:
-		var door_dist: int = _distance_to_tile(tile, state.door_tile)
+		var door_dist: int = _door_distance(state, owner_id, tile)
 		_prof_end("objective_distance_calculations", t_start)
 		_prof_add_count("objective_distance_calls")
 		return mini(heart_dist, door_dist)
@@ -3341,7 +3433,7 @@ func _nearest_hostile_heart_distance(state: GameState, owner_id: int, tile: Vect
 			continue
 		if not state.are_hostile(owner_id, int(block["owner"])):
 			continue
-		best = mini(best, _distance_to_tile(tile, block["pos"]))
+		best = mini(best, BoardTopology.path_distance(state, tile, block["pos"]))
 	_prof_end("objective_distance_calculations", t_start)
 	_prof_add_count("objective_distance_calls")
 	return best if best < 999999 else 99
@@ -3375,4 +3467,10 @@ func _has_adjacent_allied_heart(state: GameState, owner_id: int, tile: Vector2i)
 
 func _tile_key(tile: Vector2i) -> String:
 	return "%d,%d" % [tile.x, tile.y]
+
+func _tile_from_key(key: String) -> Vector2i:
+	var parts: PackedStringArray = key.split(",", false)
+	if parts.size() != 2:
+		return Vector2i(-1, -1)
+	return Vector2i(int(parts[0]), int(parts[1]))
 

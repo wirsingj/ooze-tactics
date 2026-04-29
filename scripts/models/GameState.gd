@@ -23,6 +23,7 @@ var _tile_to_block_id: Dictionary = {}
 var _owner_to_block_ids: Dictionary = {}
 var resource_nodes: Array = []
 var wall_tiles: Dictionary = {}
+var level_layout: Dictionary = {}
 var reclaim_timers: Dictionary = {}
 var entrance_tile: Vector2i = Vector2i(1, 10)
 var door_tile: Vector2i = Vector2i(28, 10)
@@ -68,6 +69,7 @@ func copy_state() -> GameState:
 	cloned._owner_to_block_ids = _owner_to_block_ids.duplicate(true)
 	cloned.resource_nodes = resource_nodes.duplicate(true)
 	cloned.wall_tiles = wall_tiles.duplicate(true)
+	cloned.level_layout = level_layout.duplicate(true)
 	cloned.reclaim_timers = reclaim_timers.duplicate(true)
 	cloned.entrance_tile = entrance_tile
 	cloned.door_tile = door_tile
@@ -263,6 +265,33 @@ func set_walls(walls: Array) -> void:
 	for w in walls:
 		if w is Array and w.size() >= 2:
 			wall_tiles[_tile_key(Vector2i(int(w[0]), int(w[1])))] = true
+
+func get_level_layout() -> Dictionary:
+	if not level_layout.is_empty():
+		return level_layout.duplicate(true)
+	return {
+		"layout_id": "runtime_state_fallback",
+		"map_type": "fallback",
+		"board_size": [width, height],
+		"outer_bounds": {"min": [0, 0], "max": [maxi(0, width - 1), maxi(0, height - 1)]},
+		"inner_walls": _wall_tiles_to_array(),
+		"spawn_positions": {},
+		"objective_positions": {
+			"entrance": [entrance_tile.x, entrance_tile.y],
+			"door": [door_tile.x, door_tile.y],
+		},
+		"resource_nodes": resource_nodes.duplicate(true),
+	}
+
+func _wall_tiles_to_array() -> Array:
+	var out: Array = []
+	for key_variant in wall_tiles.keys():
+		var key: String = String(key_variant)
+		var parts: PackedStringArray = key.split(",")
+		if parts.size() != 2:
+			continue
+		out.append([int(parts[0]), int(parts[1])])
+	return out
 
 func count_adjacent_owned(owner_id: int, tile: Vector2i, extra_owned_tiles: Dictionary = {}) -> int:
 	var count: int = 0

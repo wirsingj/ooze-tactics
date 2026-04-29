@@ -6,7 +6,7 @@ class_name EnemyFeedback
 func build_turn_line(applied_enemy_actions: Array, failed_enemy_actions: Array) -> String:
 	var attempted: int = applied_enemy_actions.size() + failed_enemy_actions.size()
 	if attempted <= 0:
-		return "Enemy: no legal staged actions"
+		return "Enemy ooze waits"
 
 	var placed: int = 0
 	var converted: int = 0
@@ -20,7 +20,7 @@ func build_turn_line(applied_enemy_actions: Array, failed_enemy_actions: Array) 
 		elif kind == "upgrade_tile":
 			upgraded += 1
 
-	var line: String = "Enemy applied %d/%d (place %d, convert %d, upgrade %d)" % [
+	var line: String = "Enemy ooze grew %d/%d: spread %d, evolved %d, strengthened %d" % [
 		applied_enemy_actions.size(),
 		attempted,
 		placed,
@@ -28,5 +28,5 @@ func build_turn_line(applied_enemy_actions: Array, failed_enemy_actions: Array) 
 		upgraded,
 	]
 	if not failed_enemy_actions.is_empty():
-		line += " | %d failed" % failed_enemy_actions.size()
+		line += " | %d blocked" % failed_enemy_actions.size()
 	return line

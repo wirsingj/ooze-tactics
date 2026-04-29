@@ -17,26 +17,26 @@ func step(state: GameState, queued_actions: Array) -> GameState:
 	next.turn_index += 1
 
 	var resolution: Dictionary = combat.resolve_with_report(queued_actions, next)
-	var log: Array[String] = resolution.get("log", [])
+	var turn_log: Array[String] = resolution.get("log", [])
 	next.last_resolution_report = resolution
 
 	var bursts: Dictionary = economy.claim_resource_bursts(next)
 	var eco_report: Dictionary = economy.compute_income_and_upkeep(next)
 	economy.apply_income_and_upkeep(next, eco_report, bursts)
-	log.append("Economy settled")
+	turn_log.append("Economy settled")
 	_advance_tile_ages(next)
-	log.append("Stability advanced")
+	turn_log.append("Stability advanced")
 	next.tick_reclaim_blocks()
-	log.append("Reclaim settled")
+	turn_log.append("Reclaim settled")
 
 	_update_stall_counter(next)
 
 	var outcome: Dictionary = director.check_victory_or_loss(next)
-	log.append("Outcome: %s" % String(outcome["status"]))
+	turn_log.append("Outcome: %s" % String(outcome["status"]))
 	if outcome.has("reason"):
-		log.append("Reason: %s" % String(outcome["reason"]))
+		turn_log.append("Reason: %s" % String(outcome["reason"]))
 
-	next.last_log = log
+	next.last_log = turn_log
 	return next
 
 func step_fast_for_trainer(state: GameState, queued_actions: Array) -> GameState:

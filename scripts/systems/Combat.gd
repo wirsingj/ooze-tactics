@@ -227,6 +227,10 @@ func validate_place_action(action: Dictionary, state: GameState) -> Dictionary:
 
 	if not state.players.has(owner):
 		return {"ok": false, "reason": "unknown owner"}
+	if not state.is_inside(pos):
+		return {"ok": false, "reason": "out of bounds"}
+	if state.is_blocked(pos):
+		return {"ok": false, "reason": "blocked cave wall"}
 	if pos == state.entrance_tile:
 		return {"ok": false, "reason": "entrance tile"}
 	if pos == state.door_tile:
