@@ -1,0 +1,19 @@
+yaiml: "0.2"
+
+project:
+  id: ooze-tactics
+  name: ooze-tactics
+
+documents:
+  sot:
+    path: SOT.md
+    title: SOT
+  architecture:
+    path: ARCHITECTURE.md
+    title: Architecture
+  maintainer:
+    path: MAINTAINER_GUIDE.md
+    title: Maintainer Guide
+
+phase: godot-tactics-vertical-slice
+notes: This file is a lightweight map for humans and coding agents. It is not a schema, build input, or release gate.
