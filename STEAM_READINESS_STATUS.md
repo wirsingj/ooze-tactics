@@ -1,6 +1,6 @@
 # Ooze Tactics Steam Readiness Status
 
-Status date: 2026-04-26
+Status date: 2026-07-15
 
 This is a production-readiness snapshot for the current vertical slice. It is not a shipping signoff.
 
@@ -12,7 +12,7 @@ This is a production-readiness snapshot for the current vertical slice. It is no
 - Dynamic ooze rendering is split from static environment and markers.
 - Ooze territory respects wall-blocking/render-truth contracts in current capture tools.
 - Role-specific generated 3D ooze assets exist for core, melee, ranged, defense, gather, and basic.
-- Existing automated gameplay tests cover economy, combat, placement, AI sanity, wall blocking, teams, upgrades, and performance smoke.
+- Existing automated gameplay tests cover economy, combat, placement, AI sanity, seeded AI role-mix smoke, wall blocking, teams, upgrades, and performance smoke.
 
 ## Not Yet Steam-Demo Ready
 
@@ -30,7 +30,7 @@ This is a production-readiness snapshot for the current vertical slice. It is no
 4. Add a short playable tutorial or first-run guidance.
 5. Add release-grade settings persistence for graphics/audio/input.
 6. Confirm 3D mode does not regress 2D mode or shared layout truth.
-7. Run longer AI-vs-AI balance sweeps to catch ranged/defense/gather overuse.
+7. Run longer AI-vs-AI balance sweeps beyond the current smoke coverage to catch ranged/defense/gather overuse.
 8. Add minimum Steam page assets: key art direction, capsule, hero screenshots, and short trailer plan.
 9. Package/export a Windows build and smoke test from a clean folder.
 10. Review third-party asset licenses and attribution for the exact shipped asset set.
@@ -40,7 +40,7 @@ This is a production-readiness snapshot for the current vertical slice. It is no
 1. Capture a curated 3D screenshot set: early spread, mid clash, late infestation, close role lineup, and core-under-threat.
 2. Profile dynamic rebuild in a standalone repro and separate first-import cost from steady-state rebuild cost.
 3. Add a visual review scene that places one tile of each ooze role side-by-side under gameplay lighting.
-4. Tune AI with seeded runs after the visual pass, focusing on ranged saturation and gather/defense economy timing.
+4. Tune AI with longer seeded runs after the visual pass, focusing on ranged saturation and gather/defense economy timing.
 5. Create a first Windows export candidate and document exact build steps.
 
 ## Known Visual Weaknesses
@@ -61,7 +61,7 @@ This is a production-readiness snapshot for the current vertical slice. It is no
 
 ## Known Gameplay / Balance Risks
 
-- AI ranged spam has dedicated penalties and tests, but longer seeded sweeps are still needed.
+- AI ranged spam has dedicated penalties plus short seeded smoke coverage, but longer seeded sweeps are still needed.
 - Defense and gather role timing can swing matches if economy and chokepoint layouts align too strongly.
 - Upgrade pacing may need escalation tuning once repeated-upgrade strategies are tested in longer runs.
 - Spectator/AI-vs-AI behavior can look convincing before it is truly balanced; capture quality should not substitute for balance data.

@@ -60,7 +60,7 @@ Turn-based tile tactics where slime factions expand, specialize tiles, and fight
 Headless test runner:
 
 ```powershell
-<path-to-godot-console.exe> --headless --path "<repo-root>" -s res://tests/run_tests.gd
+godot --headless --path . -s res://tests/run_tests.gd
 ```
 
-All core tests are currently in `tests/run_tests.gd`.
+All core tests are currently in `tests/run_tests.gd`, including gameplay rules, AI sanity, seeded AI role-mix smoke, run flow, atlas contract, and performance smoke coverage.

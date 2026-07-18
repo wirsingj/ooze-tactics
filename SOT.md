@@ -34,11 +34,17 @@ Current level progression is `1v1`, then `2v2`, then `1v3`.
 
 The current readiness snapshot says the vertical slice is not a shipping signoff. Stable gameplay truth remains the 2D mode, while 3D mode can run the core tactics loop and is undergoing visual/performance readiness work.
 
+## Validation State
+
+- Registered headless suite passed on 2026-07-15 with Godot 4.6.2 using `godot --headless --path . -s res://tests/run_tests.gd`.
+- Automated AI coverage now includes a seeded spectator role-mix smoke that checks several short AI-vs-AI runs for action output and ranged/defense/gather over-concentration.
+- This is still smoke coverage, not a replacement for longer seeded balance sweeps or visual review.
+
 ## Active Risks
 
 - Visual identity still needs directed screenshot review against the desired premium tactics bar.
 - 3D dynamic rebuilds have visible performance spikes during capture runs.
-- Capture tooling needs a documented visible-render path.
+- Capture tooling has headless commands, but screenshot output still needs visible/manual review before Steam-facing claims.
 - Steam-facing onboarding, settings, saves, trailer, screenshots, and packaging are not final.
 - Longer seeded AI balance sweeps are still needed.
 

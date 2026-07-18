@@ -32,6 +32,7 @@ func _init() -> void:
 	_test_ooze_ai_engaged_safe_backline_gather_conversion_allowed()
 	_test_ooze_ai_approaching_phase_allows_safe_backline_gather()
 	_test_ooze_ai_frontline_defense_density_brake()
+	_test_ooze_ai_seeded_role_mix_smoke()
 	_test_ooze_ai_safe_backline_downgrade()
 	_test_intent_planner_empty_ai_actions_become_pass()
 	_test_enemy_alignment_no_friendly_fire()
@@ -833,6 +834,102 @@ func _test_ooze_ai_frontline_defense_density_brake() -> void:
 				has_non_defense_combat = true
 	_assert(defense_actions <= 1, "Active fronts should not stack defense actions when local lane already has holders")
 	_assert(has_non_defense_combat, "Active fronts should keep melee/ranged pressure roles available")
+
+func _test_ooze_ai_seeded_role_mix_smoke() -> void:
+	for seed in [44101, 44102, 44103]:
+		var state: GameState = _build_seeded_spectator_state(int(seed))
+		var tick: TickSystem = TickSystem.new()
+		var ai = OOZE_AI_SCRIPT.new()
+		var role_actions: Dictionary = {"total": 0, "ranged": 0, "defense": 0, "gather": 0}
+
+		for _round in range(8):
+			var owners: Array[int] = _alive_ai_owners(state)
+			if owners.is_empty():
+				break
+			var actions: Array = []
+			for owner_id in owners:
+				var owner_actions: Array = ai.choose_actions(state, owner_id, 1)
+				if owner_actions.is_empty():
+					owner_actions = [{"type": "pass", "owner": owner_id}]
+				for action in owner_actions:
+					_accumulate_sensitive_role_action(action, role_actions)
+				actions.append_array(owner_actions)
+			state = tick.step(state, actions)
+
+		_assert(int(role_actions.get("total", 0)) > 0, "Seeded spectator AI smoke should produce actions for seed %d" % seed)
+		for role in ["ranged", "defense", "gather"]:
+			var role_count: int = int(role_actions.get(role, 0))
+			var total_count: int = maxi(1, int(role_actions.get("total", 0)))
+			_assert(
+				float(role_count) / float(total_count) <= 0.65,
+				"Seeded spectator AI smoke should not over-concentrate %s actions for seed %d" % [role, seed]
+			)
+
+		for owner_id in _alive_ai_owners(state):
+			_assert(
+				_owner_role_ratio(state, owner_id, "ranged") <= 0.55,
+				"Seeded spectator AI smoke should keep owner %d below ranged saturation for seed %d" % [owner_id, seed]
+			)
+			_assert(
+				_owner_role_ratio(state, owner_id, "defense") <= 0.60,
+				"Seeded spectator AI smoke should keep owner %d below defense saturation for seed %d" % [owner_id, seed]
+			)
+			_assert(
+				_owner_role_ratio(state, owner_id, "gather") <= 0.60,
+				"Seeded spectator AI smoke should keep owner %d below gather saturation for seed %d" % [owner_id, seed]
+			)
+
+func _build_seeded_spectator_state(seed: int) -> GameState:
+	var run_flow_script: GDScript = preload("res://scripts/systems/RunFlow.gd")
+	var run_flow: Node = run_flow_script.new()
+	run_flow.begin_dev_run(2, 2, false, true)
+	run_flow.current_level = 2
+	run_flow.run_seed = seed
+	var options: Dictionary = run_flow.build_level_options()
+	var state: GameState = LevelGenerator.new().build_level(2, run_flow.get_level_seed(), [], [], options)
+	run_flow.free()
+	return state
+
+func _alive_ai_owners(state: GameState) -> Array[int]:
+	var owners: Array[int] = []
+	var owner_keys: Array = state.players.keys()
+	owner_keys.sort()
+	for owner_variant in owner_keys:
+		var owner_id: int = int(owner_variant)
+		var player: Dictionary = state.players.get(owner_id, {})
+		if not bool(player.get("alive", true)):
+			continue
+		if not bool(player.get("ai_controlled", false)):
+			continue
+		if state.get_owner_blocks(owner_id).is_empty():
+			continue
+		owners.append(owner_id)
+	return owners
+
+func _accumulate_sensitive_role_action(action: Dictionary, role_actions: Dictionary) -> void:
+	var kind: String = String(action.get("type", "pass"))
+	var role: String = ""
+	if kind == "place_tile":
+		role = String(action.get("tile_type", "basic"))
+	elif kind == "convert_tile":
+		role = String(action.get("to_type", "basic"))
+	elif kind == "upgrade_tile":
+		role = String(action.get("tile_type", "basic"))
+	else:
+		return
+	role_actions["total"] = int(role_actions.get("total", 0)) + 1
+	if role_actions.has(role):
+		role_actions[role] = int(role_actions.get(role, 0)) + 1
+
+func _owner_role_ratio(state: GameState, owner_id: int, role: String) -> float:
+	var blocks: Array = state.get_owner_blocks(owner_id)
+	if blocks.size() < 8:
+		return 0.0
+	var role_count: int = 0
+	for block in blocks:
+		if String(block.get("tile_type", "basic")) == role:
+			role_count += 1
+	return float(role_count) / float(blocks.size())
 
 func _test_enemy_alignment_no_friendly_fire() -> void:
 	var state: GameState = GameState.new()
