@@ -7,7 +7,9 @@ belongs-here: game identity, verified capabilities, Steam readiness, active risk
 not-here: durable architecture, command reference, complete history.
 durability: volatile; synthesize and prune aggressively.
 read-with: Architecture; Maintainer Guide.
+budget: About 800 words; a working target, subject to evidence and retention needs.
 update-when: gameplay state, visual direction, Steam readiness, tests, risks, or priorities change.
+last-verified: not established; claims not rechecked in this refresh.
 agent-guidance: Preserve the distinction between stable 2D gameplay truth and evolving 3D presentation.
 ---
 

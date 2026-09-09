@@ -7,7 +7,9 @@ belongs-here: components, game loop, rules, rendering boundary, test surfaces, i
 not-here: volatile priorities, command reference, full work history.
 durability: stable; update when systems, scenes, rendering pipeline, or validation shape changes.
 read-with: SOT; Maintainer Guide.
+budget: About 1000 words; a working target, subject to evidence and retention needs.
 update-when: gameplay rules, Godot scenes, rendering architecture, AI, or export flow changes.
+last-verified: not established; claims not rechecked in this refresh.
 agent-guidance: Keep shared layout/gameplay truth separate from 3D presentation work.
 ---
 

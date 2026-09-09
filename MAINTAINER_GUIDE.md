@@ -7,7 +7,9 @@ belongs-here: Godot commands, test procedure, manual QA, important files, danger
 not-here: product direction, durable architecture, complete history.
 durability: current-only; remove dead commands quickly.
 read-with: SOT; Architecture.
+budget: About 1000 words; a working target, subject to evidence and retention needs.
 update-when: Godot version, test commands, export flow, capture tooling, or release procedure changes.
+last-verified: not established; claims not rechecked in this refresh.
 agent-guidance: Mark Godot-dependent commands separately from portable file checks.
 ---
 
