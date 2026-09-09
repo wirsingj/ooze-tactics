@@ -2,6 +2,10 @@
 
 Turn-based tile tactics where slime factions expand, specialize tiles, and fight over heart/door objectives.
 
+## AI Usage
+
+This project is maintained with AI-assisted development. See [AI_USAGE.md](AI_USAGE.md) for the disclosure and provenance expectations.
+
 ## Current Runtime Flow
 1. `MainMenu` (`res://scenes/MainMenu.tscn`) is the startup scene.
 2. Choose:

@@ -62,6 +62,10 @@ Treat saved capture files as artifacts for manual visual review; headless succes
 
 ## YAIML Maintenance
 
-Phrases such as "update YAIML", "updated YAIML", "check new YAIML", or "run a YAIML update" mean: compare this repository's local YAIML setup against a human-provided, workspace-provided, or team-approved YAIML reference, refresh compatible convention scaffolding, and preserve ooze-tactics-specific project memory.
+Provide the YAIML reference from the human prompt, workspace context, or a team-approved source at run time. Do not commit machine-specific reference paths, local drive names, user profile paths, `file://` URIs, localhost URLs, private workspace URLs, secrets, private transcripts, or raw sensitive logs into versioned project memory.
 
-Do not commit machine-specific YAIML reference paths, local drive names, user profile paths, `file://` URIs, secrets, private chat transcripts, or raw sensitive logs.
+Phrases such as "update YAIML", "updated YAIML", "check new YAIML", "refresh YAIML", or "run a YAIML update" mean convention refresh, not an ordinary project-memory rewrite. For this repository, compare local YAIML scaffolding against the provided reference and update only compatible prompts, templates, discovery hints, agent-instruction pointers, or YAIML-maintenance guidance. Preserve project memory and the existing discovery layout unless a human explicitly authorizes a layout migration.
+
+Phrases such as "clean up YAIML", "compress YAIML", "compact project memory", "prune project memory", or "prune SoT" mean to remove stale or repetitive memory while preserving current truth, evidence, human direction, decisions, unresolved conflicts, and uncertainty. Do not pad documents to meet budgets or delete necessary governed knowledge just to reduce word count.
+
+This repository does not need local YAIML prompt or template copies unless it already keeps them for a concrete workflow. Do not add `prompts/` or `templates/` just because the reference has them. Preserve project-specific SoT, Architecture, Maintainer Guide, risks, commands, naming, and supporting documents unless the reference changes how future agents should maintain YAIML here.
