@@ -1,5 +1,7 @@
 extends SceneTree
 
+const EVALUATION_RULES = preload("res://scripts/systems/AIEvaluation.gd")
+
 const DEFAULT_CONFIG_PATH: String = "res://tools/ai_tuner_config.json"
 const DEFAULT_OUTPUT_DIR: String = "user://ai_tuner_output"
 const BASELINE_TUNING_CONFIG_PATH: String = "res://config/ooze_ai_baseline.json"
@@ -32,9 +34,6 @@ const MIN_TEMPLATE_OPEN_RATIO: float = 0.58
 const MAX_TEMPLATE_WALL_RATIO: float = 0.32
 const ECONOMY_REGRESSION_GUARDRAIL: float = -6.0
 const OBJECTIVE_REGRESSION_GUARDRAIL: float = -5.0
-const OUTCOME_VICTORY_BONUS: float = 8.0
-const OUTCOME_DEFEAT_PENALTY: float = -8.0
-const OUTCOME_UNRESOLVED_PENALTY: float = -2.0
 const OUTCOME_FAST_SAMPLE_WEIGHT: float = 0.65
 const OUTCOME_SCENARIO_SAMPLE_WEIGHT: float = 1.75
 const STALEMATE_MIN_WINDOW_TURNS: int = 16
@@ -44,7 +43,6 @@ const STALEMATE_MAX_OBJECTIVE_DELTA: float = 0.10
 const STALEMATE_BASE_PENALTY: float = 0.70
 const STALEMATE_PENALTY_PER_20_TURNS: float = 0.85
 const STALEMATE_UNRESOLVED_EXTRA_PENALTY: float = 1.10
-const RESOLUTION_EVENT_BONUS: float = 1.25
 const RESOLUTION_PROGRESS_WEIGHT: float = 2.20
 const ADVANTAGE_CONVERSION_BASE_PENALTY: float = 0.55
 const ADVANTAGE_CONVERSION_SCALE: float = 1.30
@@ -2798,26 +2796,7 @@ func _aggregate_ai_profile(per_run: Array) -> Dictionary:
 func _run_outcome_bonus(run: Dictionary) -> float:
 	var outcome: Dictionary = run.get("outcome", {})
 	var status: String = String(outcome.get("status", "ongoing"))
-	var bonus: float = 0.0
-	match status:
-		"victory":
-			bonus += OUTCOME_VICTORY_BONUS
-		"defeat":
-			bonus += OUTCOME_DEFEAT_PENALTY
-		_:
-			if bool(run.get("ran_to_outcome_window", false)):
-				bonus += OUTCOME_UNRESOLVED_PENALTY
-
-	if status != "ongoing":
-		bonus += RESOLUTION_EVENT_BONUS
-		_log_scoring_signal(
-			"Resolution reward applied: %+0.2f (scenario=%s seed=%d status=%s)" % [
-				RESOLUTION_EVENT_BONUS,
-				String(run.get("scenario", "unknown")),
-				int(run.get("seed", 0)),
-				status,
-			]
-		)
+	var bonus: float = EVALUATION_RULES.outcome_bonus(status, bool(run.get("ran_to_outcome_window", false)))
 
 	var objective: Dictionary = run.get("final_objective", {})
 	var heart_progress: float = float(objective.get("heart_destroy_progress", 0.0))
@@ -3392,7 +3371,7 @@ func _owner_objective_targets_with_resources(state: GameState, owner_id: int) ->
 		if bool(node.get("consumed", false)):
 			continue
 		targets.append(node.get("pos", Vector2i(-1, -1)))
-	if state.door_hp > 0 and state.are_hostile(owner_id, GameState.PLAYER_ID):
+	if state.door_hp > 0 and EVALUATION_RULES.can_damage_door(state, owner_id):
 		targets.append(state.door_tile)
 	for block_variant in state.blocks.values():
 		var block: Dictionary = block_variant
@@ -3717,26 +3696,11 @@ func _heart_destroy_progress(initial_count: int, current_count: int) -> float:
 	return clampf(float(initial_count - current_count) / float(initial_count), 0.0, 1.0)
 
 func _owner_door_progress(state: GameState, initial_state: GameState, owner_id: int) -> float:
-	if not state.are_hostile(owner_id, GameState.PLAYER_ID):
-		return 0.0
-	var initial_hp: float = maxf(1.0, float(initial_state.door_hp))
-	var current_hp: float = clampf(float(state.door_hp), 0.0, initial_hp)
-	return clampf((initial_hp - current_hp) / initial_hp, 0.0, 1.0)
+	return EVALUATION_RULES.door_progress(state, initial_state, owner_id)
 
 func _owner_distance_to_targets(state: GameState, owner_id: int, targets: Array) -> int:
-	if targets.is_empty():
-		return MAX_DISTANCE_SENTINEL
-	var best: int = MAX_DISTANCE_SENTINEL
-	for block_variant in state.blocks.values():
-		var block: Dictionary = block_variant
-		if int(block.get("owner", -1)) != owner_id:
-			continue
-		var pos: Vector2i = block.get("pos", Vector2i(-1, -1))
-		for target_variant in targets:
-			var target: Vector2i = target_variant
-			var dist: int = abs(pos.x - target.x) + abs(pos.y - target.y)
-			best = mini(best, dist)
-	return best
+	var distance: int = EVALUATION_RULES.owner_distance(state, owner_id, targets)
+	return MAX_DISTANCE_SENTINEL if distance >= BoardTopology.UNREACHABLE_DISTANCE else distance
 
 func _find_candidate_result(results: Array, candidate_id: String) -> Dictionary:
 	for item_variant in results:

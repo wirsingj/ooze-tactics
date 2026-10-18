@@ -1,0 +1,111 @@
+{
+	"engine": "4.6.2-stable (official)",
+	"failures": [],
+	"gpu": "NVIDIA GeForce RTX 3090",
+	"limits": "Short uncapped desktop samples at a fixed turn; opening_idle means the first focus view (central front for developed states). Isolation rows deliberately hide one layer. Wall-frame intervals are authoritative; asynchronous render timers can lag very slow frames. No cross-device or full-match performance claim.",
+	"renderer": "gl_compatibility",
+	"samples": [
+		{
+			"draw_calls": 83.0,
+			"fps": 169.126861781765,
+			"frames": 305,
+			"mean_ms": 5.91272131147541,
+			"p50_ms": 5.525,
+			"p95_ms": 6.821,
+			"phase": "opening_idle",
+			"render_cpu_ms": 0.39550491825479,
+			"render_gpu_ms": 0.094718033319614
+		},
+		{
+			"draw_calls": 82.0,
+			"fps": 177.197611442855,
+			"frames": 319,
+			"mean_ms": 5.64341692789969,
+			"p50_ms": 5.52,
+			"p95_ms": 6.783,
+			"phase": "opening_without_tissue",
+			"render_cpu_ms": 0.395996866087928,
+			"render_gpu_ms": 0.0671442007663482
+		},
+		{
+			"draw_calls": 82.0,
+			"fps": 196.442503942723,
+			"frames": 354,
+			"mean_ms": 5.09054802259887,
+			"p50_ms": 5.011,
+			"p95_ms": 5.755,
+			"phase": "opening_without_terrain",
+			"render_cpu_ms": 0.368875706263181,
+			"render_gpu_ms": 0.0801497185550167
+		},
+		{
+			"draw_calls": 90.0,
+			"fps": 196.910775013077,
+			"frames": 355,
+			"mean_ms": 5.07844225352113,
+			"p50_ms": 5.002,
+			"p95_ms": 5.842,
+			"phase": "mid_zoom_idle",
+			"render_cpu_ms": 0.380259153960456,
+			"render_gpu_ms": 0.0967887328963884
+		},
+		{
+			"draw_calls": 89.0,
+			"fps": 177.009221126134,
+			"frames": 319,
+			"mean_ms": 5.64942319749216,
+			"p50_ms": 5.526,
+			"p95_ms": 6.885,
+			"phase": "mid_zoom_without_terrain",
+			"render_cpu_ms": 0.403683384384107,
+			"render_gpu_ms": 0.0820532920405409
+		},
+		{
+			"draw_calls": 90.0,
+			"fps": 71.7675746368975,
+			"frames": 130,
+			"mean_ms": 13.9338692307692,
+			"p50_ms": 13.879,
+			"p95_ms": 15.332,
+			"phase": "mid_zoom_pan",
+			"render_cpu_ms": 0.406484616032014,
+			"render_gpu_ms": 0.0904923072801186
+		},
+		{
+			"draw_calls": 92.0,
+			"fps": 172.113217184672,
+			"frames": 310,
+			"mean_ms": 5.81012903225806,
+			"p50_ms": 5.742,
+			"p95_ms": 7.024,
+			"phase": "overview_idle",
+			"render_cpu_ms": 0.424380645732726,
+			"render_gpu_ms": 0.104909677659312
+		},
+		{
+			"draw_calls": 92.0,
+			"fps": 69.644618985897,
+			"frames": 126,
+			"mean_ms": 14.3586111111111,
+			"p50_ms": 14.119,
+			"p95_ms": 16.636,
+			"phase": "overview_pan",
+			"render_cpu_ms": 0.438166667781179,
+			"render_gpu_ms": 0.0878333333465788
+		}
+	],
+	"source_sha256": {
+		"assets/shaders/colony_board.gdshader": "2bdc9e6766d4832c79ff951e06f152b6809b4a4acfc7e12b5bbf451e55959e1d",
+		"assets/shaders/colony_floor.gdshader": "fb3e16fd59c4341f3aabd12bf9332ee461d4ecdc53b561b7fa5abd2135149664",
+		"scripts/ui/ColonyRenderer.gd": "c87b422573969f238e49c93963ea505ab9061c94134b5c24eff9a14bd8f0fd2d",
+		"scripts/ui/TerritoryController.gd": "d5ae5ff36583feafcbfb595d7da67c137dd57d0fbf9db6e6e4fd320fb1038e2d",
+		"tools/profile_territory_render.gd": "c0123a53d7ad2232a6dcdd6258d7d689eac0681ff3598a39aa65b807cc576986"
+	},
+	"tiles": 10388,
+	"turn": 15,
+	"viewport": [
+		1500,
+		864
+	],
+	"vsync": false
+}

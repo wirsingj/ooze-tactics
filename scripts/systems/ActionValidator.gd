@@ -9,6 +9,7 @@ func build_owner_plan(state: GameState, queued_actions: Array, owner_id: int) ->
 	var planned_tiles: Dictionary = {}
 	var planned_upgrade_counts: Dictionary = {}
 	var planned_upgrade_total: int = 0
+	var action_count: int = 0
 	for block in state.get_owner_blocks(owner_id):
 		planned_tiles[_tile_key(block["pos"])] = true
 
@@ -21,6 +22,8 @@ func build_owner_plan(state: GameState, queued_actions: Array, owner_id: int) ->
 			continue
 
 		var kind: String = String(action.get("type", "pass"))
+		if kind != "pass":
+			action_count += 1
 		if kind == "place_tile":
 			remaining_energy -= int(action.get("cost", 0))
 			planned_tiles[_tile_key(action.get("target", Vector2i(-1, -1)))] = true
@@ -38,6 +41,7 @@ func build_owner_plan(state: GameState, queued_actions: Array, owner_id: int) ->
 		"remaining_energy": remaining_energy,
 		"planned_upgrade_counts": planned_upgrade_counts,
 		"planned_upgrade_total": planned_upgrade_total,
+		"action_count": action_count,
 	}
 
 func validate_place_target(

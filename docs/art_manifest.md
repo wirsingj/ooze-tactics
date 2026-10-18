@@ -14,28 +14,30 @@ Renderer behavior:
 
 No runtime geometry/texture path strings are hardcoded in `scripts/ui/World3DRenderer.gd`.
 
-## Runtime Geometry Mapping
+## Manifest Geometry Mapping
+
+Catalog presence alone does not prove a live consumer. Five organic growth roles are instantiated above procedural territory; Basic/resource geometry is built by the renderer.
 
 | Runtime key | Manifest path | Variant paths | Source kind | In-game usage |
 |---|---|---|---|---|
-| `blocker_wall` | `assets/meshes/generated/inner_wall_blocker_A.glb` | - | generated | Tactical blockers / chokepoints |
-| `cave_wall` | `assets/meshes/generated/outer_cave_wall_A.glb` | `assets/meshes/generated/outer_cave_wall_B.glb` | generated | Cave perimeter wall segment (deterministic A/B runtime mix) |
-| `cave_corner` | `assets/meshes/generated/cave_corner_transition_A.glb` | - | generated | Cave corner transition segment |
-| `door_arch` | `assets/meshes/imported/kenney_door_gate.glb` | - | imported | Dungeon door objective arch |
-| `floor_tile_rock` | `assets/meshes/generated/floor_tile_rock_A.glb` | `assets/meshes/generated/floor_tile_rock_B.glb` | generated | Cave floor tile variation (deterministic A/B runtime mix) |
-| `core_growth` | `assets/meshes/generated/core_growth.glb` | - | generated | Core/heart ooze growth asset placed on living ooze territory |
-| `basic_tile` | `assets/meshes/generated/basic_tile.glb` | - | generated | Low-profile base ooze expression for continuity kit |
-| `melee_growth` | `assets/meshes/generated/melee_growth.glb` | - | generated | Melee ooze tendril growth asset |
-| `ranged_growth` | `assets/meshes/generated/ranged_growth.glb` | - | generated | Ranged ooze stalk/bulb growth asset |
-| `defense_growth` | `assets/meshes/generated/defense_growth.glb` | - | generated | Defense ooze layered mass growth asset |
-| `gather_growth` | `assets/meshes/generated/gather_growth.glb` | - | generated | Gather ooze nodule cluster growth asset |
-| `node_base` | `assets/meshes/generated/node_base.glb` | - | generated | Node/core pedestal |
-| `heart_crystal` | `assets/meshes/generated/crystal_hero.glb` | - | generated | Heart/core visual |
-| `role_crystal` | `assets/meshes/generated/crystal_small.glb` | - | generated | Role marker crystal |
+| `blocker_wall` | `assets/meshes/generated/inner_wall_stone_A.glb` | `assets/meshes/generated/inner_wall_stone_B.glb` | generated | Tactical blockers / chokepoints |
+| `cave_wall` | `assets/meshes/generated/outer_wall_stone_A.glb` | `assets/meshes/generated/outer_wall_stone_B.glb` | generated | Cave perimeter wall segment (deterministic A/B runtime mix) |
+| `cave_corner` | `assets/meshes/generated/outer_wall_stone_B.glb` | `assets/meshes/generated/outer_wall_stone_A.glb` | generated | Cave corner transition segment |
+| `door_arch` | `assets/meshes/generated/door_arch_dungeon.glb` | - | generated | Dungeon door objective arch |
+| `floor_tile_rock` | `assets/meshes/generated/floor_tile_cobbled_A.glb` | `assets/meshes/generated/floor_tile_cobbled_B.glb` | generated | Cave floor tile variation (deterministic A/B runtime mix) |
+| `core_growth` | `assets/meshes/organic/core_growth.glb` | - | generated | Core/heart ooze growth asset placed on living ooze territory |
+| `basic_tile` | `assets/meshes/generated/basic_tile.glb` | - | generated | Retained catalog entry; current Basic/resource visuals are procedural |
+| `melee_growth` | `assets/meshes/organic/melee_growth.glb` | - | generated | Melee ooze tendril growth asset |
+| `ranged_growth` | `assets/meshes/organic/ranged_growth.glb` | - | generated | Organic vent/sac role growth |
+| `defense_growth` | `assets/meshes/organic/defense_growth.glb` | - | generated | Organic layered carapace role growth |
+| `gather_growth` | `assets/meshes/organic/gather_growth.glb` | - | generated | Gather ooze nodule cluster growth asset |
+| `node_base` | `assets/meshes/generated/node_base.glb` | - | generated | Retained catalog entry; current Basic/resource visuals are procedural |
+| `heart_crystal` | `assets/meshes/generated/crystal_hero.glb` | - | generated | Retained catalog entry; current Basic/resource visuals are procedural |
+| `role_crystal` | `assets/meshes/generated/crystal_small.glb` | - | generated | Retained catalog entry; current Basic/resource visuals are procedural |
 | `board_edge_trim` | `assets/meshes/imported/kenney_board_edge_trim.glb` | - | imported | Board edge framing |
-| `prop_gem` | `assets/meshes/imported/kenney_prop_coin.glb` | - | imported | Gem resource marker |
-| `prop_scroll` | `assets/meshes/imported/kenney_prop_chest.glb` | - | imported | Scroll resource marker |
-| `prop_rat` | `assets/meshes/imported/kenney_prop_rocks.glb` | - | imported | Rat/resource marker proxy |
+| `prop_gem` | `assets/meshes/imported/kenney_prop_coin.glb` | - | imported | Retained catalog entry; current Basic/resource visuals are procedural |
+| `prop_scroll` | `assets/meshes/imported/kenney_prop_chest.glb` | - | imported | Retained catalog entry; current Basic/resource visuals are procedural |
+| `prop_rat` | `assets/meshes/imported/kenney_prop_rocks.glb` | - | imported | Retained catalog entry; current Basic/resource visuals are procedural |
 
 ## Runtime Texture Mapping
 
@@ -66,5 +68,5 @@ No runtime geometry/texture path strings are hardcoded in `scripts/ui/World3DRen
 
 - Mixed generated/imported assets are explicitly declared per entry in the manifest via `source_kind`.
 - Where `geometry.*.variants` is present, `World3DRenderer` chooses variants deterministically from transform position and asset key.
-- Ooze gameplay growth roles (`core_growth`, `basic_tile`, `melee_growth`, `ranged_growth`, `defense_growth`, `gather_growth`) are served from generated deterministic GLBs and rendered on top of the continuous base ooze territory layer.
+- Five live growth roles use the original organic Blender kit; see [generation and provenance](../tools/blender_gen/README.md). Runtime fitting constrains imported bounds, and named skin/shell/lumen surfaces preserve material contrast while following owner colors. The studio render and geometric tests do not establish gameplay-camera acceptance.
 - Any runtime asset-path change must update `data/world3d_asset_manifest.json` first, then this doc.

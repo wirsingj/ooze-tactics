@@ -54,7 +54,9 @@ func make_marker_stamp(
 	queued_tiles: Dictionary,
 	queued_actions: Array,
 	hover_preview_action: Dictionary,
-	hover_invalid_reason: String
+	hover_invalid_reason: String,
+	valid_place_targets: Array = [],
+	enemy_intent_actions: Array = []
 ) -> String:
 	var queued_keys: Array = queued_tiles.keys()
 	queued_keys.sort()
@@ -75,7 +77,7 @@ func make_marker_stamp(
 		if not queued_sig.is_empty():
 			queued_sig += ","
 		queued_sig += "%s:%s" % [_tile_key(info.get("tile", Vector2i(-1, -1))), String(info.get("role", "basic"))]
-	return "%s|%s|%s|%s|%s|%s|%s" % [_tile_key(selected_tile), _tile_key(hovered_tile), queued_joined, preview_key, preview_kind, preview_role + ":" + hover_invalid_reason, queued_sig]
+	return "%s|%s|%s|%s|%s|%s|%s|%s|%s" % [_tile_key(selected_tile), _tile_key(hovered_tile), queued_joined, preview_key, preview_kind, preview_role + ":" + hover_invalid_reason, queued_sig, str(valid_place_targets), str(enemy_intent_actions)]
 
 func rebuild_markers(
 	root: Node3D,
@@ -88,11 +90,20 @@ func rebuild_markers(
 	queued_tiles: Dictionary,
 	queued_actions: Array,
 	hover_preview_action: Dictionary,
-	hover_invalid_reason: String
+	hover_invalid_reason: String,
+	valid_place_targets: Array = [],
+	enemy_intent_actions: Array = []
 ) -> void:
 	_clear_children(root)
 	if state == null or root == null:
 		return
+	for tile in valid_place_targets:
+		if state.is_inside(tile):
+			_add_tile_marker(root, state, tile_world_size, board_min, ground_tops, tile, Color(0.25, 1.0, 0.45, 0.48), 0.08)
+	for action in enemy_intent_actions:
+		var tile: Vector2i = preview_target_tile(state, action)
+		if state.is_inside(tile):
+			_add_tile_marker(root, state, tile_world_size, board_min, ground_tops, tile, Color(1.0, 0.28, 0.38, 0.65), 0.12)
 	_add_queued_preview_markers(root, state, tile_world_size, board_min, ground_tops, queued_actions)
 	if not hover_preview_action.is_empty():
 		var preview_tile: Vector2i = preview_target_tile(state, hover_preview_action)
@@ -286,12 +297,14 @@ func _add_tile_marker(
 	y_offset: float
 ) -> void:
 	var marker: MeshInstance3D = MeshInstance3D.new()
-	var mesh: CylinderMesh = CylinderMesh.new()
-	mesh.top_radius = tile_world_size * 0.45
-	mesh.bottom_radius = tile_world_size * 0.46
-	mesh.height = 0.016
-	mesh.radial_segments = 16
+	# An open frame preserves floor/role visibility instead of painting a disc.
+	var mesh: TorusMesh = TorusMesh.new()
+	mesh.inner_radius = tile_world_size * 0.39
+	mesh.outer_radius = tile_world_size * 0.43
+	mesh.rings = 32
+	mesh.ring_segments = 6
 	marker.mesh = mesh
+	marker.scale.y = 0.35
 	var top: float = _tile_ground_top(tile, ground_tops)
 	marker.position = _tile_world_position(tile, board_min, tile_world_size) + Vector3(0.0, top + maxf(y_offset, TILE_MARKER_MIN_CLEARANCE), 0.0)
 	marker.material_override = _marker_material(color)

@@ -18,6 +18,26 @@ documents:
 supporting:
   - path: AI_USAGE.md
     role: ai-usage-disclosure
+  - path: RISK_REVIEW.md
+    role: risk-review
+  - path: YAIML_GUIDE.md
+    role: operating-guide
+  - path: YAIML_TEMPLATES.md
+    role: document-templates
+  - path: YAIMLACP.md
+    role: coordination-guide
+  - path: YAIML_NOTICE.md
+    role: copied-guidance-notice
+  - path: .yaiml/YAIML_GUIDE.md
+    role: operating-guide
+  - path: .yaiml/skills/INDEX.md
+    role: skills
+  - path: .yaiml/YAIMLACP.md
+    role: yaimlacp
+  - path: .yaiml/BOOTSTRAP.md
+    role: bootstrap
+  - path: .yaiml/YAIML_NOTICE.md
+    role: notice
 
 phase: godot-tactics-vertical-slice
 notes: This file is a lightweight map for humans and coding agents. It is not a schema, build input, or release gate.

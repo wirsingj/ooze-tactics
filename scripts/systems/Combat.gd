@@ -33,6 +33,7 @@ const UPGRADE_BASE_COST: Dictionary = {
 	"gather": 6,
 }
 const MAX_UPGRADE_TIER: int = 3
+const TERRITORY = preload("res://scripts/systems/TerritoryRules.gd")
 const SPECIALIZATION_TIER: int = 1
 const UPGRADE_TIER_II_SURCHARGE: int = 4
 const UPGRADE_TIER_III_SURCHARGE: int = 9
@@ -92,9 +93,19 @@ func resolve(actions: Array, state: GameState) -> Array[String]:
 func resolve_with_report(actions: Array, state: GameState, include_log: bool = true, compact_report: bool = false) -> Dictionary:
 	var report: Dictionary = _apply_staged_actions(actions, state, include_log, compact_report)
 	var resolution_log: Array[String] = report.get("log", [])
+	var health_before: Dictionary = {}
+	var door_hp_before: int = state.door_hp
+	if not compact_report:
+		# Snapshot after purchases so new tiles are included and conversion or
+		# upgrade HP changes cannot be mistaken for combat damage.
+		for block in state.blocks.values():
+			health_before[int(block["id"])] = {"hp": int(block["hp"]), "tile": block["pos"], "owner": int(block["owner"])}
 
-	_resolve_melee_damage(state, resolution_log, include_log)
-	_resolve_ranged_damage(state, resolution_log, include_log)
+	var attack_events: Array = []
+	_resolve_melee_damage(state, resolution_log, include_log, attack_events, not compact_report)
+	_resolve_ranged_damage(state, resolution_log, include_log, attack_events, not compact_report)
+	if not compact_report:
+		report["attack_events"] = attack_events
 
 	var removed_positions: Array[Vector2i] = []
 	for block_id_variant in state.blocks.keys():
@@ -114,6 +125,18 @@ func resolve_with_report(actions: Array, state: GameState, include_log: bool = t
 	var defeat_report: Dictionary = _resolve_heart_defeats(state, resolution_log, include_log)
 	report["defeated_owners"] = defeat_report.get("defeated_owners", [])
 	report["player_heart_burst"] = int(defeat_report.get("player_heart_burst", 0))
+	if not compact_report:
+		var events: Array = []
+		for block_id in health_before:
+			var before: Dictionary = health_before[block_id]
+			var dissolved: bool = not state.blocks.has(block_id)
+			var hp_after: int = 0 if dissolved else int(state.blocks[block_id]["hp"])
+			var damage: int = maxi(0, int(before["hp"]) - hp_after)
+			if dissolved or damage > 0:
+				events.append({"kind": "dissolved" if dissolved else "damage", "tile": before["tile"], "owner": before["owner"], "amount": damage})
+		if state.door_hp < door_hp_before:
+			events.append({"kind": "door", "tile": state.door_tile, "amount": door_hp_before - state.door_hp})
+		report["combat_events"] = events
 
 	report["log"] = resolution_log
 	return report
@@ -122,7 +145,12 @@ func preview_resolution(state: GameState, actions: Array) -> Dictionary:
 	var preview_state: GameState = state.copy_state()
 	return _apply_staged_actions(actions, preview_state, false)
 
-func _apply_staged_actions(actions: Array, state: GameState, include_log: bool, compact_report: bool = false) -> Dictionary:
+func reconcile_owner_queue(state: GameState, actions: Array, owner_id: int) -> Dictionary:
+	# Replay placement dependencies and prices in the same order as a real turn,
+	# without combat, income, or any mutation of the live state.
+	return _apply_staged_actions(actions, state.copy_state(), false, false, owner_id)
+
+func _apply_staged_actions(actions: Array, state: GameState, include_log: bool, compact_report: bool = false, reprice_owner: int = -1) -> Dictionary:
 	var ordered: Array = _order_actions(actions)
 	var action_log: Array[String] = []
 	var applied_actions: Array = []
@@ -134,6 +162,8 @@ func _apply_staged_actions(actions: Array, state: GameState, include_log: bool, 
 
 	for action in ordered:
 		var kind: String = String(action.get("type", "pass"))
+		if int(action.get("owner", 0)) == reprice_owner:
+			_reprice_queued_action(action, state)
 		var result: Dictionary = {"applied": false, "reason": "unsupported action"}
 		match kind:
 			"place_tile":
@@ -179,6 +209,29 @@ func _apply_staged_actions(actions: Array, state: GameState, include_log: bool, 
 		"results_by_preview_id": results_by_preview_id,
 		"log": action_log,
 	}
+
+func _reprice_queued_action(action: Dictionary, state: GameState) -> void:
+	var owner: int = int(action.get("owner", 0))
+	var kind: String = String(action.get("type", "pass"))
+	if kind == "place_tile":
+		var role: String = String(action.get("tile_type", "basic"))
+		if TILE_RULES.has(role):
+			var cost: int = int(TILE_RULES[role]["cost"])
+			if role == "basic" and owner == GameState.PLAYER_ID:
+				cost = maxi(1, cost + int(state.card_modifiers.get("grow_cost_delta", 0)))
+			action["cost"] = cost
+	elif kind == "convert_tile" or kind == "upgrade_tile":
+		var block: Dictionary = state.blocks.get(int(action.get("block_id", -1)), {})
+		if block.is_empty():
+			return
+		var role: String = String(block.get("tile_type", "basic"))
+		var tier: int = int(block.get("upgrade_tier", 0))
+		if kind == "convert_tile":
+			action["energy_delta"] = conversion_energy_delta(role, String(action.get("to_type", "basic")), tier)
+		else:
+			action["cost"] = upgrade_energy_cost(state, owner, role, 0, 0, tier)
+			action["planned_type_count"] = 0
+			action["planned_total_count"] = 0
 
 func _sort_actions(a: Dictionary, b: Dictionary) -> bool:
 	# Deterministic action ordering contract:
@@ -264,7 +317,7 @@ func _apply_place_tile(action: Dictionary, state: GameState, event_log: Array[St
 	var block_id: int = state.spawn_block(owner, pos, false, int(TILE_RULES[tile_type]["max_hp"]), tile_type)
 	var block: Dictionary = state.blocks[block_id]
 	block["upgrade_tier"] = _default_upgrade_tier(tile_type)
-	_apply_tile_stats(block, tile_type)
+	_apply_tile_stats(block, tile_type, state.territory_mode)
 	block["max_hp"] = _effective_max_hp(block, tile_type)
 	block["hp"] = int(block["max_hp"])
 	_refresh_gather_bonus(state, block)
@@ -352,7 +405,7 @@ func _apply_convert_tile(action: Dictionary, state: GameState, event_log: Array[
 	block["tile_type"] = to_type
 	block["last_converted_turn"] = state.turn_index
 	block["upgrade_tier"] = _default_upgrade_tier(to_type)
-	_apply_tile_stats(block, to_type)
+	_apply_tile_stats(block, to_type, state.territory_mode)
 
 	var new_max_hp: int = _effective_max_hp(block, to_type)
 	block["max_hp"] = new_max_hp
@@ -386,7 +439,7 @@ func _apply_upgrade_tile(action: Dictionary, state: GameState, event_log: Array[
 	state.players[owner]["nutrients"] = int(state.players[owner]["nutrients"]) - cost
 	var old_max_hp: int = int(block.get("max_hp", int(TILE_RULES[tile_type]["max_hp"])))
 	block["upgrade_tier"] = mini(MAX_UPGRADE_TIER, current_tier + 1)
-	_apply_tile_stats(block, tile_type)
+	_apply_tile_stats(block, tile_type, state.territory_mode)
 	var new_max_hp: int = _effective_max_hp(block, tile_type)
 	block["max_hp"] = new_max_hp
 	block["hp"] = mini(new_max_hp, int(block.get("hp", new_max_hp)) + maxi(0, new_max_hp - old_max_hp))
@@ -400,7 +453,7 @@ func _apply_upgrade_tile(action: Dictionary, state: GameState, event_log: Array[
 		event_log.append("Owner %d upgraded block %d (%s) to tier %d for %d energy" % [owner, block_id, tile_type, int(block["upgrade_tier"]), cost])
 	return {"applied": true}
 
-func _apply_tile_stats(block: Dictionary, tile_type: String) -> void:
+func _apply_tile_stats(block: Dictionary, tile_type: String, territory_mode: bool = false) -> void:
 	var rules: Dictionary = TILE_RULES[tile_type]
 	var tier_bonus_steps: int = _upgrade_bonus_steps(tile_type, int(block.get("upgrade_tier", 0)))
 	var defense_value: int = int(rules["defense"])
@@ -434,6 +487,13 @@ func _apply_tile_stats(block: Dictionary, tile_type: String) -> void:
 	block["ranged_splash_bonus"] = ranged_splash_bonus
 	block["defense_guard_bonus"] = defense_guard_bonus
 	block["gather_upgrade_bonus"] = gather_upgrade_bonus
+	if territory_mode:
+		if tile_type=="melee":
+			block["damage"] = 6+MELEE_UPGRADE_DAMAGE_BONUS*tier_bonus_steps
+			block["range"] = 2
+		elif tile_type=="ranged":
+			block["damage"] = 4
+			block["range"] = 8+RANGED_UPGRADE_RANGE_BONUS*tier_bonus_steps
 	if tile_type != "gather":
 		block["gather_bonus"] = 0
 
@@ -466,7 +526,7 @@ func _refresh_gather_bonus(state: GameState, block: Dictionary) -> void:
 	if bool(node.get("consumed", false)):
 		block["gather_bonus"] = Economy.GATHER_RESOURCE_BONUS
 
-func _resolve_melee_damage(state: GameState, event_log: Array[String], include_log: bool = true) -> void:
+func _resolve_melee_damage(state: GameState, event_log: Array[String], include_log: bool = true, attacks: Array = [], record_attacks: bool = false) -> void:
 	var pending_damage: Dictionary = {}
 
 	for block in state.blocks.values():
@@ -479,11 +539,18 @@ func _resolve_melee_damage(state: GameState, event_log: Array[String], include_l
 		if owner == GameState.PLAYER_ID:
 			melee_base += int(state.card_modifiers.get("melee_damage_bonus", 0))
 
-		for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var attack_steps: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
+		if state.territory_mode:
+			attack_steps.append_array([Vector2i(-2,0),Vector2i(2,0),Vector2i(0,-2),Vector2i(0,2)])
+		for step in attack_steps:
 			var target_pos: Vector2i = block["pos"] + step
+			if state.territory_mode and not TERRITORY.clear_shot(state,owner,block.pos,target_pos):
+				continue
 			if target_pos == state.door_tile and _can_damage_door(state, owner) and state.door_hp > 0:
 				var door_hit: int = _modified_damage(state, owner, melee_base)
 				state.door_hp = maxi(0, state.door_hp - door_hit)
+				if record_attacks:
+					attacks.append({"kind":"melee", "from":block["pos"], "to":state.door_tile, "owner":owner, "source_id":block_id})
 				if include_log:
 					event_log.append("Melee block %d hit door for %d" % [block_id, door_hit])
 				continue
@@ -497,18 +564,22 @@ func _resolve_melee_damage(state: GameState, event_log: Array[String], include_l
 			var base_damage: int = _modified_damage(state, owner, melee_base)
 			var melee_damage: int = base_damage + _melee_breaker_bonus(state, target) + int(block.get("melee_break_bonus", 0))
 			pending_damage[target_id] = int(pending_damage.get(target_id, 0)) + melee_damage
+			if record_attacks:
+				attacks.append({"kind":"melee", "from":block["pos"], "to":target["pos"], "owner":owner, "source_id":block_id})
 			if include_log:
 				event_log.append("Melee block %d struck %d" % [block_id, target_id])
 
 	_apply_damage_batch(state, pending_damage)
 
-func _resolve_ranged_damage(state: GameState, event_log: Array[String], include_log: bool = true) -> void:
+func _resolve_ranged_damage(state: GameState, event_log: Array[String], include_log: bool = true, attacks: Array = [], record_attacks: bool = false) -> void:
 	var pending_damage: Dictionary = {}
 
 	for block in state.blocks.values():
 		var owner: int = int(block["owner"])
 		var block_id: int = int(block["id"])
 		if String(block.get("tile_type", "basic")) != "ranged":
+			continue
+		if state.territory_mode and (int(block.hp)<=0 or _has_adjacent_hostile(state,owner,block.pos)):
 			continue
 
 		var target_info: Dictionary = _nearest_ranged_target(state, owner, block["pos"], int(block.get("range", 4)))
@@ -520,6 +591,8 @@ func _resolve_ranged_damage(state: GameState, event_log: Array[String], include_
 			ranged_damage = maxi(1, ranged_damage - RANGED_CONTACT_DAMAGE_PENALTY)
 		if String(target_info.get("kind", "")) == "door":
 			state.door_hp = maxi(0, state.door_hp - ranged_damage)
+			if record_attacks:
+				attacks.append({"kind":"ranged", "from":block["pos"], "to":state.door_tile, "owner":owner, "source_id":block_id})
 			if include_log:
 				event_log.append("Ranged block %d shot door for %d" % [block_id, ranged_damage])
 			continue
@@ -527,7 +600,11 @@ func _resolve_ranged_damage(state: GameState, event_log: Array[String], include_
 		var target_id: int = int(target_info.get("id", -1))
 		if target_id <= 0:
 			continue
+		if state.territory_mode:
+			ranged_damage = maxi(0,ranged_damage-_effective_defense(state,state.blocks[target_id]))
 		pending_damage[target_id] = int(pending_damage.get(target_id, 0)) + ranged_damage
+		if record_attacks:
+			attacks.append({"kind":"ranged", "from":block["pos"], "to":state.blocks[target_id]["pos"], "owner":owner, "source_id":block_id})
 		if include_log:
 			event_log.append("Ranged block %d shot %d" % [block_id, target_id])
 		if not in_direct_contact:
@@ -543,9 +620,9 @@ func _resolve_ranged_damage(state: GameState, event_log: Array[String], include_
 				include_log
 			)
 
-	_apply_damage_batch(state, pending_damage)
+	_apply_damage_batch(state, pending_damage, state.territory_mode)
 
-func _apply_damage_batch(state: GameState, pending_damage: Dictionary) -> void:
+func _apply_damage_batch(state: GameState, pending_damage: Dictionary, already_armored: bool = false) -> void:
 	for target_id in pending_damage.keys():
 		if not state.blocks.has(target_id):
 			continue
@@ -556,18 +633,17 @@ func _apply_damage_batch(state: GameState, pending_damage: Dictionary) -> void:
 			target["hp"] = int(target["max_hp"])
 			state.blocks[target_id] = target
 			continue
-		var support_count: int = state.count_owned_within_manhattan(owner, target["pos"], SUPPORT_RADIUS)
-		var support_cap: int = SUPPORT_MAX_BONUS
-		if owner == GameState.PLAYER_ID:
-			support_cap += int(state.card_modifiers.get("support_bonus_cap_bonus", 0))
-		support_cap = maxi(0, support_cap)
-		var support_bonus: int = mini(support_cap, int(support_count / SUPPORT_DIVISOR))
-		var stability_bonus: int = _stability_defense_bonus(int(target.get("age", 0)))
-		var guard_bonus: int = _adjacent_defense_guard_bonus(state, int(target["id"]))
-		var effective_defense: int = int(target.get("defense", 0)) + support_bonus + stability_bonus + guard_bonus
-		var reduced: int = maxi(1, raw - effective_defense)
+		var reduced: int = raw if already_armored else maxi(1,raw-_effective_defense(state,target))
 		target["hp"] = int(target["hp"]) - reduced
 		state.blocks[target_id] = target
+
+func _effective_defense(state: GameState, target: Dictionary) -> int:
+	var owner: int = int(target.owner)
+	var support_cap: int = SUPPORT_MAX_BONUS
+	if owner==GameState.PLAYER_ID:
+		support_cap += int(state.card_modifiers.get("support_bonus_cap_bonus",0))
+	var support: int = mini(maxi(0,support_cap),int(state.count_owned_within_manhattan(owner,target.pos,SUPPORT_RADIUS)/SUPPORT_DIVISOR))
+	return int(target.get("defense",0))+support+_stability_defense_bonus(int(target.get("age",0)))+_adjacent_defense_guard_bonus(state,int(target.id))
 
 func _nearest_ranged_target(state: GameState, owner_id: int, origin: Vector2i, max_range: int) -> Dictionary:
 	var best_kind: String = ""
@@ -581,6 +657,8 @@ func _nearest_ranged_target(state: GameState, owner_id: int, origin: Vector2i, m
 		var block_pos: Vector2i = block["pos"]
 		var dist: int = absi(origin.x - block_pos.x) + absi(origin.y - block_pos.y)
 		if dist > max_range:
+			continue
+		if state.territory_mode and (int(block.hp)<=0 or not TERRITORY.clear_shot(state,owner_id,origin,block_pos)):
 			continue
 		if dist < best_dist or (dist == best_dist and best_kind == "door"):
 			best_dist = dist
@@ -643,7 +721,12 @@ func _apply_ranged_splash(
 			if seen_targets.has(splash_id):
 				continue
 			seen_targets[splash_id] = true
-			pending_damage[splash_id] = int(pending_damage.get(splash_id, 0)) + splash_damage
+			var hit: int = splash_damage
+			if state.territory_mode:
+				if primary_damage<=0 or not TERRITORY.clear_shot(state,owner,target_pos,candidate):
+					continue
+				hit = maxi(0,hit-_effective_defense(state,splash_target))
+			pending_damage[splash_id] = int(pending_damage.get(splash_id, 0)) + hit
 			if include_log:
 				event_log.append("Ranged block %d splashed %d" % [source_id, splash_id])
 
@@ -661,8 +744,7 @@ func _resolve_heart_defeats(state: GameState, event_log: Array[String], include_
 
 	for owner_id_variant in state.players.keys():
 		var owner_id: int = int(owner_id_variant)
-		if state.get_owner_blocks(owner_id).is_empty():
-			state.players[owner_id]["alive"] = false
+		if not bool(state.players[owner_id].get("alive", true)):
 			continue
 		if state.count_heart_tiles(owner_id) > 0:
 			continue
@@ -680,7 +762,7 @@ func _resolve_heart_defeats(state: GameState, event_log: Array[String], include_
 		if include_log:
 			event_log.append("Owner %d defeated (all heart tiles destroyed)" % owner_id)
 
-		if owner_id != GameState.PLAYER_ID and state.players.has(GameState.PLAYER_ID):
+		if state.players.has(GameState.PLAYER_ID) and state.are_hostile(GameState.PLAYER_ID, owner_id):
 			state.players[GameState.PLAYER_ID]["nutrients"] = int(state.players[GameState.PLAYER_ID]["nutrients"]) + HEART_DEFEAT_BURST_ENERGY
 			player_burst_total += HEART_DEFEAT_BURST_ENERGY
 
@@ -725,6 +807,8 @@ func _adjacent_defense_guard_bonus(state: GameState, target_id: int) -> int:
 		guards += DEFENSE_GUARD_PER_ADJACENT + int(neighbor.get("defense_guard_bonus", 0))
 
 	var guard_cap: int = DEFENSE_GUARD_MAX
+	if state.territory_mode:
+		guard_cap = 3
 	if owner == GameState.PLAYER_ID:
 		guard_cap += int(state.card_modifiers.get("defense_guard_cap_bonus", 0))
 	guard_cap = maxi(0, guard_cap)
@@ -741,7 +825,7 @@ func _melee_breaker_bonus(state: GameState, target: Dictionary) -> int:
 	return bonus
 
 func _can_damage_door(state: GameState, owner_id: int) -> bool:
-	return not state.are_hostile(owner_id, GameState.PLAYER_ID)
+	return not state.territory_mode and not state.are_hostile(owner_id, GameState.PLAYER_ID)
 
 func _public_action_copy(action: Dictionary) -> Dictionary:
 	var out: Dictionary = action.duplicate(true)

@@ -9,6 +9,9 @@ const GATHER_BASE_INCOME: int = 1
 const GATHER_RESOURCE_BONUS: int = 1
 
 func claim_resource_bursts(state: GameState) -> Dictionary:
+	if state.territory_mode:
+		preload("res://scripts/systems/TerritoryRules.gd").settle_sites(state)
+		return {}
 	var bursts: Dictionary = {}
 	for owner_id in state.players.keys():
 		bursts[owner_id] = 0
@@ -34,6 +37,8 @@ func claim_resource_bursts(state: GameState) -> Dictionary:
 	return bursts
 
 func compute_income_and_upkeep(state: GameState) -> Dictionary:
+	if state.territory_mode:
+		return preload("res://scripts/systems/TerritoryRules.gd").income(state)
 	var income_by_owner: Dictionary = {}
 	var upkeep_by_owner: Dictionary = {}
 

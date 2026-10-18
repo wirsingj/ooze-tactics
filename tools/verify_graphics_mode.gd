@@ -15,8 +15,8 @@ func _run() -> void:
 		push_error("RunFlow autoload not found")
 		quit(2)
 		return
-	if run_flow.has_method("set_graphics_style"):
-		run_flow.call("set_graphics_style", style)
+	# Verification must not overwrite the player's saved presentation choice.
+	run_flow.graphics_style = style
 
 	var packed: PackedScene = load("res://scenes/Main.tscn")
 	if packed == null:
@@ -33,6 +33,6 @@ func _run() -> void:
 		quit(4)
 		return
 	var using_3d: bool = bool(controller.call("_use_3d_world"))
-	var effective_style: String = "3d" if using_3d else "2d"
+	var effective_style: String = "colony" if controller.colony_enabled else ("3d" if using_3d else "2d")
 	print("graphics_style_requested=%s effective=%s" % [style, effective_style])
-	quit(0)
+	quit(0 if effective_style == style else 1)

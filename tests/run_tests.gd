@@ -61,6 +61,7 @@ func _init() -> void:
 	_test_player_queue_basic_toggle_and_requeue()
 	_test_atlas_sprite_contract()
 	_test_turn_performance_smoke()
+	failures.append_array(preload("res://tests/test_recovery.gd").new().run())
 
 	if failures.is_empty():
 		print("ALL TESTS PASSED")

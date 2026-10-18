@@ -11,6 +11,7 @@ const DEV_MAX_TEAM_SIZE: int = 4
 const SETTINGS_PATH: String = "user://settings.cfg"
 const GRAPHICS_STYLE_2D: String = "2d"
 const GRAPHICS_STYLE_3D: String = "3d"
+const GRAPHICS_STYLE_COLONY: String = "colony"
 
 const UPGRADE_POOL: Array = [
 	{
@@ -73,17 +74,17 @@ const LEVEL_SETUPS: Dictionary = {
 		"ally_ai_count": 0,
 		"enemy_clusters": 1,
 		"player_energy_bonus": 8,
-		"enemy_energy_bonus": -5,
+		"enemy_energy_bonus": 0,
 		"player_income_delta": 2,
 		"player_max_actions": 5,
-		"enemy_income_delta": -2,
-		"enemy_max_actions": 1,
+		"enemy_income_delta": 1,
+		"enemy_max_actions": 2,
 		"player_heart_max": 1,
 		"enemy_heart_max": 1,
 		"player_cluster_size_min": 5,
 		"player_cluster_size_max": 5,
-		"enemy_cluster_size_min": 1,
-		"enemy_cluster_size_max": 1,
+		"enemy_cluster_size_min": 4,
+		"enemy_cluster_size_max": 4,
 		"turn_limit": 30,
 		"door_hp": 12,
 	},
@@ -95,17 +96,17 @@ const LEVEL_SETUPS: Dictionary = {
 		"ally_ai_count": 0,
 		"enemy_clusters": 1,
 		"player_energy_bonus": 6,
-		"enemy_energy_bonus": -4,
+		"enemy_energy_bonus": 1,
 		"player_income_delta": 2,
 		"player_max_actions": 5,
-		"enemy_income_delta": -1,
-		"enemy_max_actions": 1,
+		"enemy_income_delta": 2,
+		"enemy_max_actions": 3,
 		"player_heart_max": 1,
 		"enemy_heart_max": 1,
 		"player_cluster_size_min": 5,
 		"player_cluster_size_max": 6,
-		"enemy_cluster_size_min": 1,
-		"enemy_cluster_size_max": 1,
+		"enemy_cluster_size_min": 4,
+		"enemy_cluster_size_max": 5,
 		"turn_limit": 36,
 		"door_hp": 14,
 	},
@@ -117,17 +118,17 @@ const LEVEL_SETUPS: Dictionary = {
 		"ally_ai_count": 0,
 		"enemy_clusters": 2,
 		"player_energy_bonus": 6,
-		"enemy_energy_bonus": -4,
+		"enemy_energy_bonus": 0,
 		"player_income_delta": 2,
 		"player_max_actions": 5,
-		"enemy_income_delta": -1,
-		"enemy_max_actions": 1,
+		"enemy_income_delta": 1,
+		"enemy_max_actions": 2,
 		"player_heart_max": 2,
 		"enemy_heart_max": 1,
 		"player_cluster_size_min": 5,
 		"player_cluster_size_max": 6,
-		"enemy_cluster_size_min": 1,
-		"enemy_cluster_size_max": 1,
+		"enemy_cluster_size_min": 4,
+		"enemy_cluster_size_max": 5,
 		"turn_limit": 44,
 		"door_hp": 18,
 	},
@@ -139,17 +140,17 @@ const LEVEL_SETUPS: Dictionary = {
 		"ally_ai_count": 0,
 		"enemy_clusters": 2,
 		"player_energy_bonus": 7,
-		"enemy_energy_bonus": -3,
+		"enemy_energy_bonus": 1,
 		"player_income_delta": 2,
 		"player_max_actions": 5,
-		"enemy_income_delta": -1,
-		"enemy_max_actions": 2,
+		"enemy_income_delta": 1,
+		"enemy_max_actions": 3,
 		"player_heart_max": 2,
 		"enemy_heart_max": 1,
 		"player_cluster_size_min": 5,
 		"player_cluster_size_max": 6,
-		"enemy_cluster_size_min": 2,
-		"enemy_cluster_size_max": 2,
+		"enemy_cluster_size_min": 4,
+		"enemy_cluster_size_max": 5,
 		"turn_limit": 44,
 		"door_hp": 20,
 		"loot_upgrade": true,
@@ -162,11 +163,11 @@ const LEVEL_SETUPS: Dictionary = {
 		"ally_ai_count": 0,
 		"enemy_clusters": 1,
 		"player_energy_bonus": 8,
-		"enemy_energy_bonus": -14,
+		"enemy_energy_bonus": 4,
 		"player_income_delta": 2,
 		"player_max_actions": 5,
-		"enemy_income_delta": -2,
-		"enemy_max_actions": 1,
+		"enemy_income_delta": 3,
+		"enemy_max_actions": 4,
 		"player_heart_max": 2,
 		"enemy_heart_max": 1,
 		"player_cluster_size_min": 6,
@@ -201,7 +202,7 @@ var result_next_scene: String = "res://scenes/MainMenu.tscn"
 var result_button_text: String = "Continue"
 var result_auto_advance: bool = false
 var result_delay_seconds: float = 1.4
-var graphics_style: String = GRAPHICS_STYLE_3D
+var graphics_style: String = GRAPHICS_STYLE_COLONY
 
 func _ready() -> void:
 	_load_user_settings()
@@ -274,6 +275,7 @@ func build_level_options() -> Dictionary:
 		"player_start_energy": base_player_energy,
 		"ally_start_energy": base_player_energy,
 		"enemy_start_energy": base_enemy_energy,
+		"ai_tactical_search": true,
 		"player_income_delta": int(setup.get("player_income_delta", 0)),
 		"ally_income_delta": int(setup.get("ally_income_delta", setup.get("player_income_delta", 0))),
 		"enemy_income_delta": int(setup.get("enemy_income_delta", 0)),
@@ -350,28 +352,24 @@ func _clear_result() -> void:
 	result_delay_seconds = 0.0
 
 func get_graphics_style() -> String:
-	if graphics_style == GRAPHICS_STYLE_2D:
-		return GRAPHICS_STYLE_2D
-	return GRAPHICS_STYLE_3D
+	return graphics_style if graphics_style in [GRAPHICS_STYLE_2D, GRAPHICS_STYLE_3D, GRAPHICS_STYLE_COLONY] else GRAPHICS_STYLE_COLONY
 
 func is_graphics_style_3d() -> bool:
 	return get_graphics_style() == GRAPHICS_STYLE_3D
 
 func set_graphics_style(style: String) -> void:
-	var normalized: String = GRAPHICS_STYLE_3D
-	if String(style).to_lower() == GRAPHICS_STYLE_2D:
-		normalized = GRAPHICS_STYLE_2D
-	graphics_style = normalized
+	var normalized: String = style.to_lower()
+	graphics_style = normalized if normalized in [GRAPHICS_STYLE_2D, GRAPHICS_STYLE_3D, GRAPHICS_STYLE_COLONY] else GRAPHICS_STYLE_COLONY
 	_save_user_settings()
 
 func _load_user_settings() -> void:
 	var cfg: ConfigFile = ConfigFile.new()
 	var err: int = cfg.load(SETTINGS_PATH)
 	if err != OK:
-		graphics_style = GRAPHICS_STYLE_3D
+		graphics_style = GRAPHICS_STYLE_COLONY
 		return
-	var stored: String = String(cfg.get_value("video", "graphics_style", GRAPHICS_STYLE_3D)).to_lower()
-	graphics_style = GRAPHICS_STYLE_2D if stored == GRAPHICS_STYLE_2D else GRAPHICS_STYLE_3D
+	var stored: String = String(cfg.get_value("video", "graphics_style", GRAPHICS_STYLE_COLONY)).to_lower()
+	graphics_style = stored if stored in [GRAPHICS_STYLE_2D, GRAPHICS_STYLE_3D, GRAPHICS_STYLE_COLONY] else GRAPHICS_STYLE_COLONY
 
 func _save_user_settings() -> void:
 	var cfg: ConfigFile = ConfigFile.new()

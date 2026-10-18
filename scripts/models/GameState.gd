@@ -33,6 +33,8 @@ var turn_limit: int = 50
 var enemies_allied: bool = true
 var dev_player_immortal: bool = false
 var spectator_mode: bool = false
+var territory_mode: bool = false
+var team_scores: Dictionary = {TEAM_PLAYER: 0, TEAM_ENEMY: 0}
 
 var stall_counter: int = 0
 var next_block_id: int = 1
@@ -79,6 +81,8 @@ func copy_state() -> GameState:
 	cloned.enemies_allied = enemies_allied
 	cloned.dev_player_immortal = dev_player_immortal
 	cloned.spectator_mode = spectator_mode
+	cloned.territory_mode = territory_mode
+	cloned.team_scores = team_scores.duplicate()
 	cloned.stall_counter = stall_counter
 	cloned.next_block_id = next_block_id
 	cloned.last_log = last_log.duplicate()

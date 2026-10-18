@@ -13,6 +13,7 @@ const MENU_FONT_PATH: String = "res://assets/fonts/PressStart2P-Regular.ttf"
 @onready var top_spacer: Control = $Center/VBox/TopSpacer
 @onready var buttons_panel: PanelContainer = $Center/VBox/ButtonsPanel
 @onready var start_button: Button = $Center/VBox/ButtonsPanel/ButtonsRow/StartButton
+@onready var territory_button: Button = $Center/VBox/ButtonsPanel/ButtonsRow/TerritoryButton
 @onready var dev_start_button: Button = $Center/VBox/ButtonsPanel/ButtonsRow/DevStartButton
 @onready var settings_button: Button = $Center/VBox/ButtonsPanel/ButtonsRow/SettingsButton
 @onready var exit_button: Button = $Center/VBox/ButtonsPanel/ButtonsRow/ExitButton
@@ -38,6 +39,7 @@ func _notification(what: int) -> void:
 
 func _connect_buttons() -> void:
 	start_button.pressed.connect(_on_start_pressed)
+	territory_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/TerritoryWar.tscn"))
 	dev_start_button.pressed.connect(_on_dev_start_pressed)
 	settings_button.pressed.connect(_on_settings_pressed)
 	exit_button.pressed.connect(_on_exit_pressed)
@@ -87,7 +89,7 @@ func _apply_menu_theme() -> void:
 		panel_style.set_content_margin(SIDE_RIGHT, 10.0)
 		panel_style.set_content_margin(SIDE_BOTTOM, 10.0)
 		buttons_panel.add_theme_stylebox_override("panel", panel_style)
-	for button in [start_button, dev_start_button, settings_button, exit_button, dev_confirm_button, dev_cancel_button]:
+	for button in [start_button, territory_button, dev_start_button, settings_button, exit_button, dev_confirm_button, dev_cancel_button]:
 		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.add_theme_font_size_override("font_size", 14)
 

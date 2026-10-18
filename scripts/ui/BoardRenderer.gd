@@ -42,6 +42,7 @@ const ENEMY_TINTS: Array[Color] = [
 ]
 
 var tile_size: float = 32.0
+var use_colony_palette: bool = false
 var atlas = ATLAS_CATALOG_SCRIPT.new()
 
 var _owner_by_tile: Dictionary = {}
@@ -1018,6 +1019,8 @@ func _overlay_key(tile_type: String, gather_infused: bool) -> String:
 	return "slime_overlay_%s" % tile_type
 
 func _owner_tint(state: GameState, owner_id: int) -> Color:
+	if use_colony_palette and state != null:
+		return Color.from_hsv(preload("res://scripts/ui/ColonyArt.gd").hue(state, owner_id), 0.58, 0.92)
 	if owner_id == GameState.PLAYER_ID:
 		return PLAYER_TINT
 

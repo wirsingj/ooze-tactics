@@ -1,0 +1,109 @@
+{
+	"engine": "4.6.2-stable (official)",
+	"gpu": "NVIDIA GeForce RTX 3090",
+	"limits": "Short uncapped desktop samples of the actual opening map. Isolation rows deliberately hide one visual layer. No cross-device or full-match performance claim.",
+	"renderer": "gl_compatibility",
+	"samples": [
+		{
+			"draw_calls": 8007.0,
+			"fps": 50.4660064308111,
+			"frames": 91,
+			"mean_ms": 19.8153186813187,
+			"p50_ms": 19.328,
+			"p95_ms": 23.61,
+			"phase": "opening_idle",
+			"process_ms": 95.2291868131869,
+			"render_cpu_ms": 18.702120917184,
+			"render_gpu_ms": 16.3465053956587
+		},
+		{
+			"draw_calls": 8006.0,
+			"fps": 54.2358473493337,
+			"frames": 98,
+			"mean_ms": 18.4379897959184,
+			"p50_ms": 18.092,
+			"p95_ms": 20.259,
+			"phase": "opening_without_tissue",
+			"process_ms": 21.9870714285714,
+			"render_cpu_ms": 17.2024897750543,
+			"render_gpu_ms": 14.665295912295
+		},
+		{
+			"draw_calls": 48.0,
+			"fps": 1409.97963362751,
+			"frames": 2538,
+			"mean_ms": 0.709230102442868,
+			"p50_ms": 0.673,
+			"p95_ms": 0.982,
+			"phase": "opening_without_terrain",
+			"process_ms": 27.4127399527173,
+			"render_cpu_ms": 0.217099684590754,
+			"render_gpu_ms": 0.0750977149346243
+		},
+		{
+			"draw_calls": 104653.0,
+			"fps": 3.75121311552718,
+			"frames": 7,
+			"mean_ms": 266.580428571429,
+			"p50_ms": 234.823,
+			"p95_ms": 465.799,
+			"phase": "mid_zoom_idle",
+			"process_ms": 426.143714285714,
+			"render_cpu_ms": 171.12771419755,
+			"render_gpu_ms": 165.553143187825
+		},
+		{
+			"draw_calls": 50.0,
+			"fps": 1419.09361296791,
+			"frames": 2555,
+			"mean_ms": 0.704675146771037,
+			"p50_ms": 0.669,
+			"p95_ms": 0.969,
+			"phase": "mid_zoom_without_terrain",
+			"process_ms": 303.177397651669,
+			"render_cpu_ms": 0.218784344417942,
+			"render_gpu_ms": 0.0757076319328959
+		},
+		{
+			"draw_calls": 104973.0,
+			"fps": 0.857134163353486,
+			"frames": 2,
+			"mean_ms": 1166.6785,
+			"p50_ms": 1287.213,
+			"p95_ms": 1287.213,
+			"phase": "mid_zoom_pan",
+			"process_ms": 927.782,
+			"render_cpu_ms": 0.191500000655651,
+			"render_gpu_ms": 0.0745000019669533
+		},
+		{
+			"draw_calls": 3355.0,
+			"fps": 120.022588583031,
+			"frames": 217,
+			"mean_ms": 8.33176497695852,
+			"p50_ms": 8.247,
+			"p95_ms": 8.889,
+			"phase": "overview_idle",
+			"process_ms": 46.824880184332,
+			"render_cpu_ms": 7.38928109270087,
+			"render_gpu_ms": 5.09304149249732
+		},
+		{
+			"draw_calls": 3355.0,
+			"fps": 13.1565170533129,
+			"frames": 24,
+			"mean_ms": 76.0079583333333,
+			"p50_ms": 76.578,
+			"p95_ms": 79.601,
+			"phase": "overview_pan",
+			"process_ms": 45.6445416666667,
+			"render_cpu_ms": 7.87158330281575,
+			"render_gpu_ms": 6.90862498680751
+		}
+	],
+	"viewport": [
+		1600,
+		900
+	],
+	"vsync": false
+}

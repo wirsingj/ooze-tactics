@@ -1,6 +1,8 @@
 # Ooze Tactics 2.5D Art Pipeline
 
-## Direction Lock
+Status: Legacy description of the mesh-based presentation, not a pixel-art pipeline or current direction lock. Some helper names below may be historical. The proposed art study and open presentation decision are in [visual direction](visual/graphics_goal_v1.md); verify implementation before following these older procedures.
+
+## Existing Presentation
 - Theme: cave / underground + living slime growth.
 - Palette: keep existing slime team tints and role colors; improve via lighting, emission, and material response.
 - Presentation: 2.5D tactical board with depth, shadows, and angled camera.

@@ -1,0 +1,13 @@
+Ooze heart visual study v1
+Date: 2026-10-03
+Provider/tool: OpenAI built-in image_gen; backing image model not reported by the tool.
+Art direction and prompt: Codex (GPT-6 Astra).
+Inputs: Text only; no reference images or external asset inputs.
+Post-processing: None. Original PNG copied unchanged.
+Status: Unaccepted visual concept, not a runtime sprite or editable SpriteWrite project.
+Inspection: 1536x1024 RGBA PNG; sampled alpha includes transparent and partially opaque values. Soft glow and dense detail do not satisfy a strict limited-palette pixel-grid production contract. Animation, tiling, and gameplay-size readability are unverified.
+
+Generation prompt:
+Use case: stylized-concept. Asset type: one isolated pixel-art creature/territory concept for Ooze Tactics, exploring a 2.5D tactics presentation. Create a single original ooze heart growth emerging organically from a joined low pool of living slime, viewed from a fixed three-quarter overhead tactical angle. This is a visual style study, not an animation sheet. Medium: deliberate pixel art with clearly stepped silhouettes, economical crisp pixel clusters, a coherent limited palette, flat discrete shading ramps, no antialiasing or smooth gradients. Appearance: weighty subterranean organism, asymmetrical lobes of deep teal slime, restrained pale mint rim highlights, a partially embedded warm amber nucleus visible under a thick folded membrane. The surrounding pool has a few thick branching lobes suggesting it can join neighboring territory; the heart and pool are one organism. No eyes, face, mouth, limbs, armor, crown, mascot styling, cute expression, plastic shine, or ornamental spikes. Restrained organic cave-fantasy mood. Design for readability at roughly 96 pixels tall, display as a large crisp pixel-art enlargement with generous transparent margin on all sides. One subject, one view, no other objects, no floor tile, no text, no frame, no fake checkerboard. Fixed light from upper left; compact contact shadow only within the organism footprint. Preserve actual transparent background.
+
+Tool option: transparent_background = true

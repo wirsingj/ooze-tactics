@@ -521,15 +521,28 @@ func _build_local_threat_map(state: GameState, owner_id: int) -> Dictionary:
 		var enemy_support: int = _count_owned_support(state, enemy_owner, enemy_pos, 2)
 		if enemy_support >= 5:
 			weight += 2
-		var distances: Dictionary = _limited_distance_map(state, enemy_pos, THREAT_SCAN_RADIUS)
+		var distances: Dictionary = _threat_distance_map(state, enemy)
 		for tile_variant in distances.keys():
 			var tile: Vector2i = tile_variant
 			var dist: int = int(distances[tile_variant])
-			if dist > THREAT_SCAN_RADIUS:
-				continue
 			threat_map[tile] = int(threat_map.get(tile, 0)) + weight + maxi(0, THREAT_SCAN_RADIUS + 1 - dist)
 	_prof_end("local_threat_cache_build", t_start)
 	return threat_map
+
+func _threat_distance_map(state: GameState, enemy: Dictionary) -> Dictionary:
+	var origin: Vector2i = enemy["pos"]
+	if String(enemy.get("tile_type", "basic")) != "ranged":
+		return _limited_distance_map(state, origin, THREAT_SCAN_RADIUS)
+	# Match combat's Manhattan ranged reach, including shots over walls.
+	var radius: int = maxi(THREAT_SCAN_RADIUS, int(enemy.get("range", 4)))
+	var distances: Dictionary = {}
+	for y in range(maxi(0, origin.y - radius), mini(state.height, origin.y + radius + 1)):
+		for x in range(maxi(0, origin.x - radius), mini(state.width, origin.x + radius + 1)):
+			var tile: Vector2i = Vector2i(x, y)
+			var distance: int = absi(x - origin.x) + absi(y - origin.y)
+			if distance <= radius and BoardTopology.is_traversable(state, tile):
+				distances[tile] = distance
+	return distances
 
 func _limited_distance_map(state: GameState, start: Vector2i, max_distance: int) -> Dictionary:
 	var distances: Dictionary = {}
@@ -714,6 +727,12 @@ static func _sanitize_tuning_value(key: String, value: Variant, layer_name: Stri
 	return {"ok": true, "value": clamped_float}
 
 func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array:
+	var proposed: Array = _choose_heuristic_actions(state, owner_id, min_adjacent)
+	if bool(state.players.get(owner_id, {}).get("tactical_search", false)):
+		return preload("res://scripts/systems/TacticalPlanner.gd").new().refine(state, owner_id, min_adjacent, proposed)
+	return proposed
+
+func _choose_heuristic_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array:
 	var choose_total_start_usec: int = _prof_begin()
 	var actions: Array = []
 	if not state.players.has(owner_id):
@@ -749,6 +768,11 @@ func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array
 	var reserved_place_tiles: Dictionary = {}
 	var reserved_convert_blocks: Dictionary = {}
 	var engaged: bool = bool(_active_strategy_context.get("engaged", _is_owner_engaged(state, owner_id)))
+	# Spending every two-energy income tick on Basic can permanently prevent
+	# an exposed frontier from buying its four/five-energy combat role.
+	if _should_save_for_combat(state, owner_id, energy):
+		_prof_end("choose_total", choose_total_start_usec)
+		return actions
 	var desired_upgrade_count: int = 0
 	var low_threat: bool = bool(_active_strategy_context.get("low_threat", _is_owner_low_threat(state, owner_id)))
 	if engaged and _can_afford_any_upgrade(energy):
@@ -950,6 +974,28 @@ func choose_actions(state: GameState, owner_id: int, min_adjacent: int) -> Array
 
 	_prof_end("choose_total", choose_total_start_usec)
 	return actions
+
+func _should_save_for_combat(state: GameState, owner_id: int, energy: int) -> bool:
+	if energy >= int(Combat.TILE_RULES["ranged"]["cost"]):
+		return false
+	var income: int = int(Economy.new().compute_income_and_upkeep(state)["delta"].get(owner_id, 0))
+	if income <= 0:
+		return false
+	# Only wait for an existing legal combat conversion reachable within two
+	# income ticks. Zero-income owners and distant expansion keep acting.
+	var future_energy: int = energy + income * 2
+	for candidate in [
+		_best_frontline_upgrade_action(state, owner_id, future_energy, {}),
+		_best_second_line_ranged_upgrade_action(state, owner_id, future_energy, {}),
+	]:
+		if candidate.is_empty():
+			continue
+		var cost: int = _action_energy_cost(candidate["action"])
+		if cost <= energy:
+			return false
+		if cost <= future_energy:
+			return true
+	return false
 
 # Frontline-first action selection.
 func _best_frontline_action(
@@ -2284,12 +2330,7 @@ func _should_prefer_midgame_gather_candidate(
 	return gather_score >= existing_score - 5
 
 func _estimated_owner_income(state: GameState, owner_id: int) -> int:
-	var base_income: int = 2 if state.get_owner_blocks(owner_id).size() > 0 else 0
-	var gather_income: int = 0
-	for block in state.get_owner_blocks(owner_id):
-		if String(block.get("tile_type", "basic")) == "gather":
-			gather_income += 1 + int(block.get("gather_bonus", 0)) + int(block.get("gather_upgrade_bonus", 0))
-	return base_income + gather_income
+	return int(Economy.new().compute_income_and_upkeep(state)["delta"].get(owner_id, 0))
 
 func _count_gather_tiles(state: GameState, owner_id: int) -> int:
 	var total: int = 0
@@ -2729,9 +2770,10 @@ func _local_threat_score(state: GameState, owner_id: int, tile: Vector2i) -> int
 		if not state.are_hostile(owner_id, enemy_owner):
 			continue
 		var enemy_pos: Vector2i = enemy["pos"]
-		var dist: int = BoardTopology.path_distance(state, tile, enemy_pos, THREAT_SCAN_RADIUS)
-		if dist > THREAT_SCAN_RADIUS:
+		var distances: Dictionary = _threat_distance_map(state, enemy)
+		if not distances.has(tile):
 			continue
+		var dist: int = int(distances[tile])
 		var weight: int = 2
 		var enemy_type: String = String(enemy.get("tile_type", "basic"))
 		if enemy_type == "melee":

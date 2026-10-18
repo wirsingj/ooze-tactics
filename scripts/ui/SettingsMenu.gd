@@ -5,6 +5,7 @@ extends Control
 
 const STYLE_2D: String = "2d"
 const STYLE_3D: String = "3d"
+const STYLE_COLONY: String = "colony"
 
 func _ready() -> void:
 	_populate_graphics_style_options()
@@ -16,15 +17,17 @@ func _on_back_pressed() -> void:
 
 func _populate_graphics_style_options() -> void:
 	graphics_style_option.clear()
+	graphics_style_option.add_item("Living Colony (2.5D)")
+	graphics_style_option.set_item_metadata(0, STYLE_COLONY)
 	graphics_style_option.add_item("Legacy 2D (Atlas)")
-	graphics_style_option.set_item_metadata(0, STYLE_2D)
+	graphics_style_option.set_item_metadata(1, STYLE_2D)
 	graphics_style_option.add_item("Cave 3D (Live)")
-	graphics_style_option.set_item_metadata(1, STYLE_3D)
+	graphics_style_option.set_item_metadata(2, STYLE_3D)
 	var run_flow = get_node_or_null("/root/RunFlow")
-	var style: String = STYLE_3D
+	var style: String = STYLE_COLONY
 	if run_flow != null and run_flow.has_method("get_graphics_style"):
 		style = String(run_flow.call("get_graphics_style"))
-	var target_index: int = 0 if style == STYLE_2D else 1
+	var target_index: int = [STYLE_COLONY, STYLE_2D, STYLE_3D].find(style)
 	graphics_style_option.select(target_index)
 
 func _on_graphics_style_selected(index: int) -> void:

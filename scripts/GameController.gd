@@ -26,6 +26,8 @@ const ENEMY_FEEDBACK_SCRIPT: GDScript = preload("res://scripts/systems/EnemyFeed
 const WORLD_RENDER_LAYER_SCRIPT: GDScript = preload("res://scripts/ui/WorldRenderLayer.gd")
 const SLIME_LAYER_SHADER: Shader = preload("res://assets/shaders/slime_layer.gdshader")
 const WORLD_3D_RENDERER_SCRIPT_PATH: String = "res://scripts/ui/World3DRenderer.gd"
+const COLONY_RENDERER = preload("res://scripts/ui/ColonyRenderer.gd")
+const COLONY_ART = preload("res://scripts/ui/ColonyArt.gd")
 const ACTION_BUTTON_HINTS: Dictionary = {
 	"basic": "Basic: spread your ooze into empty ground.",
 	"melee": "Melee: acidic limbs that tear through nearby enemies.",
@@ -39,7 +41,7 @@ const ACTION_BUTTON_HINTS: Dictionary = {
 }
 const OBJECTIVE_TEXT: String = "Destroy the enemy heart or break the dungeon door"
 const ROLE_INFO: Dictionary = {
-	"basic": {"name": "Basic Ooze", "effect": "Spreads territory. Cheap, fragile, and generates energy with your ooze mass."},
+	"basic": {"name": "Basic Ooze", "effect": "Cheap territory and support for nearby growth. Build Gather pods for extra income."},
 	"melee": {"name": "Melee Growth", "effect": "Close-range acidic limbs. Best at breaking enemy hearts in contact."},
 	"ranged": {"name": "Ranged Spitter", "effect": "Fires acid from behind your front line. Can pressure hearts and doors."},
 	"defense": {"name": "Defense Ridge", "effect": "Hardened ooze. Holds chokepoints and protects nearby growth."},
@@ -117,6 +119,8 @@ var world_slime_layer: WorldRenderLayer = null
 var world_emissive_layer: WorldRenderLayer = null
 var world_overlay_layer: WorldRenderLayer = null
 var world_3d_enabled: bool = true
+var colony_enabled: bool = false
+var colony_view: Control = null
 var _world_3d_renderer_load_failed: bool = false
 var _world_3d_sync_queued: bool = false
 
@@ -183,6 +187,10 @@ func _ready() -> void:
 	_setup_world_layers()
 	_sync_graphics_style_from_runflow()
 	_setup_3d_presentation()
+	if colony_enabled:
+		colony_view = COLONY_RENDERER.new()
+		colony_view.name = "LivingColony"
+		board_region.add_child(colony_view)
 	_apply_ui_theme()
 	upgrade_overlay.visible = false
 	_load_data()
@@ -207,7 +215,7 @@ func _process(delta: float) -> void:
 	if using_3d and world_3d_root != null:
 		_world_3d_call("tick_visual", [pacing_delta if pacing_delta > 0.0 else delta])
 
-	if pacing_delta > 0.0 and not using_3d:
+	if pacing_delta > 0.0 and not using_3d and not colony_enabled:
 		anim_timer += pacing_delta
 		if anim_timer >= ANIM_FRAME_TIME:
 			anim_timer = 0.0
@@ -229,7 +237,7 @@ func _process(delta: float) -> void:
 		_refresh_energy_label_style()
 
 	if pacing_delta > 0.0 and _update_turn_pulse(pacing_delta):
-		if not using_3d:
+		if not using_3d and not colony_enabled:
 			needs_redraw = true
 
 	if pacing_delta > 0.0 and _is_spectator_mode() and not spectator_paused and not run_over and not _is_modal_overlay_open() and not pulse_active:
@@ -318,7 +326,7 @@ func _update_slime_shader_time(delta: float) -> void:
 	(world_slime_layer.material as ShaderMaterial).set_shader_parameter("u_time", slime_shader_time)
 
 func _draw_world_background(canvas: Node2D) -> void:
-	if _use_3d_world():
+	if colony_enabled or _use_3d_world():
 		return
 	if state == null:
 		return
@@ -332,7 +340,7 @@ func _draw_world_background(canvas: Node2D) -> void:
 	)
 
 func _draw_world_slime(canvas: Node2D) -> void:
-	if _use_3d_world():
+	if colony_enabled or _use_3d_world():
 		return
 	if state == null:
 		return
@@ -350,7 +358,7 @@ func _draw_world_slime(canvas: Node2D) -> void:
 	)
 
 func _draw_world_emissive(canvas: Node2D) -> void:
-	if _use_3d_world():
+	if colony_enabled or _use_3d_world():
 		return
 	if state == null:
 		return
@@ -363,7 +371,7 @@ func _draw_world_emissive(canvas: Node2D) -> void:
 	)
 
 func _draw_world_overlay(canvas: Node2D) -> void:
-	if _use_3d_world():
+	if colony_enabled or _use_3d_world():
 		return
 	if state == null:
 		return
@@ -385,6 +393,9 @@ func _draw_world_overlay(canvas: Node2D) -> void:
 
 func _queue_world_redraw() -> void:
 	_perf_increment("queue_world_redraw_calls")
+	if colony_enabled:
+		_sync_colony_world()
+		return
 	if _use_3d_world():
 		if not _world_3d_sync_queued:
 			_world_3d_sync_queued = true
@@ -433,6 +444,15 @@ func _sync_graphics_style_from_runflow() -> void:
 		return
 	if run_flow.has_method("is_graphics_style_3d"):
 		world_3d_enabled = bool(run_flow.call("is_graphics_style_3d"))
+	colony_enabled = run_flow.get_graphics_style() == "colony"
+	renderer.use_colony_palette = colony_enabled
+
+func _sync_colony_world() -> void:
+	if colony_view == null or state == null:
+		return
+	colony_view.sync_world(state, {"selected": selected_tile, "hover": hovered_tile,
+		"queued": queued_actions, "preview": hover_preview_action, "invalid": hover_invalid_reason,
+		"valid": valid_place_targets, "convert": valid_convert_targets, "intents": enemy_intent_actions})
 
 func _ensure_world_3d_renderer_loaded() -> bool:
 	if _world_3d_renderer_load_failed:
@@ -486,11 +506,16 @@ func _sync_3d_world() -> void:
 			hover_invalid_reason,
 			recent_enemy_actions,
 			anim_frame,
+			valid_place_targets,
+			enemy_intent_actions,
 		]
 	)
 	_perf_end("sync_3d_world", sync_start_usec)
 
 func _handle_3d_camera_input(event: InputEvent) -> bool:
+	if colony_enabled and colony_view != null:
+		var point: Vector2 = get_viewport().get_mouse_position()
+		return colony_view.handle_camera_input(event, point-board_clip_rect.position, board_clip_rect.has_point(point))
 	if not _use_3d_world():
 		return false
 	var mouse_pos: Vector2 = get_viewport().get_mouse_position()
@@ -521,7 +546,7 @@ func clear_turn_pulse_for_capture() -> void:
 	pulse_finish_pause = 0.0
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _use_3d_world() and not _is_modal_overlay_open():
+	if (colony_enabled or _use_3d_world()) and not _is_modal_overlay_open():
 		if _handle_3d_camera_input(event):
 			if event is InputEventMouseButton:
 				var camera_mouse_event: InputEventMouseButton = event
@@ -663,6 +688,13 @@ func _sync_hover_hint_from_mouse() -> void:
 		return
 
 	var mouse_pos: Vector2 = get_viewport().get_mouse_position()
+	# GUI controls consume motion before _unhandled_input; clear stale board
+	# hover explicitly so its card and marker do not linger over the HUD.
+	if not board_clip_rect.has_point(mouse_pos) and hovered_tile != Vector2i(-1, -1):
+		hovered_tile = Vector2i(-1, -1)
+		_recompute_hover_context()
+		_refresh_ui()
+		_queue_world_redraw()
 	var hover_hint: String = ""
 	for binding in hover_hint_bindings:
 		var control: Control = binding.get("control", null) as Control
@@ -734,11 +766,16 @@ func _apply_ui_theme() -> void:
 	ranged_button.icon = renderer.make_ui_icon("ranged", 34)
 	gather_button.icon = renderer.make_ui_icon("gather", 34)
 	defense_button.icon = renderer.make_ui_icon("defense", 34)
+	if colony_enabled:
+		for entry in [[basic_button,"basic"],[melee_button,"melee"],[ranged_button,"ranged"],[gather_button,"gather"],[defense_button,"defense"]]:
+			entry[0].icon = COLONY_ART.icon(entry[1])
+			entry[0].expand_icon = true
+			entry[0].add_theme_constant_override("icon_max_width", 34)
 
 	for button in [basic_button, melee_button, ranged_button, gather_button, defense_button]:
 		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
-		button.expand_icon = false
+		button.expand_icon = colony_enabled
 		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.add_theme_font_size_override("font_size", 12)
 		button.add_theme_constant_override("h_separation", 4)
@@ -956,6 +993,7 @@ func _queue_place_action(tile: Vector2i, tile_type: String) -> Dictionary:
 	if not Combat.TILE_RULES.has(tile_type):
 		return {"ok": false, "reason": "unknown tile type"}
 
+	var original_queue: Array = queued_actions.duplicate(true)
 	var removed_existing: Array = _remove_player_place_actions_for_tile(tile)
 	if not removed_existing.is_empty():
 		var had_same_type: bool = false
@@ -964,27 +1002,28 @@ func _queue_place_action(tile: Vector2i, tile_type: String) -> Dictionary:
 				had_same_type = true
 				break
 		if had_same_type:
-			return {"ok": true, "message": "Spread cancelled"}
+			return {"ok": true, "message": _finish_queue_edit("Spread cancelled")}
 
 	var plan: Dictionary = _build_player_queue_plan()
 	var check: Dictionary = _validate_place_target(tile, tile_type, plan)
 	if not bool(check["ok"]):
-		_restore_removed_actions(removed_existing)
+		queued_actions = original_queue
 		return check
 
 	var candidate: Dictionary = _build_place_candidate(tile, tile_type)
 	var apply_check: Dictionary = validator.predict_candidate_application(state, queued_actions, enemy_intent_actions, candidate)
 	if not bool(apply_check.get("ok", false)):
-		_restore_removed_actions(removed_existing)
+		queued_actions = original_queue
 		return {"ok": false, "reason": String(apply_check.get("reason", "conflict in turn resolution"))}
 
 	queued_actions.append(candidate)
-	return {"ok": true, "message": "Spread %s queued for %d energy" % [_tile_type_label(tile_type), _tile_cost(tile_type)]}
+	return {"ok": true, "message": _finish_queue_edit("Spread %s queued for %d energy" % [_tile_type_label(tile_type), _tile_cost(tile_type)])}
 
 func _queue_convert_action(block: Dictionary, to_type: String) -> Dictionary:
 	if not Combat.TILE_RULES.has(to_type):
 		return {"ok": false, "reason": "unknown tile type"}
 
+	var original_queue: Array = queued_actions.duplicate(true)
 	var block_id: int = int(block["id"])
 	var removed_existing: Array = _remove_player_convert_actions_for_block(block_id)
 	if not removed_existing.is_empty():
@@ -994,30 +1033,31 @@ func _queue_convert_action(block: Dictionary, to_type: String) -> Dictionary:
 				had_same_type = true
 				break
 		if had_same_type:
-			return {"ok": true, "message": "Evolution cancelled"}
+			return {"ok": true, "message": _finish_queue_edit("Evolution cancelled")}
 
 	var plan: Dictionary = _build_player_queue_plan()
 	var check: Dictionary = _validate_convert_target(block, to_type, plan)
 	if not bool(check["ok"]):
-		_restore_removed_actions(removed_existing)
+		queued_actions = original_queue
 		return check
 
 	var from_type: String = String(block.get("tile_type", "basic"))
 	var candidate: Dictionary = _build_convert_candidate(block_id, from_type, to_type)
 	var apply_check: Dictionary = validator.predict_candidate_application(state, queued_actions, enemy_intent_actions, candidate)
 	if not bool(apply_check.get("ok", false)):
-		_restore_removed_actions(removed_existing)
+		queued_actions = original_queue
 		return {"ok": false, "reason": String(apply_check.get("reason", "conflict in turn resolution"))}
 
 	queued_actions.append(candidate)
 	var energy_delta: int = int(candidate.get("energy_delta", 0))
-	return {"ok": true, "message": "Evolve %s into %s queued%s" % [
+	return {"ok": true, "message": _finish_queue_edit("Evolve %s into %s queued%s" % [
 		_tile_type_label(from_type),
 		_tile_type_label(to_type),
 		(" for %d energy" % energy_delta) if energy_delta > 0 else ""
-	]}
+	])}
 
 func _queue_upgrade_action(block: Dictionary) -> Dictionary:
+	var original_queue: Array = queued_actions.duplicate(true)
 	var block_id: int = int(block["id"])
 	var removed_existing: Array = _remove_player_convert_actions_for_block(block_id)
 	if not removed_existing.is_empty():
@@ -1027,12 +1067,12 @@ func _queue_upgrade_action(block: Dictionary) -> Dictionary:
 				had_upgrade = true
 				break
 		if had_upgrade:
-			return {"ok": true, "message": "Strengthen cancelled"}
+			return {"ok": true, "message": _finish_queue_edit("Strengthen cancelled")}
 
 	var plan: Dictionary = _build_player_queue_plan()
 	var check: Dictionary = _validate_upgrade_target(block, plan)
 	if not bool(check.get("ok", false)):
-		_restore_removed_actions(removed_existing)
+		queued_actions = original_queue
 		return check
 
 	var tile_type: String = String(block.get("tile_type", "basic"))
@@ -1040,11 +1080,28 @@ func _queue_upgrade_action(block: Dictionary) -> Dictionary:
 	var candidate: Dictionary = _build_upgrade_candidate(block_id, tile_type, cost, plan)
 	var apply_check: Dictionary = validator.predict_candidate_application(state, queued_actions, enemy_intent_actions, candidate)
 	if not bool(apply_check.get("ok", false)):
-		_restore_removed_actions(removed_existing)
+		queued_actions = original_queue
 		return {"ok": false, "reason": String(apply_check.get("reason", "conflict in turn resolution"))}
 
 	queued_actions.append(candidate)
-	return {"ok": true, "message": "Strengthen %s queued for %d energy" % [_tile_type_label(tile_type), cost]}
+	return {"ok": true, "message": _finish_queue_edit("Strengthen %s queued for %d energy" % [_tile_type_label(tile_type), cost])}
+
+func _finish_queue_edit(message: String) -> String:
+	var all_actions: Array = queued_actions.duplicate(true)
+	all_actions.append_array(enemy_intent_actions)
+	var report: Dictionary = Combat.new().reconcile_owner_queue(state, all_actions, GameState.PLAYER_ID)
+	queued_actions.clear()
+	for action in report.get("applied_actions", []):
+		if int(action.get("owner", 0)) == GameState.PLAYER_ID:
+			action["_preview_id"] = _next_preview_id()
+			queued_actions.append(action)
+	var removed_count: int = 0
+	for action in report.get("failed_actions", []):
+		if int(action.get("owner", 0)) == GameState.PLAYER_ID:
+			removed_count += 1
+	if removed_count > 0:
+		return "%s; removed %d dependent or invalid action(s)" % [message, removed_count]
+	return message
 
 func _remove_player_place_actions_for_tile(tile: Vector2i) -> Array:
 	var removed: Array = []
@@ -1077,12 +1134,6 @@ func _remove_player_convert_actions_for_block(block_id: int) -> Array:
 	removed.reverse()
 	return removed
 
-func _restore_removed_actions(removed_actions: Array) -> void:
-	if removed_actions.is_empty():
-		return
-	for action in removed_actions:
-		queued_actions.append(action)
-
 func _remove_player_action_for_tile(tile: Vector2i) -> bool:
 	var removed: bool = false
 	for i in range(queued_actions.size() - 1, -1, -1):
@@ -1108,7 +1159,7 @@ func _remove_player_action_for_tile(tile: Vector2i) -> bool:
 				removed = true
 
 	if removed:
-		_set_status("Removed queued action", 1.0)
+		_set_status(_finish_queue_edit("Removed queued action"), 2.0)
 	return removed
 
 func _try_dev_heart_defeat(tile: Vector2i) -> bool:
@@ -1206,6 +1257,11 @@ func _apply_resolution_result(resolution: Dictionary, acting_owner: int, include
 
 	state = next_state
 	queued_actions.clear()
+	if colony_enabled and colony_view != null:
+		_sync_colony_world()
+		colony_view.show_resolution(report)
+	if _use_3d_world():
+		_world_3d_call("show_combat_events", [report.get("combat_events", [])])
 
 	recent_enemy_actions = resolution.get("applied_enemy_actions", [])
 	recent_enemy_failed_actions = resolution.get("failed_enemy_actions", [])
@@ -1840,8 +1896,9 @@ func _refresh_ui() -> void:
 				queued_convert_count += 1
 			"upgrade_tile":
 				queued_upgrade_count += 1
-	queue_label.text = "Queued Growth %d   Spread %d   Evolve %d   Strengthen %d   Run Evolutions %d" % [
+	queue_label.text = "Actions %d/%d   Spread %d   Evolve %d   Strengthen %d   Run Evolutions %d" % [
 		queued_actions.size(),
+		_player_action_limit(),
 		queued_place_count,
 		queued_convert_count,
 		queued_upgrade_count,
@@ -2169,6 +2226,8 @@ func _recompute_hover_context() -> void:
 
 	if hovered_tile == Vector2i(-1, -1) or not state.is_inside(hovered_tile):
 		return
+	if _find_player_place_action_index(hovered_tile) >= 0:
+		return
 
 	var hovered_block: Dictionary = state.get_block_at(hovered_tile)
 	if hovered_block.is_empty():
@@ -2217,6 +2276,8 @@ func _recompute_hover_context() -> void:
 		hover_invalid_reason = "not owned"
 
 func _validate_place_target(tile: Vector2i, tile_type: String, plan: Dictionary) -> Dictionary:
+	if int(plan.get("action_count", 0)) >= _player_action_limit():
+		return {"ok": false, "reason": "action limit reached"}
 	return validator.validate_place_target(
 		state,
 		GameState.PLAYER_ID,
@@ -2228,10 +2289,17 @@ func _validate_place_target(tile: Vector2i, tile_type: String, plan: Dictionary)
 	)
 
 func _validate_convert_target(block: Dictionary, to_type: String, plan: Dictionary) -> Dictionary:
+	if int(plan.get("action_count", 0)) >= _player_action_limit():
+		return {"ok": false, "reason": "action limit reached"}
 	return validator.validate_convert_target(state, GameState.PLAYER_ID, block, to_type, plan)
 
 func _validate_upgrade_target(block: Dictionary, plan: Dictionary) -> Dictionary:
+	if int(plan.get("action_count", 0)) >= _player_action_limit():
+		return {"ok": false, "reason": "action limit reached"}
 	return validator.validate_upgrade_target(state, GameState.PLAYER_ID, block, plan)
+
+func _player_action_limit() -> int:
+	return maxi(1, int(state.players.get(GameState.PLAYER_ID, {}).get("max_actions", 5)))
 
 func _find_player_place_action_index(tile: Vector2i) -> int:
 	for i in range(queued_actions.size()):
@@ -2260,6 +2328,8 @@ func _mouse_to_tile(mouse_pos: Vector2) -> Vector2i:
 		return Vector2i(-1, -1)
 	if not board_clip_rect.has_point(mouse_pos):
 		return Vector2i(-1, -1)
+	if colony_enabled and colony_view != null:
+		return colony_view.viewport_to_tile(mouse_pos-board_clip_rect.position)
 	if _use_3d_world():
 		var viewport_mouse: Vector2 = mouse_pos - board_clip_rect.position
 		var tile_from_3d: Variant = _world_3d_call("viewport_to_tile", [viewport_mouse])
@@ -2393,14 +2463,14 @@ func _update_clarity_overlays() -> void:
 	var tutorial_text: String = _tutorial_prompt_text()
 	tutorial_prompt_label.text = tutorial_text
 	tutorial_prompt_label.visible = not tutorial_text.is_empty() and not run_over
-	tutorial_prompt_label.position = Vector2(board_region_rect.position.x + 12.0, board_region_rect.position.y + 12.0)
+	tutorial_prompt_label.position = Vector2(board_region_rect.position.x + 12.0, objective_banner_label.position.y + objective_banner_label.size.y + 6.0)
 	tutorial_prompt_label.size = Vector2(minf(420.0, board_region_rect.size.x - 24.0), 64.0)
 
 	var hover_text: String = _hover_card_text()
 	hover_card_label.text = hover_text
-	hover_card_label.visible = not hover_text.is_empty() and not run_over
-	hover_card_label.position = Vector2(board_region_rect.position.x + 12.0, maxf(board_region_rect.position.y + 92.0, board_region_rect.end.y - 86.0))
-	hover_card_label.size = Vector2(minf(460.0, board_region_rect.size.x - 24.0), 74.0)
+	hover_card_label.visible = not hover_text.is_empty() and not run_over and not _is_modal_overlay_open()
+	hover_card_label.position = Vector2(board_clip_rect.position.x + 12.0, maxf(board_clip_rect.position.y, board_clip_rect.end.y - 86.0))
+	hover_card_label.size = Vector2(minf(460.0, board_clip_rect.size.x - 24.0), 74.0)
 
 func _make_stylebox_texture(texture: Texture2D, margin: int, content: int) -> StyleBoxTexture:
 	var style: StyleBoxTexture = StyleBoxTexture.new()
@@ -2539,6 +2609,8 @@ func _hover_card_text() -> String:
 	if hovered_tile == state.door_tile and state.door_hp > 0:
 		return "Dungeon Door\nBreak it to win this level. HP %d/%d." % [state.door_hp, state.door_max_hp]
 
+	if _find_player_place_action_index(hovered_tile) >= 0:
+		return "Growth Queued\nEnd Turn to grow here. Click again or right-click to cancel."
 	if not hover_preview_action.is_empty():
 		return "Action Preview\n%s" % _action_preview_text(hover_preview_action)
 	if not hover_invalid_reason.is_empty():
@@ -2611,6 +2683,8 @@ func _player_reason_text(reason: String) -> String:
 			return "you already queued growth there."
 		"insufficient energy":
 			return "you need more energy."
+		"action limit reached":
+			return "your actions are queued. End Turn or cancel an action."
 		"requires basic tile":
 			return "only Basic ooze can evolve into a role."
 		"basic cannot upgrade":
@@ -2685,6 +2759,9 @@ func _update_board_layout(force: bool = false) -> void:
 	var centered_y: float = region.position.y + maxf(0.0, floor((region.size.y - map_size.y) * 0.5))
 
 	board_origin = Vector2(centered_x, centered_y)
+	if colony_enabled and colony_view != null:
+		colony_view.position = region.position-board_region.get_global_rect().position
+		colony_view.size = region.size
 	if _use_3d_world():
 		_update_3d_layout(region)
 	_update_clarity_overlays()

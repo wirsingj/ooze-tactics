@@ -1,0 +1,185 @@
+{
+	"candidate_sha256": "d7b105bbbed028cfcbd701d336343aab453ac4ca2df0e9b9db506064fe7d9696",
+	"engine": "4.6.2-stable (official)",
+	"failures": [],
+	"limits": "Six side-swapped seeded matches against one frozen heuristic; not human difficulty or broad holdout validation. Normal campaign objectives are asymmetric: the player team's deadline and human-owner heart loss can end play while its ally survives. HP loss includes heart-collapse removal, not only direct attack damage.",
+	"matches": [
+		{
+			"actions": {
+				"1": 139,
+				"2": 93
+			},
+			"candidate_team": 1,
+			"decision_max_ms": 711,
+			"decision_total_ms": 24873,
+			"failed_actions": 6,
+			"failure_reasons": {
+				"needs more support (2/3)": 1,
+				"not empty": 5
+			},
+			"hp_lost_including_collapse": {
+				"1": 41,
+				"2": 720
+			},
+			"outcome": {
+				"reason": "all_enemy_hearts_destroyed",
+				"status": "victory"
+			},
+			"remaining_hearts": {
+				"1": 2,
+				"2": 0
+			},
+			"seed": 1337,
+			"turns": 30,
+			"winning_team": 1
+		},
+		{
+			"actions": {
+				"1": 116,
+				"2": 121
+			},
+			"candidate_team": 2,
+			"decision_max_ms": 566,
+			"decision_total_ms": 21585,
+			"failed_actions": 20,
+			"failure_reasons": {
+				"needs more support (2/3)": 1,
+				"not adjacent": 1,
+				"not empty": 18
+			},
+			"hp_lost_including_collapse": {
+				"1": 692,
+				"2": 130
+			},
+			"outcome": {
+				"reason": "turn_limit",
+				"status": "loss"
+			},
+			"remaining_hearts": {
+				"1": 2,
+				"2": 2
+			},
+			"seed": 1337,
+			"turns": 30,
+			"winning_team": 2
+		},
+		{
+			"actions": {
+				"1": 117,
+				"2": 130
+			},
+			"candidate_team": 1,
+			"decision_max_ms": 858,
+			"decision_total_ms": 22027,
+			"failed_actions": 37,
+			"failure_reasons": {
+				"needs more support (2/3)": 4,
+				"not adjacent": 4,
+				"not empty": 29
+			},
+			"hp_lost_including_collapse": {
+				"1": 117,
+				"2": 681
+			},
+			"outcome": {
+				"reason": "turn_limit",
+				"status": "loss"
+			},
+			"remaining_hearts": {
+				"1": 2,
+				"2": 2
+			},
+			"seed": 2026,
+			"turns": 30,
+			"winning_team": 2
+		},
+		{
+			"actions": {
+				"1": 71,
+				"2": 84
+			},
+			"candidate_team": 2,
+			"decision_max_ms": 639,
+			"decision_total_ms": 11498,
+			"failed_actions": 3,
+			"failure_reasons": {
+				"not empty": 3
+			},
+			"hp_lost_including_collapse": {
+				"1": 327,
+				"2": 33
+			},
+			"outcome": {
+				"reason": "all_player_hearts_destroyed",
+				"status": "loss"
+			},
+			"remaining_hearts": {
+				"1": 1,
+				"2": 2
+			},
+			"seed": 2026,
+			"turns": 18,
+			"winning_team": 2
+		},
+		{
+			"actions": {
+				"1": 138,
+				"2": 120
+			},
+			"candidate_team": 1,
+			"decision_max_ms": 1038,
+			"decision_total_ms": 28550,
+			"failed_actions": 9,
+			"failure_reasons": {
+				"not empty": 9
+			},
+			"hp_lost_including_collapse": {
+				"1": 100,
+				"2": 836
+			},
+			"outcome": {
+				"reason": "turn_limit",
+				"status": "loss"
+			},
+			"remaining_hearts": {
+				"1": 2,
+				"2": 2
+			},
+			"seed": 45678,
+			"turns": 30,
+			"winning_team": 2
+		},
+		{
+			"actions": {
+				"1": 120,
+				"2": 139
+			},
+			"candidate_team": 2,
+			"decision_max_ms": 864,
+			"decision_total_ms": 25863,
+			"failed_actions": 19,
+			"failure_reasons": {
+				"not empty": 19
+			},
+			"hp_lost_including_collapse": {
+				"1": 776,
+				"2": 91
+			},
+			"outcome": {
+				"reason": "turn_limit",
+				"status": "loss"
+			},
+			"remaining_hearts": {
+				"1": 2,
+				"2": 2
+			},
+			"seed": 45678,
+			"turns": 30,
+			"winning_team": 2
+		}
+	],
+	"planner_sha256": "a44e58a3644311c316f3ea67fa5b93a74a697cb884766608e8afcd51977460ae",
+	"reference_sha256": "ea245ca4f0ccdf2bbc0ac11f21e669115e73becd69c386868da7291a6e906025",
+	"scenario": "2v2 equal budgets; 14 energy, 4 income, 3 actions each; normal global turn batching",
+	"scenario_sha256": "4b219e77e151325e732674905548235249e8b2b1a63d67e1e9f8ca9e94e6c8e7"
+}

@@ -1,0 +1,2 @@
+# Preserve the frozen opponent bytes used by the recorded evaluation hash.
+baselines/ai/pressure_reference_v1.gd.txt -text whitespace=cr-at-eol,-blank-at-eof

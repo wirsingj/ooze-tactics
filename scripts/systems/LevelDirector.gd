@@ -2,19 +2,33 @@ extends RefCounted
 class_name LevelDirector
 
 func check_victory_or_loss(state: GameState) -> Dictionary:
+    if state.territory_mode:
+        if _all_team_hearts_destroyed(state,GameState.TEAM_PLAYER):
+            return {"status":"loss","reason":"all_player_team_hearts_destroyed"}
+        if _all_team_hearts_destroyed(state,GameState.TEAM_ENEMY):
+            return {"status":"victory","reason":"all_enemy_hearts_destroyed"}
+        var goal: int = preload("res://scripts/systems/TerritoryRules.gd").WIN_SCORE
+        var player_score: int = int(state.team_scores.get(GameState.TEAM_PLAYER,0))
+        var enemy_score: int = int(state.team_scores.get(GameState.TEAM_ENEMY,0))
+        if player_score>=goal or enemy_score>=goal:
+            if player_score!=enemy_score:
+                return {"status":"victory" if player_score>enemy_score else "loss","reason":"resource_control"}
+        return {"status":"ongoing"}
     if not state.spectator_mode and state.count_heart_tiles(GameState.PLAYER_ID) <= 0:
         return {"status": "loss", "reason": "all_player_hearts_destroyed"}
     if state.spectator_mode and _all_team_hearts_destroyed(state, GameState.TEAM_PLAYER):
         return {"status": "loss", "reason": "all_player_team_hearts_destroyed"}
-
-    if state.turn_limit > 0 and state.turn_index >= state.turn_limit:
-        return {"status": "loss", "reason": "turn_limit"}
 
     if state.door_hp <= 0:
         return {"status": "victory", "reason": "door_destroyed"}
 
     if _all_hostile_hearts_destroyed(state):
         return {"status": "victory", "reason": "all_enemy_hearts_destroyed"}
+
+    # The displayed final turn may complete an objective. Losing the player's
+    # hearts still takes precedence over a simultaneous objective completion.
+    if state.turn_limit > 0 and state.turn_index >= state.turn_limit:
+        return {"status": "loss", "reason": "turn_limit"}
 
     if not state.spectator_mode and state.stall_counter >= 3:
         return {"status": "loss", "reason": "stall_lock"}

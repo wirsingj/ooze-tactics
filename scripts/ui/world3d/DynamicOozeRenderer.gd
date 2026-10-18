@@ -7,6 +7,7 @@ const OOZE_SURFACE_OFFSET: float = 0.090
 const OOZE_BASE_SURFACE_OFFSET: float = 0.165
 const OOZE_GROWTH_BASE_OFFSET: float = 0.180
 const OOZE_BASE_THICKNESS: float = 0.30
+var growth_surface_materials: Dictionary = {}
 
 func build_owner_layers(
 	context,
@@ -594,33 +595,33 @@ func _add_growth_asset_instance(
 	match role:
 		"core":
 			role_y_lift += 0.08
-			role_scale = Vector3(1.26, 1.44, 1.26)
+			role_scale = Vector3.ONE * 1.15
 			role_yaw_variation_deg = 7.0
 			lateral_jitter_tiles = 0.03
 			forward_jitter_tiles = 0.02
 		"melee":
 			role_y_lift += 0.04
-			role_scale = Vector3(1.12, 1.04, 1.12)
+			role_scale = Vector3.ONE
 			forward_lean_degrees = -6.0
 			role_yaw_variation_deg = 8.0
 			lateral_jitter_tiles = 0.04
 			forward_jitter_tiles = 0.04
 		"ranged":
 			role_y_lift += 0.06
-			role_scale = Vector3(0.74, 1.84, 0.74)
+			role_scale = Vector3.ONE
 			forward_lean_degrees = -8.0
 			role_yaw_variation_deg = 12.0
 			lateral_jitter_tiles = 0.07
 			forward_jitter_tiles = 0.06
 		"defense":
 			role_y_lift += 0.03
-			role_scale = Vector3(1.42, 0.66, 1.42)
+			role_scale = Vector3.ONE * 1.05
 			role_yaw_variation_deg = 8.0
 			lateral_jitter_tiles = 0.03
 			forward_jitter_tiles = 0.02
 		"gather":
 			role_y_lift += 0.03
-			role_scale = Vector3(1.12, 0.82, 1.12)
+			role_scale = Vector3.ONE
 			role_yaw_variation_deg = 10.0
 			lateral_jitter_tiles = 0.05
 			forward_jitter_tiles = 0.04
@@ -661,7 +662,81 @@ func _add_growth_asset_instance(
 	)
 	if inst == null:
 		return
+	fit_growth_to_tile(inst, center, tile_world_size, context._tile_floor_top(tile) + role_y_lift)
+	_apply_growth_surface_materials(inst, per_tile_material)
 	_register_growth_animation(context, growth_anim_entries, inst, role, tile, owner_id, clamped_tier)
+
+func _apply_growth_surface_materials(root: Node3D, owner_material: Material) -> void:
+	if not owner_material is StandardMaterial3D:
+		return
+	for mesh_node in root.find_children("*", "MeshInstance3D", true, false):
+		var node: MeshInstance3D = mesh_node as MeshInstance3D
+		if node.mesh == null:
+			continue
+		for surface in range(node.mesh.get_surface_count()):
+			var source: Material = node.mesh.surface_get_material(surface)
+			if source == null or not source.resource_name.begins_with("Ooze"):
+				continue
+			node.material_override = null
+			var tint: Color = owner_material.albedo_color
+			var key: String = source.resource_name + tint.to_html()
+			if not growth_surface_materials.has(key):
+				var mat: StandardMaterial3D = owner_material.duplicate()
+				mat.metallic = 0.0
+				mat.albedo_color = tint.darkened(0.22)
+				mat.roughness = 0.46
+				mat.metallic_specular = 0.28
+				mat.clearcoat = 0.12
+				mat.emission_energy_multiplier = 0.02
+				if source.resource_name.begins_with("OozeShell"):
+					mat.albedo_color = Color(0.10, 0.13, 0.15).lerp(tint, 0.18)
+					mat.roughness = 0.48
+					mat.clearcoat = 0.08
+				elif source.resource_name.begins_with("OozeLumen"):
+					mat.albedo_color = tint.lerp(Color(0.86, 1.0, 0.72), 0.50)
+					mat.roughness = 0.38
+					mat.emission_energy_multiplier = 0.16
+				mat.emission = mat.albedo_color
+				growth_surface_materials[key] = mat
+			node.set_surface_override_material(surface, growth_surface_materials[key])
+
+func fit_growth_to_tile(node: Node3D, center: Vector3, tile_size: float, floor_y: float) -> void:
+	# Bound the actual imported geometry after normalization, facing, and tiers.
+	# This keeps adjacent tactical cells distinct even when source meshes differ.
+	var local_bounds: AABB = growth_local_bounds(node)
+	if local_bounds.size.length_squared() <= 0.00001:
+		return
+	var bounds: AABB = node.transform * local_bounds
+	var factor: float = minf(1.0, tile_size * 0.82 / maxf(bounds.size.x, bounds.size.z))
+	factor = minf(factor, tile_size * 1.10 / maxf(0.001, bounds.size.y))
+	node.basis = node.basis.scaled(Vector3.ONE * factor)
+	bounds = node.transform * local_bounds
+	var bounds_center: Vector3 = bounds.get_center()
+	node.position += Vector3(center.x - bounds_center.x, floor_y - bounds.position.y, center.z - bounds_center.z)
+
+func growth_local_bounds(root: Node3D) -> AABB:
+	if root.has_meta("growth_local_bounds"):
+		return root.get_meta("growth_local_bounds")
+	var meshes: Array[Node] = root.find_children("*", "MeshInstance3D", true, false)
+	if root is MeshInstance3D:
+		meshes.append(root)
+	var bounds: AABB = AABB()
+	var initialized: bool = false
+	for mesh_node in meshes:
+		var mesh: MeshInstance3D = mesh_node as MeshInstance3D
+		if mesh.mesh == null:
+			continue
+		var transform: Transform3D = Transform3D.IDENTITY
+		var current: Node = mesh
+		while current != root and current != null:
+			if current is Node3D:
+				transform = current.transform * transform
+			current = current.get_parent()
+		var mesh_bounds: AABB = transform * mesh.get_aabb()
+		bounds = bounds.merge(mesh_bounds) if initialized else mesh_bounds
+		initialized = true
+	root.set_meta("growth_local_bounds", bounds)
+	return bounds
 
 func _register_growth_animation(context, growth_anim_entries: Array, node: Node3D, role: String, tile: Vector2i, owner_id: int, tier: int) -> void:
 	var phase_seed: int = context._tile_noise(tile.x + owner_id * 11, tile.y + owner_id * 19, 1979)
@@ -767,7 +842,7 @@ func _build_ooze_surface_mesh(context, board_width: float, board_height: float, 
 			var h_u: float = context._sample_ground_height_at_local(lx, lz + eps_z, board_width, board_height) + surface_offset
 			var tx: Vector3 = Vector3(2.0 * eps_x, h_r - h_l, 0.0)
 			var tz: Vector3 = Vector3(0.0, h_u - h_d, 2.0 * eps_z)
-			normals[idx] = tx.cross(tz).normalized()
+			normals[idx] = tz.cross(tx).normalized()
 	for z in range(sz):
 		for x in range(sx):
 			var i0: int = z * (sx + 1) + x
@@ -800,7 +875,7 @@ func _tile_attack_direction(context, state: GameState, owner_id: int, tile: Vect
 	for block in state.blocks.values():
 		if not bool(block.get("is_heart", false)):
 			continue
-		if int(block.get("owner", owner_id)) == owner_id:
+		if not state.are_hostile(owner_id, int(block.get("owner", owner_id))):
 			continue
 		var other: Vector2i = block.get("pos", Vector2i(-1, -1))
 		if not state.is_inside(other):

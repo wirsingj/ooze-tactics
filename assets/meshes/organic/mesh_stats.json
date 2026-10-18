@@ -1,0 +1,22 @@
+{
+  "core": {
+    "vertices": 3198,
+    "triangles": 6364
+  },
+  "melee": {
+    "vertices": 3156,
+    "triangles": 6288
+  },
+  "ranged": {
+    "vertices": 2706,
+    "triangles": 5364
+  },
+  "defense": {
+    "vertices": 3409,
+    "triangles": 6782
+  },
+  "gather": {
+    "vertices": 3580,
+    "triangles": 7132
+  }
+}

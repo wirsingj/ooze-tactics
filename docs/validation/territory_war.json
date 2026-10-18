@@ -1,0 +1,802 @@
+{
+	"board": [
+		260,
+		160
+	],
+	"engine": "4.6.2-stable (official)",
+	"failed_actions": 0,
+	"limits": "One fixed-layout all-AI Territory War match using normal global turns; stops on a terminal outcome or after 40 turns. The stored seed does not vary this map. No human balance or visual acceptance.",
+	"max_turn_ms": 5192,
+	"seed": 1337,
+	"source_sha256": {
+		"models/GameState.gd": "caa4ca1305365341eb493a092e1352bbebf738c4c85969300df29e567ba463a9",
+		"systems/Combat.gd": "980c76fb8bd0c1812478deccf6a074cff0cbd02a906e8163a25afebff07dacd1",
+		"systems/Economy.gd": "63bed815a1804cddb2095e78151dcffe81b52b42ff40110e0814d4c463dde2a4",
+		"systems/LevelDirector.gd": "e509d0a10e994b61d061608a229770ee614c1e8da2c5eaf42708e2c2ea13a5b3",
+		"systems/TerritoryAI.gd": "2f65207a7d777de31bca477c4204287b673eca7b73f92d5eb729559c494c4c0b",
+		"systems/TerritoryOrders.gd": "55c08e6c1f88b494855d00fe6c47f7fcdb9808933960005f108a8a63edecf7fb",
+		"systems/TerritoryRules.gd": "09062e8aafc75114ad5e99bafd04979631bb9b49815cdf64bfd715cad9e10510",
+		"systems/TerritoryScenario.gd": "2c06878e015614a06752c4227d60eee89868c11ed4d01c4abc78f5e8333e5794",
+		"systems/TerritoryTurn.gd": "93c3e36a22e7184d3ba28805dded796d45984897d294b09dcbdc71c675c43e8e",
+		"systems/TickSystem.gd": "c65031c13f4432924a3b82936eef22c7e63354b1c490164f71e9f22649f08f5e"
+	},
+	"turns": [
+		{
+			"actions": 724,
+			"blocks": 1508,
+			"ms": 370,
+			"orders": 8,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 1504,
+				"gather": 4
+			},
+			"scores": {
+				"1": 0,
+				"2": 0
+			},
+			"turn": 1
+		},
+		{
+			"actions": 680,
+			"blocks": 2188,
+			"ms": 368,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 2184,
+				"gather": 4
+			},
+			"scores": {
+				"1": 0,
+				"2": 0
+			},
+			"turn": 2
+		},
+		{
+			"actions": 600,
+			"blocks": 2788,
+			"ms": 403,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 2784,
+				"gather": 4
+			},
+			"scores": {
+				"1": 0,
+				"2": 0
+			},
+			"turn": 3
+		},
+		{
+			"actions": 560,
+			"blocks": 3348,
+			"ms": 440,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 3344,
+				"gather": 4
+			},
+			"scores": {
+				"1": 0,
+				"2": 0
+			},
+			"turn": 4
+		},
+		{
+			"actions": 560,
+			"blocks": 3908,
+			"ms": 483,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 3904,
+				"gather": 4
+			},
+			"scores": {
+				"1": 0,
+				"2": 0
+			},
+			"turn": 5
+		},
+		{
+			"actions": 560,
+			"blocks": 4468,
+			"ms": 535,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 4464,
+				"gather": 4
+			},
+			"scores": {
+				"1": 0,
+				"2": 0
+			},
+			"turn": 6
+		},
+		{
+			"actions": 528,
+			"blocks": 4996,
+			"ms": 1010,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 4992,
+				"gather": 4
+			},
+			"scores": {
+				"1": 0,
+				"2": 0
+			},
+			"turn": 7
+		},
+		{
+			"actions": 512,
+			"blocks": 5508,
+			"ms": 1206,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 5504,
+				"gather": 4
+			},
+			"scores": {
+				"1": 0,
+				"2": 0
+			},
+			"turn": 8
+		},
+		{
+			"actions": 488,
+			"blocks": 5996,
+			"ms": 1280,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 5988,
+				"gather": 8
+			},
+			"scores": {
+				"1": 2,
+				"2": 2
+			},
+			"turn": 9
+		},
+		{
+			"actions": 680,
+			"blocks": 6676,
+			"ms": 1528,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 6668,
+				"gather": 8
+			},
+			"scores": {
+				"1": 4,
+				"2": 4
+			},
+			"turn": 10
+		},
+		{
+			"actions": 674,
+			"blocks": 7350,
+			"ms": 1539,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 7342,
+				"gather": 8
+			},
+			"scores": {
+				"1": 6,
+				"2": 6
+			},
+			"turn": 11
+		},
+		{
+			"actions": 660,
+			"blocks": 8010,
+			"ms": 1688,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 8002,
+				"gather": 8
+			},
+			"scores": {
+				"1": 8,
+				"2": 8
+			},
+			"turn": 12
+		},
+		{
+			"actions": 640,
+			"blocks": 8650,
+			"ms": 1747,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 8642,
+				"gather": 8
+			},
+			"scores": {
+				"1": 10,
+				"2": 10
+			},
+			"turn": 13
+		},
+		{
+			"actions": 620,
+			"blocks": 9270,
+			"ms": 1919,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 9262,
+				"gather": 8
+			},
+			"scores": {
+				"1": 12,
+				"2": 12
+			},
+			"turn": 14
+		},
+		{
+			"actions": 592,
+			"blocks": 9862,
+			"ms": 1957,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 9854,
+				"gather": 8
+			},
+			"scores": {
+				"1": 14,
+				"2": 14
+			},
+			"turn": 15
+		},
+		{
+			"actions": 516,
+			"blocks": 10378,
+			"ms": 2014,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 10370,
+				"gather": 8
+			},
+			"scores": {
+				"1": 16,
+				"2": 16
+			},
+			"turn": 16
+		},
+		{
+			"actions": 466,
+			"blocks": 10844,
+			"ms": 2044,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 10834,
+				"gather": 10
+			},
+			"scores": {
+				"1": 19,
+				"2": 19
+			},
+			"turn": 17
+		},
+		{
+			"actions": 612,
+			"blocks": 11456,
+			"ms": 2161,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 11446,
+				"gather": 10
+			},
+			"scores": {
+				"1": 22,
+				"2": 22
+			},
+			"turn": 18
+		},
+		{
+			"actions": 644,
+			"blocks": 12100,
+			"ms": 2278,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 12090,
+				"gather": 10
+			},
+			"scores": {
+				"1": 25,
+				"2": 25
+			},
+			"turn": 19
+		},
+		{
+			"actions": 580,
+			"blocks": 12680,
+			"ms": 2321,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 12670,
+				"gather": 10
+			},
+			"scores": {
+				"1": 28,
+				"2": 28
+			},
+			"turn": 20
+		},
+		{
+			"actions": 457,
+			"blocks": 13137,
+			"ms": 2408,
+			"orders": 4,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 13127,
+				"gather": 10
+			},
+			"scores": {
+				"1": 31,
+				"2": 31
+			},
+			"turn": 21
+		},
+		{
+			"actions": 420,
+			"blocks": 13547,
+			"ms": 3183,
+			"orders": 8,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 13512,
+				"defense": 12,
+				"gather": 11,
+				"ranged": 12
+			},
+			"scores": {
+				"1": 34,
+				"2": 34
+			},
+			"turn": 22
+		},
+		{
+			"actions": 453,
+			"blocks": 13980,
+			"ms": 3433,
+			"orders": 8,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 13938,
+				"defense": 12,
+				"gather": 11,
+				"melee": 7,
+				"ranged": 12
+			},
+			"scores": {
+				"1": 37,
+				"2": 37
+			},
+			"turn": 23
+		},
+		{
+			"actions": 404,
+			"blocks": 14362,
+			"ms": 3504,
+			"orders": 8,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 14314,
+				"defense": 12,
+				"gather": 11,
+				"melee": 13,
+				"ranged": 12
+			},
+			"scores": {
+				"1": 40,
+				"2": 40
+			},
+			"turn": 24
+		},
+		{
+			"actions": 401,
+			"blocks": 14741,
+			"ms": 3583,
+			"orders": 8,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 14691,
+				"defense": 11,
+				"gather": 11,
+				"melee": 16,
+				"ranged": 12
+			},
+			"scores": {
+				"1": 43,
+				"2": 44
+			},
+			"turn": 25
+		},
+		{
+			"actions": 520,
+			"blocks": 15237,
+			"ms": 3782,
+			"orders": 8,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 15184,
+				"defense": 10,
+				"gather": 11,
+				"melee": 20,
+				"ranged": 12
+			},
+			"scores": {
+				"1": 46,
+				"2": 48
+			},
+			"turn": 26
+		},
+		{
+			"actions": 516,
+			"blocks": 15725,
+			"ms": 3802,
+			"orders": 8,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 15667,
+				"defense": 10,
+				"gather": 11,
+				"melee": 25,
+				"ranged": 12
+			},
+			"scores": {
+				"1": 49,
+				"2": 52
+			},
+			"turn": 27
+		},
+		{
+			"actions": 514,
+			"blocks": 16205,
+			"ms": 3962,
+			"orders": 8,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 16138,
+				"defense": 8,
+				"gather": 11,
+				"melee": 36,
+				"ranged": 12
+			},
+			"scores": {
+				"1": 52,
+				"2": 56
+			},
+			"turn": 28
+		},
+		{
+			"actions": 519,
+			"blocks": 16686,
+			"ms": 4794,
+			"orders": 12,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 16585,
+				"defense": 20,
+				"gather": 11,
+				"melee": 46,
+				"ranged": 24
+			},
+			"scores": {
+				"1": 55,
+				"2": 60
+			},
+			"turn": 29
+		},
+		{
+			"actions": 473,
+			"blocks": 17104,
+			"ms": 5089,
+			"orders": 12,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 17001,
+				"defense": 20,
+				"gather": 12,
+				"melee": 51,
+				"ranged": 20
+			},
+			"scores": {
+				"1": 59,
+				"2": 64
+			},
+			"turn": 30
+		},
+		{
+			"actions": 377,
+			"blocks": 17419,
+			"ms": 5001,
+			"orders": 12,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 17302,
+				"defense": 20,
+				"gather": 13,
+				"melee": 64,
+				"ranged": 20
+			},
+			"scores": {
+				"1": 63,
+				"2": 67
+			},
+			"turn": 31
+		},
+		{
+			"actions": 255,
+			"blocks": 17588,
+			"ms": 5180,
+			"orders": 12,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 17460,
+				"defense": 20,
+				"gather": 13,
+				"melee": 75,
+				"ranged": 20
+			},
+			"scores": {
+				"1": 67,
+				"2": 70
+			},
+			"turn": 32
+		},
+		{
+			"actions": 146,
+			"blocks": 17665,
+			"ms": 4934,
+			"orders": 12,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 17520,
+				"defense": 20,
+				"gather": 13,
+				"melee": 92,
+				"ranged": 20
+			},
+			"scores": {
+				"1": 71,
+				"2": 74
+			},
+			"turn": 33
+		},
+		{
+			"actions": 135,
+			"blocks": 17728,
+			"ms": 5149,
+			"orders": 12,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 17574,
+				"defense": 20,
+				"gather": 13,
+				"melee": 101,
+				"ranged": 20
+			},
+			"scores": {
+				"1": 75,
+				"2": 78
+			},
+			"turn": 34
+		},
+		{
+			"actions": 94,
+			"blocks": 17737,
+			"ms": 5192,
+			"orders": 12,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 17575,
+				"defense": 20,
+				"gather": 13,
+				"melee": 110,
+				"ranged": 19
+			},
+			"scores": {
+				"1": 79,
+				"2": 82
+			},
+			"turn": 35
+		},
+		{
+			"actions": 81,
+			"blocks": 17756,
+			"ms": 5172,
+			"orders": 12,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 17575,
+				"defense": 20,
+				"gather": 13,
+				"melee": 129,
+				"ranged": 19
+			},
+			"scores": {
+				"1": 83,
+				"2": 86
+			},
+			"turn": 36
+		},
+		{
+			"actions": 91,
+			"blocks": 17765,
+			"ms": 5079,
+			"orders": 12,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 17580,
+				"defense": 19,
+				"gather": 13,
+				"melee": 134,
+				"ranged": 19
+			},
+			"scores": {
+				"1": 87,
+				"2": 90
+			},
+			"turn": 37
+		},
+		{
+			"actions": 85,
+			"blocks": 17774,
+			"ms": 5147,
+			"orders": 12,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 17580,
+				"defense": 19,
+				"gather": 13,
+				"melee": 143,
+				"ranged": 19
+			},
+			"scores": {
+				"1": 91,
+				"2": 94
+			},
+			"turn": 38
+		},
+		{
+			"actions": 91,
+			"blocks": 17792,
+			"ms": 4989,
+			"orders": 12,
+			"outcome": {
+				"status": "ongoing"
+			},
+			"roles": {
+				"basic": 17595,
+				"defense": 19,
+				"gather": 13,
+				"melee": 146,
+				"ranged": 19
+			},
+			"scores": {
+				"1": 95,
+				"2": 98
+			},
+			"turn": 39
+		},
+		{
+			"actions": 84,
+			"blocks": 17784,
+			"ms": 4983,
+			"orders": 12,
+			"outcome": {
+				"reason": "resource_control",
+				"status": "loss"
+			},
+			"roles": {
+				"basic": 17580,
+				"defense": 18,
+				"gather": 12,
+				"melee": 155,
+				"ranged": 19
+			},
+			"scores": {
+				"1": 99,
+				"2": 102
+			},
+			"turn": 40
+		}
+	]
+}

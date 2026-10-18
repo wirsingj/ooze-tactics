@@ -37,7 +37,7 @@
       ],
       "normalize": {
         "scale": [1.04, 1.16, 1.04],
-        "offset": [0.0, -0.10, 0.0]
+        "offset": [0.0, -0.1, 0.0]
       }
     },
     "cave_corner": {
@@ -48,7 +48,7 @@
       ],
       "normalize": {
         "scale": [1.08, 1.18, 1.08],
-        "offset": [0.0, -0.10, 0.0]
+        "offset": [0.0, -0.1, 0.0]
       }
     },
     "door_arch": {
@@ -71,11 +71,11 @@
       }
     },
     "core_growth": {
-      "path": "res://assets/meshes/generated/core_growth.glb",
+      "path": "res://assets/meshes/organic/core_growth.glb",
       "source_kind": "generated",
       "normalize": {
-        "scale": [0.88, 0.88, 0.88],
-        "offset": [0.0, -0.04, 0.0]
+        "scale": [1.0, 1.0, 1.0],
+        "offset": [0.0, 0.0, 0.0]
       }
     },
     "basic_tile": {
@@ -87,35 +87,35 @@
       }
     },
     "melee_growth": {
-      "path": "res://assets/meshes/generated/melee_growth.glb",
+      "path": "res://assets/meshes/organic/melee_growth.glb",
       "source_kind": "generated",
       "normalize": {
-        "scale": [0.86, 0.86, 0.86],
-        "offset": [0.0, -0.03, 0.0]
+        "scale": [1.0, 1.0, 1.0],
+        "offset": [0.0, 0.0, 0.0]
       }
     },
     "ranged_growth": {
-      "path": "res://assets/meshes/generated/ranged_growth.glb",
+      "path": "res://assets/meshes/organic/ranged_growth.glb",
       "source_kind": "generated",
       "normalize": {
-        "scale": [0.86, 0.86, 0.86],
-        "offset": [0.0, -0.03, 0.0]
+        "scale": [1.0, 1.0, 1.0],
+        "offset": [0.0, 0.0, 0.0]
       }
     },
     "defense_growth": {
-      "path": "res://assets/meshes/generated/defense_growth.glb",
+      "path": "res://assets/meshes/organic/defense_growth.glb",
       "source_kind": "generated",
       "normalize": {
-        "scale": [0.88, 0.88, 0.88],
-        "offset": [0.0, -0.04, 0.0]
+        "scale": [1.0, 1.0, 1.0],
+        "offset": [0.0, 0.0, 0.0]
       }
     },
     "gather_growth": {
-      "path": "res://assets/meshes/generated/gather_growth.glb",
+      "path": "res://assets/meshes/organic/gather_growth.glb",
       "source_kind": "generated",
       "normalize": {
-        "scale": [0.86, 0.86, 0.86],
-        "offset": [0.0, -0.03, 0.0]
+        "scale": [1.0, 1.0, 1.0],
+        "offset": [0.0, 0.0, 0.0]
       }
     },
     "node_base": {

@@ -94,6 +94,7 @@ func build_level(
 			state.players[enemy_id]["nutrients"] = enemy_start_energy
 		state.players[enemy_id]["income_delta"] = int(options.get("enemy_income_delta", 0))
 		state.players[enemy_id]["max_actions"] = int(options.get("enemy_max_actions", 3))
+		state.players[enemy_id]["tactical_search"] = bool(options.get("ai_tactical_search", false))
 
 	var ally_spawns: Array = _build_ally_spawns(room, state, ally_ai_count)
 	for ally in ally_spawns:
@@ -106,6 +107,7 @@ func build_level(
 			state.players[ally_id]["ai_controlled"] = true
 		state.players[ally_id]["income_delta"] = int(options.get("ally_income_delta", options.get("player_income_delta", 0)))
 		state.players[ally_id]["max_actions"] = int(options.get("ally_max_actions", options.get("player_max_actions", 3)))
+		state.players[ally_id]["tactical_search"] = bool(options.get("ai_tactical_search", false))
 
 	state.resource_nodes = []
 	for node in room.get("resource_nodes", []):

@@ -4,10 +4,6 @@ class_name EnemyFeedback
 # Formats concise, truthful enemy-action summaries from applied outcomes only.
 
 func build_turn_line(applied_enemy_actions: Array, failed_enemy_actions: Array) -> String:
-	var attempted: int = applied_enemy_actions.size() + failed_enemy_actions.size()
-	if attempted <= 0:
-		return "Enemy ooze waits"
-
 	var placed: int = 0
 	var converted: int = 0
 	var upgraded: int = 0
@@ -20,8 +16,12 @@ func build_turn_line(applied_enemy_actions: Array, failed_enemy_actions: Array) 
 		elif kind == "upgrade_tile":
 			upgraded += 1
 
-	var line: String = "Enemy ooze grew %d/%d: spread %d, evolved %d, strengthened %d" % [
-		applied_enemy_actions.size(),
+	var changed: int = placed + converted + upgraded
+	var attempted: int = changed + failed_enemy_actions.size()
+	if attempted == 0:
+		return "Enemy ooze waits"
+	var line: String = "Enemy actions %d/%d: spread %d, evolved %d, strengthened %d" % [
+		changed,
 		attempted,
 		placed,
 		converted,

@@ -340,6 +340,8 @@ var _queued_tiles: Dictionary = {}
 var _queued_actions: Array = []
 var _hover_preview_action: Dictionary = {}
 var _hover_invalid_reason: String = ""
+var _valid_place_targets: Array = []
+var _enemy_intent_actions: Array = []
 
 var _last_static_stamp: String = ""
 var _last_dynamic_stamp: String = ""
@@ -364,6 +366,8 @@ var _dynamic_root: Node3D = null
 var _growth_pool_root: Node3D = null
 var _dynamic_light_root: Node3D = null
 var _marker_root: Node3D = null
+var _combat_feedback_root: Node3D = null
+var _combat_feedback_time: float = 0.0
 var _hero_shot_root: Node3D = null
 var _camera: Camera3D = null
 var _key_light: DirectionalLight3D = null
@@ -463,7 +467,9 @@ func sync_world(
 	hover_preview_action: Dictionary,
 	hover_invalid_reason: String,
 	_recent_enemy_actions: Array,
-	_anim_frame: int
+	_anim_frame: int,
+	valid_place_targets: Array = [],
+	enemy_intent_actions: Array = []
 ) -> void:
 	_perf_increment("sync_calls")
 	_state = state
@@ -473,6 +479,8 @@ func sync_world(
 	_queued_actions = queued_actions
 	_hover_preview_action = hover_preview_action
 	_hover_invalid_reason = hover_invalid_reason
+	_valid_place_targets = valid_place_targets
+	_enemy_intent_actions = enemy_intent_actions
 	if _state == null:
 		return
 
@@ -507,6 +515,7 @@ func sync_world(
 
 func tick_visual(delta: float) -> void:
 	_visual_time += maxf(0.0, delta)
+	_update_combat_feedback(maxf(0.0, delta))
 	var frame_ms: float = maxf(0.0, delta) * 1000.0
 	_frame_time_accum += frame_ms
 	_frame_time_samples += 1
@@ -520,6 +529,38 @@ func tick_visual(delta: float) -> void:
 		_growth_animation_time_samples += 1
 		_growth_animation_time_max_ms = maxf(_growth_animation_time_max_ms, growth_anim_ms)
 	_update_camera_transform(false)
+
+func show_combat_events(events: Array) -> void:
+	if _combat_feedback_root == null:
+		_combat_feedback_root = Node3D.new()
+		_combat_feedback_root.name = "CombatFeedback"
+		add_child(_combat_feedback_root)
+	_clear_children(_combat_feedback_root)
+	_combat_feedback_time = 1.8
+	for event in events:
+		var label: Label3D = Label3D.new()
+		var dissolved: bool = String(event.get("kind", "")) == "dissolved"
+		label.text = "Dissolved" if dissolved else "-%d" % int(event.get("amount", 0))
+		label.font_size = 38 if dissolved else 48
+		label.outline_size = 8
+		label.pixel_size = 0.008
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.no_depth_test = true
+		label.modulate = Color(1.0, 0.86, 0.64) if dissolved else Color(1.0, 0.57, 0.32)
+		var tile: Vector2i = event.get("tile", Vector2i.ZERO)
+		label.position = _tile_world_position(tile) + Vector3(0.0, _tile_floor_top(tile) + tile_world_size * 0.95, 0.0)
+		_combat_feedback_root.add_child(label)
+
+func _update_combat_feedback(delta: float) -> void:
+	if _combat_feedback_root == null or _combat_feedback_time <= 0.0:
+		return
+	_combat_feedback_time = maxf(0.0, _combat_feedback_time - delta)
+	if _combat_feedback_time <= 0.0:
+		_clear_children(_combat_feedback_root)
+		return
+	for label in _combat_feedback_root.get_children():
+		label.position.y += delta * 0.22
+		label.modulate.a = minf(1.0, _combat_feedback_time / 0.45)
 
 func set_perf_dynamic_rendering_enabled(enabled: bool) -> void:
 	_perf_dynamic_rendering_enabled = enabled
@@ -745,7 +786,9 @@ func _make_marker_stamp() -> String:
 		_queued_tiles,
 		_queued_actions,
 		_hover_preview_action,
-		_hover_invalid_reason
+		_hover_invalid_reason,
+		_valid_place_targets,
+		_enemy_intent_actions
 	)
 
 func _terrain_height_local(local_x: float, local_z: float, board_width: float, board_height: float) -> float:
@@ -1105,7 +1148,7 @@ func _add_objective_glow_lights(active_light_keys: Dictionary) -> void:
 			light,
 			_tile_world_position(tile) + Vector3(0.0, _tile_ground_top(tile) + 0.78, 0.0),
 			glow_color,
-			1.08,
+			0.32,
 			4.8
 		)
 		heart_lights_added += 1
@@ -1159,7 +1202,9 @@ func _rebuild_markers() -> void:
 		_queued_tiles,
 		_queued_actions,
 		_hover_preview_action,
-		_hover_invalid_reason
+		_hover_invalid_reason,
+		_valid_place_targets,
+		_enemy_intent_actions
 	)
 
 func _add_door_marker(tile: Vector2i, entrance: bool) -> void:
@@ -1913,12 +1958,7 @@ func _owner_is_left_side(owner_id: int) -> bool:
 	return owner_id == GameState.PLAYER_ID
 
 func _owner_ooze_tint(owner_id: int) -> Color:
-	var raw_tint: Color
-	if _owner_is_left_side(owner_id):
-		raw_tint = Color(0.12, 0.58, 0.18, 1.0)
-	else:
-		raw_tint = Color(0.62, 0.05, 0.12, 1.0)
-	return _normalize_ooze_color(raw_tint, OOZE_MIN_VALUE, OOZE_MIN_LUMA, OOZE_MAX_SATURATION)
+	return _normalize_ooze_color(_owner_tint(owner_id), OOZE_MIN_VALUE, OOZE_MIN_LUMA, OOZE_MAX_SATURATION)
 
 func _owner_role_growth_tint(owner_tint: Color, role: String) -> Color:
 	match role:

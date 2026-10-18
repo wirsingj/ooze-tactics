@@ -69,7 +69,7 @@ size_flags_horizontal = 3
 
 [node name="Hint" type="Label" parent="Center/Panel/Margin/VBox"]
 layout_mode = 2
-text = "Choose how gameplay is rendered. 2D uses the legacy sprite atlas, 3D uses the live cave renderer."
+text = "Living Colony brings animated pixel-art ooze to an isometric board. Legacy 2D and Cave 3D remain available."
 horizontal_alignment = 1
 autowrap_mode = 2
 

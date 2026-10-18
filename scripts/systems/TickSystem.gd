@@ -40,7 +40,7 @@ func step(state: GameState, queued_actions: Array) -> GameState:
 	return next
 
 func step_fast_for_trainer(state: GameState, queued_actions: Array) -> GameState:
-	# Trainer-only deterministic fast path:
+	# Deterministic compact path for training and tactical lookahead:
 	# keeps all gameplay resolution identical while skipping per-turn log string work.
 	var next: GameState = state.copy_state()
 	next.turn_index += 1
